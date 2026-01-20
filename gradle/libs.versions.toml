@@ -1,0 +1,23 @@
+[versions]
+kotlin = "2.2.21"
+junitJupiter = "5.8.1"
+pluginId = "com.mole.aspectk.compiler"
+autoService = "1.1.1"
+
+[libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+
+kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-gradlePlugin-api = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin-api", version.ref = "kotlin" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
+kotlin-compiler = { module = "org.jetbrains.kotlin:kotlin-compiler", version.ref = "kotlin" }
+google-autoservice-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
+google-autoservice = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
+kotlin-compile-testing = { module = "dev.zacsweers.kctfork:core", version = "0.12.1" }
+kotlin-compiler-embeddable = {module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin"}
+
+[plugins]
+shadow = { id = "com.gradleup.shadow", version = "9.2.2" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
