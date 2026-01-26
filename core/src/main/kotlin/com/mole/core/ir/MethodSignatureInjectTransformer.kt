@@ -36,6 +36,7 @@ data class Context(
 )
  */
 
+// TODO 컴파일러 코드에서 stdlib 의존성 제거 -> 현재 IR트리가 너무 깊습니다.
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class MethodSignatureInjectTransformer(
     private val aspectKContext: AspectKIrCompilerContext,
