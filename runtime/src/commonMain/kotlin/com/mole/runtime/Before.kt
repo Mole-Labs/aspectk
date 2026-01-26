@@ -6,5 +6,5 @@ import kotlin.reflect.KClass
 @Retention(AnnotationRetention.BINARY) // 또는 RUNTIME
 @MustBeDocumented
 public annotation class Before(
-    val target: KClass<*>,
+    vararg val target: KClass<out Annotation>,
 )

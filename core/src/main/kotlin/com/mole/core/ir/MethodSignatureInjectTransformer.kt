@@ -40,7 +40,7 @@ data class Context(
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class MethodSignatureInjectTransformer(
     private val aspectKContext: AspectKIrCompilerContext,
-    private val targetAnnotation: FqName,
+    private val targetAnnotations: List<FqName>,
 ) : IrElementTransformerVoidWithContext() {
     private var fieldCounter: Int = 0
 
@@ -167,5 +167,5 @@ internal class MethodSignatureInjectTransformer(
         }
     }
 
-    private fun canSkip(declaration: IrFunction): Boolean = !declaration.hasAnnotation(targetAnnotation)
+    private fun canSkip(declaration: IrFunction): Boolean = !targetAnnotations.any(declaration::hasAnnotation)
 }

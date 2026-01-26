@@ -1,28 +1,83 @@
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.expressions.IrClassReference
+import org.jetbrains.kotlin.ir.expressions.IrVararg
+import org.jetbrains.kotlin.ir.expressions.IrVarargElement
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.name.FqName
 
+/*
+@Aspect
+object FirebaseAspect {
+	@Before(target = MoleEvent::class)
+	fun log(joinPoint:JoinPoint) {
+
+	}
+}
+
+이런 Aspect 분석 후 AspectLookUp으로 변환
+
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectVisitor(
     private val aspectkContext: AspectKIrCompilerContext,
 ) : IrVisitorVoid() {
+    override fun visitFile(declaration: IrFile) {
+        declaration.acceptChildren(this, null)
+    }
+
     override fun visitClass(declaration: IrClass) {
         if (canSkip(declaration)) return super.visitClass(declaration)
 
-        declaration.functions
-            .filter { func ->
-                AspectKIrCompilerContext.ADVICE_ANNOTATIONS_FQ_NAME.any(func::hasAnnotation)
-            }.forEach {
-                val annotation = it.annotations.first()
-                annotation.arguments.forEach {
+        declaration.functions.forEach { func ->
+            func.annotations.forEach { annotation ->
+                val fqName = annotation.type.classFqName ?: return@forEach
+                if (fqName !in AspectKIrCompilerContext.ADVICE_ANNOTATIONS_FQ_NAME) return@forEach
+                val kind = AspectContext.find(fqName) ?: error("kind not found: $fqName")
+                when (val targetArg = annotation.arguments[0]) {
+                    is IrVararg -> {
+                        targetArg.elements.forEach { element ->
+                            processElement(element, func, declaration, kind)
+                        }
+                    }
+
+                    else -> {
+                        error("invalid targetArg: $targetArg")
+                    }
                 }
-                aspectkContext.aspectLookUp
             }
+        }
+    }
+
+    private fun processElement(
+        element: IrVarargElement,
+        func: IrSimpleFunction,
+        aspectClass: IrClass,
+        kind: AspectContext.Kind,
+    ) {
+        if (element is IrClassReference) {
+            val targetFqName =
+                element.classType.classFqName
+                    ?: return // 여기서 에러 리포팅 권장
+
+            aspectkContext.aspectLookUp.add(
+                fqName = targetFqName,
+                aspectContext =
+                    AspectContext(
+                        advice = func,
+                        aspect = aspectClass.symbol,
+                        kind = kind,
+                        methodSignature = null,
+                    ),
+            )
+        }
     }
 
     private fun canSkip(declaration: IrClass): Boolean =
