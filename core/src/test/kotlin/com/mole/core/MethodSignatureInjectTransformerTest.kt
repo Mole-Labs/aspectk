@@ -190,4 +190,63 @@ class MethodSignatureInjectTransformerTest {
         assertEquals(expected1, actual1)
         assertEquals(expected2, actual2)
     }
+
+    @Test
+    fun `multiple MethodSignature can be created in multiple classes`() {
+        val result =
+            compile(
+                """              
+                class Test1 {                    
+                    @JvmName("example1")
+                    fun test1() {}
+                }
+                
+                class Test2 {
+                    @JvmName("example1")
+                    fun test1() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        // when
+        val loader = result.classLoader
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test1",
+                fieldName = $$"ajc$tjp_0",
+            )
+        val actual2 =
+            loader.assertAndGetField(
+                className = "Test2",
+                fieldName = $$"ajc$tjp_1",
+            )
+
+        val expected1 =
+            MethodSignature(
+                methodName = "test1",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = JvmName::class,
+                            typeName = "kotlin.jvm.JvmName",
+                            arguments = mapOf("name" to "example1"),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        loader.thisParameterInfo("Test1"),
+                    ),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+        val expected2 =
+            expected1.copy(
+                parameter =
+                    listOf(
+                        loader.thisParameterInfo("Test2"),
+                    ),
+            )
+        assertEquals(expected1, actual1)
+        assertEquals(expected2, actual2)
+    }
 }

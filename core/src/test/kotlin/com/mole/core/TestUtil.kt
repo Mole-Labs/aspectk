@@ -63,7 +63,7 @@ fun URLClassLoader.thisParameterInfo(className: String = "Test"): MethodParamete
     MethodParameter(
         name = "<this>",
         type = loadClass(className).kotlin,
-        typeName = "Test",
+        typeName = className,
         annotations = listOf(),
         isNullable = false,
     )
