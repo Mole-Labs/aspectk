@@ -12,28 +12,14 @@ class AdviceGenerationExtension : IrGenerationExtension {
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext,
     ) {
-        val methodSignatureSymbol =
-            pluginContext
-                .getSymbol(
-                    fqName = "com.mole.runtime.MethodSignature",
-                )
-        val methodParameterSymbol =
-            pluginContext.getSymbol(
-                fqName = "com.mole.runtime.MethodParameter",
-            )
+        val aspectkContext = AspectKIrCompilerContext(pluginContext)
 
-        val annotationInfoSymbol =
-            pluginContext.getSymbol(
-                fqName = "com.mole.runtime.AnnotationInfo",
-            )
+        moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)
 
         moduleFragment.transform(
             MethodSignatureInjectTransformer(
-                pluginContext,
-                methodSignatureSymbol,
-                methodParameterSymbol,
-                annotationInfoSymbol,
-                FqName("com.mole.runtime.Before"), // 추후 동적으로 변경,
+                aspectkContext,
+                FqName("kotlin.jvm.JvmName"), // 추후 동적으로 변경,
             ),
             null,
         )

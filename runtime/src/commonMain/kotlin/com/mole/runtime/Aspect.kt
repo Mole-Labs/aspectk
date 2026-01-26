@@ -1,10 +1,6 @@
 package com.mole.runtime
 
-import kotlin.reflect.KClass
-
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.BINARY) // 또는 RUNTIME
 @MustBeDocumented
-public annotation class Before(
-    val target: KClass<*>,
-)
+public annotation class Aspect

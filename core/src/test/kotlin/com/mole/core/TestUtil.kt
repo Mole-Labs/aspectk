@@ -1,11 +1,14 @@
 package com.mole.core
 
+import com.mole.runtime.MethodParameter
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.JvmDefaultMode
+import org.junit.jupiter.api.Assertions.assertNotNull
+import java.net.URLClassLoader
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
@@ -41,4 +44,26 @@ fun compile(
             SourceFile.kotlin(name = name, contents = source),
         ),
         plugin,
+    )
+
+fun URLClassLoader.assertAndGetField(
+    className: String,
+    fieldName: String,
+    targetClass: String? = null,
+): Any =
+    this
+        .loadClass(className)
+        .getDeclaredField(fieldName)
+        .apply {
+            setAccessible(true)
+            assertNotNull(this@apply)
+        }.get(targetClass)
+
+fun URLClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
+    MethodParameter(
+        name = "<this>",
+        type = loadClass(className).kotlin,
+        typeName = "Test",
+        annotations = listOf(),
+        isNullable = false,
     )

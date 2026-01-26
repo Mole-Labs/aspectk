@@ -1,114 +1,135 @@
 package com.mole.core
 
+import com.mole.runtime.AnnotationInfo
 import com.mole.runtime.MethodParameter
 import com.mole.runtime.MethodSignature
 import com.tschuchort.compiletesting.KotlinCompilation
+import org.jetbrains.annotations.NotNull
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCompilerApi::class)
 class MethodSignatureInjectTransformerTest {
     @Test
-    fun `MethodSignature must be created in existing companion object`() {
+    fun `MethodSignature should be created in existing companion object`() {
         // given
         val result =
             compile(
-                """
-                import com.mole.runtime.Before
-                
+                """                
                 class Test {
                     companion object {
                     }
                     
-                    @Before
+                    @JvmName("test2")
                     fun test1() {
                     }
                 }
-                """.trimIndent(),
+                """,
             )
 
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
         val loader = result.classLoader
-        val companionClass = loader.loadClass($$"Test$Companion")
-        val injectedField = companionClass.getDeclaredField($$"ajc$tjp_0")
-        injectedField.setAccessible(true)
+        val actual =
+            loader.assertAndGetField(
+                className = $$"Test$Companion",
+                fieldName = $$"ajc$tjp_0",
+            )
 
         // then
         val expected =
             MethodSignature(
                 methodName = "test1",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = JvmName::class,
+                            typeName = "kotlin.jvm.JvmName",
+                            arguments = mapOf("name" to "test2"),
+                        ),
+                    ),
                 parameter =
                     listOf(
-                        MethodParameter(
-                            name = "<this>",
-                            type = loader.loadClass("Test").kotlin,
-                            typeName = "Test",
-                            annotations = listOf(),
-                            annotationsName = listOf(),
-                            isNullable = false,
-                        ),
+                        loader.thisParameterInfo(),
                     ),
                 returnType = Unit::class,
                 returnTypeName = "kotlin.Unit",
             )
-        assertNotNull(injectedField)
-        val actual = injectedField.get(null)
         assertEquals(expected, actual)
     }
 
     @Test
-    fun `MethodSignature must contain annotations of method parameters`() {
+    fun `MethodSignature contains annotations of method parameters`() {
         // given
         val result =
             compile(
-                """
-                import com.mole.runtime.Before
-                
+                """              
+                import org.jetbrains.annotations.NotNull
+
                 class Test {
                     companion object {
                     }
                     
-                    @Before
+                    @JvmName("test2")
                     fun test1(
-                        arg1:Int,
-                        @Suppress("test") arg2:String
-                    ) {
-                    }
+                        arg1:Int?,
+                        @NotNull("test") arg2:String
+                    ) {}
                 }
-                """.trimIndent(),
+                """,
             )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
         val loader = result.classLoader
-        val companionClass = loader.loadClass($$"Test$Companion")
-        val injectedField = companionClass.getDeclaredField($$"ajc$tjp_0")
-        injectedField.setAccessible(true)
+        val actual =
+            loader.assertAndGetField(
+                className = $$"Test$Companion",
+                fieldName = $$"ajc$tjp_0",
+            )
 
         // then
         val expected =
             MethodSignature(
                 methodName = "test1",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = JvmName::class,
+                            typeName = "kotlin.jvm.JvmName",
+                            arguments = mapOf("name" to "test2"),
+                        ),
+                    ),
                 parameter =
                     listOf(
+                        loader.thisParameterInfo(),
                         MethodParameter(
-                            name = "<this>",
-                            type = loader.loadClass("Test").kotlin,
-                            typeName = "Test",
+                            name = "arg1",
+                            type = Int::class,
+                            typeName = "kotlin.Int",
                             annotations = listOf(),
-                            annotationsName = listOf(),
+                            isNullable = true,
+                        ),
+                        MethodParameter(
+                            name = "arg2",
+                            type = String::class,
+                            typeName = "kotlin.String",
+                            annotations =
+                                listOf(
+                                    AnnotationInfo(
+                                        type = NotNull::class,
+                                        typeName = "org.jetbrains.annotations.NotNull",
+                                        arguments = mapOf("value" to "test"),
+                                    ),
+                                ),
                             isNullable = false,
                         ),
                     ),
                 returnType = Unit::class,
                 returnTypeName = "kotlin.Unit",
             )
-        assertNotNull(injectedField)
-        val actual = injectedField.get(null)
         assertEquals(expected, actual)
     }
 }
