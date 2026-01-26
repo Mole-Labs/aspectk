@@ -12,16 +12,13 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalCompilerApi::class)
 class MethodSignatureInjectTransformerTest {
     @Test
-    fun `MethodSignature should be created in existing companion object`() {
+    fun `MethodSignature should be created in with static field`() {
         // given
         val result =
             compile(
                 """                
                 class Test {
-                    companion object {
-                    }
-                    
-                    @JvmName("test2")
+                    @JvmName("example1")
                     fun test1() {
                     }
                 }
@@ -34,7 +31,7 @@ class MethodSignatureInjectTransformerTest {
         val loader = result.classLoader
         val actual =
             loader.assertAndGetField(
-                className = $$"Test$Companion",
+                className = "Test",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -47,7 +44,7 @@ class MethodSignatureInjectTransformerTest {
                         AnnotationInfo(
                             type = JvmName::class,
                             typeName = "kotlin.jvm.JvmName",
-                            arguments = mapOf("name" to "test2"),
+                            arguments = mapOf("name" to "example1"),
                         ),
                     ),
                 parameter =
@@ -69,10 +66,7 @@ class MethodSignatureInjectTransformerTest {
                 import org.jetbrains.annotations.NotNull
 
                 class Test {
-                    companion object {
-                    }
-                    
-                    @JvmName("test2")
+                    @JvmName("example1")
                     fun test1(
                         arg1:Int?,
                         @NotNull("test") arg2:String
@@ -86,7 +80,7 @@ class MethodSignatureInjectTransformerTest {
         val loader = result.classLoader
         val actual =
             loader.assertAndGetField(
-                className = $$"Test$Companion",
+                className = "Test",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -99,7 +93,7 @@ class MethodSignatureInjectTransformerTest {
                         AnnotationInfo(
                             type = JvmName::class,
                             typeName = "kotlin.jvm.JvmName",
-                            arguments = mapOf("name" to "test2"),
+                            arguments = mapOf("name" to "example1"),
                         ),
                     ),
                 parameter =
@@ -131,5 +125,69 @@ class MethodSignatureInjectTransformerTest {
                 returnTypeName = "kotlin.Unit",
             )
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `multiple MethodSignature can be created`() {
+        val result =
+            compile(
+                """              
+                class Test {                    
+                    @JvmName("example1")
+                    fun test1() {}
+                    
+                    @JvmName("example2")
+                    fun test2() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val loader = result.classLoader
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+        val actual2 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_1",
+            )
+
+        val expected1 =
+            MethodSignature(
+                methodName = "test1",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = JvmName::class,
+                            typeName = "kotlin.jvm.JvmName",
+                            arguments = mapOf("name" to "example1"),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        loader.thisParameterInfo(),
+                    ),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+
+        val expected2 =
+            expected1.copy(
+                methodName = "test2",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = JvmName::class,
+                            typeName = "kotlin.jvm.JvmName",
+                            arguments = mapOf("name" to "example2"),
+                        ),
+                    ),
+            )
+        assertEquals(expected1, actual1)
+        assertEquals(expected2, actual2)
     }
 }

@@ -2,78 +2,25 @@ package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.descriptors.ClassKind
-import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.descriptors.Modality
-import org.jetbrains.kotlin.ir.builders.declarations.addConstructor
-import org.jetbrains.kotlin.ir.builders.declarations.buildClass
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irCallConstructor
 import org.jetbrains.kotlin.ir.builders.irVararg
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.symbols.impl.IrValueParameterSymbolImpl
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.classOrNull
-import org.jetbrains.kotlin.ir.types.createType
 import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.irConstructorCall
 import org.jetbrains.kotlin.ir.util.render
-import org.jetbrains.kotlin.name.*
-
-@OptIn(UnsafeDuringIrConstructionAPI::class)
-internal fun IrPluginContext.createCompanionObject(parentClass: IrClass): IrClass =
-    irFactory
-        .buildClass {
-            startOffset = parentClass.startOffset
-            endOffset = parentClass.endOffset
-            origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
-            name = SpecialNames.DEFAULT_NAME_FOR_COMPANION_OBJECT
-            kind = ClassKind.OBJECT
-            isCompanion = true
-            visibility = DescriptorVisibilities.PUBLIC
-            modality = Modality.FINAL
-        }.apply {
-            val owner = this@apply
-            parent = parentClass
-            superTypes = listOf(irBuiltIns.anyType)
-            thisReceiver =
-                irFactory
-                    .createValueParameter(
-                        startOffset = startOffset,
-                        endOffset = endOffset,
-                        kind = IrParameterKind.DispatchReceiver,
-                        origin = IrDeclarationOrigin.INSTANCE_RECEIVER,
-                        name = Name.special("<this>"),
-                        type = symbol.createType(false, emptyList()),
-                        isAssignable = false,
-                        symbol = IrValueParameterSymbolImpl(),
-                        varargElementType = null,
-                        isCrossinline = false,
-                        isNoinline = false,
-                        isHidden = false,
-                    ).apply {
-                        parent = owner
-                    }
-
-            addConstructor {
-                origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
-                isPrimary = true
-                visibility = DescriptorVisibilities.PRIVATE
-            }.apply {
-                body = irFactory.createBlockBody(startOffset, endOffset)
-            }
-
-            // 3. 부모 클래스의 선언 목록에 이 객체를 등록
-            parentClass.declarations.add(this)
-        }
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal fun IrPluginContext.createIrListOf(

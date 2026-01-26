@@ -52,31 +52,27 @@ internal class MethodSignatureInjectTransformer(
         if (canSkip(declaration)) return super.visitFunctionNew(declaration)
         parentClass =
             currentClass?.irElement as? IrClass ?: return super.visitFunctionNew(declaration)
-        val companion =
-            parentClass.declarations
-                .filterIsInstance<IrClass>()
-                .firstOrNull { it.isCompanion }
-                ?: aspectKContext.pluginContext.createCompanionObject(parentClass)
 
         val signatureField =
             aspectKContext.pluginContext.irFactory
                 .buildField {
-                    startOffset = companion.startOffset
-                    endOffset = companion.endOffset
+                    startOffset = parentClass.startOffset
+                    endOffset = parentClass.endOffset
                     name = Name.identifier($$"ajc$tjp_$${fieldCounter++}") // 유니크한 이름
                     type = aspectKContext.methodSignatureSymbol.defaultType
                     isStatic = true
                     isFinal = true
                     visibility = DescriptorVisibilities.PRIVATE
                 }.apply {
-                    val builder = DeclarationIrBuilder(aspectKContext.pluginContext, companion.symbol)
-                    parent = companion
+                    val builder = DeclarationIrBuilder(aspectKContext.pluginContext, parentClass.symbol)
+                    parent = parentClass
                     initializer =
                         aspectKContext.pluginContext.irFactory.createExpressionBody(
                             builder.createMethodSignatureInitializer(declaration),
                         )
                 }
-        companion.declarations.add(signatureField)
+
+        parentClass.declarations.add(signatureField)
 
         return super.visitFunctionNew(declaration)
     }
