@@ -9,7 +9,7 @@ import kotlin.reflect.KClass
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class MethodSignatureInjectTransformerTest {
+class AspectTransformerTest {
     @Test
     fun `MethodSignature should be created in with static field`() {
         // given
@@ -29,7 +29,7 @@ class MethodSignatureInjectTransformerTest {
                 object ExampleAspect {
                     @Before(TargetExample::class)
                     fun doBefore(joinPoint: JoinPoint) {
-                        
+                        System.out.println("hello")
                     }
                 }
                                     
@@ -50,6 +50,10 @@ class MethodSignatureInjectTransformerTest {
                 className = "Test",
                 fieldName = $$"ajc$tjp_0",
             )
+        loader.loadClass("Test").let { clazz ->
+            val instance = clazz.getDeclaredConstructor().newInstance()
+            clazz.getMethod("test1").invoke(instance)
+        }
 
         // then
         val expected = singleField(loader)

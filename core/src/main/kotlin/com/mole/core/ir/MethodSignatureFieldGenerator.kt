@@ -1,80 +1,58 @@
 package com.mole.core.ir
 
-import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
 import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irString
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrValueParameter
-import org.jetbrains.kotlin.ir.declarations.createExpressionBody
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.constructors
-import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.util.isNullable
-import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
-/*
-일단 acceptChild로 IrCall, IrSymbol 객체 저장
-자료구조가 Map<FqName, List<Context>>
-
-data class Context(
-    val irCall:IrCall,
-    val symbol:IrSymbol,
-    val methodSignature:
-    val kind:AspectKind
-)
- */
-
-// TODO 컴파일러 코드에서 stdlib 의존성 제거 -> 현재 IR트리가 너무 깊습니다.
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal class MethodSignatureInjectTransformer(
+internal class MethodSignatureFieldGenerator(
     private val aspectKContext: AspectKIrCompilerContext,
-    private val targetAnnotations: List<FqName>,
-) : IrElementTransformerVoidWithContext() {
+) {
     private var fieldCounter: Int = 0
 
     private val methodSignatureConstructor = aspectKContext.methodSignatureSymbol.constructors.first()
 
     private lateinit var parentClass: IrClass
 
-    override fun visitFunctionNew(declaration: IrFunction): IrStatement {
-        if (canSkip(declaration)) return super.visitFunctionNew(declaration)
-        parentClass =
-            currentClass?.irElement as? IrClass ?: return super.visitFunctionNew(declaration)
+    fun toField(methodSignature: IrExpression): IrField =
+        aspectKContext.pluginContext.irFactory
+            .buildField {
+                startOffset = parentClass.startOffset
+                endOffset = parentClass.endOffset
+                name = Name.identifier($$"ajc$tjp_$${fieldCounter++}") // 유니크한 이름
+                type = aspectKContext.methodSignatureSymbol.defaultType
+                isStatic = true
+                isFinal = true
+                visibility = DescriptorVisibilities.PRIVATE
+            }.apply {
+                parent = parentClass
+                initializer =
+                    aspectKContext.pluginContext.irFactory.createExpressionBody(
+                        methodSignature,
+                    )
+            }
 
-        val signatureField =
-            aspectKContext.pluginContext.irFactory
-                .buildField {
-                    startOffset = parentClass.startOffset
-                    endOffset = parentClass.endOffset
-                    name = Name.identifier($$"ajc$tjp_$${fieldCounter++}") // 유니크한 이름
-                    type = aspectKContext.methodSignatureSymbol.defaultType
-                    isStatic = true
-                    isFinal = true
-                    visibility = DescriptorVisibilities.PRIVATE
-                }.apply {
-                    val builder = DeclarationIrBuilder(aspectKContext.pluginContext, parentClass.symbol)
-                    parent = parentClass
-                    initializer =
-                        aspectKContext.pluginContext.irFactory.createExpressionBody(
-                            builder.createMethodSignatureInitializer(declaration),
-                        )
-                }
-
-        parentClass.declarations.add(signatureField)
-
-        return super.visitFunctionNew(declaration)
+    fun generate(
+        declaration: IrFunction,
+        parentClass: IrClass,
+    ): IrExpression {
+        this.parentClass = parentClass
+        return DeclarationIrBuilder(aspectKContext.pluginContext, parentClass.symbol).run {
+            createMethodSignatureInitializer(declaration)
+        }
     }
 
     private fun IrBuilderWithScope.createMethodSignatureInitializer(declaration: IrFunction): IrExpression =
@@ -166,6 +144,4 @@ internal class MethodSignatureInjectTransformer(
             }
         }
     }
-
-    private fun canSkip(declaration: IrFunction): Boolean = !targetAnnotations.any(declaration::hasAnnotation)
 }

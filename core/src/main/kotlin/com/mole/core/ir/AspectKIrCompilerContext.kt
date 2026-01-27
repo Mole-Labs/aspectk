@@ -8,6 +8,7 @@ internal data class AspectKIrCompilerContext(
     val pluginContext: IrPluginContext,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
 ) {
+    val joinPointSymbol: IrClassSymbol = pluginContext.getSymbol(JOIN_POINT_FQ_NAME)
     val methodSignatureSymbol: IrClassSymbol = pluginContext.getSymbol(METHOD_SIGNATURE_FQ_NAME)
     val methodParameterSymbol: IrClassSymbol = pluginContext.getSymbol(METHOD_PARAMETER_FQ_NAME)
     val annotationInfoSymbol: IrClassSymbol = pluginContext.getSymbol(ANNOTATION_INFO_FQ_NAME)
@@ -23,5 +24,7 @@ internal data class AspectKIrCompilerContext(
         const val METHOD_PARAMETER_FQ_NAME = "com.mole.runtime.MethodParameter"
 
         const val ANNOTATION_INFO_FQ_NAME = "com.mole.runtime.AnnotationInfo"
+
+        const val JOIN_POINT_FQ_NAME = "com.mole.runtime.internal.DefaultJoinPoint"
     }
 }

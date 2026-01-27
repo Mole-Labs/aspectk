@@ -12,10 +12,14 @@ class AdviceGenerationExtension : IrGenerationExtension {
         pluginContext: IrPluginContext,
     ) {
         val aspectkContext = AspectKIrCompilerContext(pluginContext)
+        val joinPointGenerator = JoinPointGenerator(aspectkContext)
+        val methodSignatureGenerator = MethodSignatureFieldGenerator(aspectkContext)
 
         moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)
         moduleFragment.transform(
-            MethodSignatureInjectTransformer(
+            AspectTransformer(
+                joinPointGenerator,
+                methodSignatureGenerator,
                 aspectkContext,
                 aspectkContext.aspectLookUp.targets,
             ),

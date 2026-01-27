@@ -3,7 +3,7 @@ package com.mole.core.ir
 import com.mole.core.ir.AspectContext.Kind.BEFORE
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.name.FqName
 
 // Target Annotation과 AspectContext는 다대다관계
@@ -53,7 +53,7 @@ internal class AspectLookUp {
 
 internal data class AspectContext(
     val advice: IrFunction,
-    val aspect: IrSymbol,
+    val aspect: IrClassSymbol,
     val kind: Kind,
     val methodSignature: IrExpression? = null,
 ) {
