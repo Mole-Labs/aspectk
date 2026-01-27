@@ -1,7 +1,6 @@
 package com.mole.core.ir
 
 import com.mole.core.reportCompilerBug
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.declarations.buildField
@@ -51,7 +50,7 @@ internal class MethodSignatureFieldGenerator(
         parentClass: IrClass,
     ): IrExpression {
         this.parentClass = parentClass
-        return DeclarationIrBuilder(aspectKContext.pluginContext, parentClass.symbol).run {
+        return aspectKContext.withIrBuilder(parentClass.symbol) {
             createMethodSignatureInitializer(declaration)
         }
     }
@@ -60,7 +59,7 @@ internal class MethodSignatureFieldGenerator(
         irCall(methodSignatureConstructor).apply {
             arguments[0] = irString(declaration.name.asString())
             arguments[1] =
-                aspectKContext.pluginContext.createIrListOf(
+                aspectKContext.createIrListOf(
                     scope = aspectKContext.methodSignatureSymbol,
                     elementType = aspectKContext.annotationInfoSymbol.defaultType,
                     elements =
@@ -69,7 +68,7 @@ internal class MethodSignatureFieldGenerator(
                         },
                 )
             arguments[2] =
-                aspectKContext.pluginContext.createIrListOf(
+                aspectKContext.createIrListOf(
                     scope = symbol,
                     elementType = aspectKContext.methodParameterSymbol.defaultType,
                     elements =
@@ -81,7 +80,7 @@ internal class MethodSignatureFieldGenerator(
                         },
                 )
             arguments[3] =
-                aspectKContext.pluginContext.createKClassExpression(
+                aspectKContext.createKClassExpression(
                     startOffset = declaration.startOffset,
                     endOffset = declaration.endOffset,
                     classType = declaration.returnType,
@@ -97,11 +96,11 @@ internal class MethodSignatureFieldGenerator(
         declaration: IrFunction,
         param: IrValueParameter,
     ): IrExpression =
-        DeclarationIrBuilder(aspectKContext.pluginContext, aspectKContext.methodParameterSymbol).run {
+        aspectKContext.withIrBuilder(aspectKContext.methodParameterSymbol) {
             irCall(aspectKContext.methodParameterSymbol.constructors.first()).apply {
                 arguments[0] = irString(param.name.asString())
                 arguments[1] =
-                    aspectKContext.pluginContext.createKClassExpression(
+                    aspectKContext.createKClassExpression(
                         startOffset = declaration.startOffset,
                         endOffset = declaration.endOffset,
                         classType = param.type,
@@ -113,7 +112,7 @@ internal class MethodSignatureFieldGenerator(
                     )
 
                 arguments[3] =
-                    aspectKContext.pluginContext.createIrListOf(
+                    aspectKContext.createIrListOf(
                         scope = aspectKContext.methodParameterSymbol,
                         elementType = aspectKContext.annotationInfoSymbol.defaultType,
                         elements =
@@ -127,10 +126,10 @@ internal class MethodSignatureFieldGenerator(
         }
 
     private fun createAnnotationInfoInitializer(annotation: IrConstructorCall): IrExpression =
-        DeclarationIrBuilder(aspectKContext.pluginContext, aspectKContext.annotationInfoSymbol).run {
+        aspectKContext.withIrBuilder(aspectKContext.annotationInfoSymbol) {
             irCall(aspectKContext.annotationInfoSymbol.constructors.first()).apply {
                 arguments[0] =
-                    aspectKContext.pluginContext.createKClassExpression(
+                    aspectKContext.createKClassExpression(
                         startOffset = annotation.startOffset,
                         endOffset = annotation.endOffset,
                         classType = annotation.type,
@@ -155,13 +154,13 @@ internal class MethodSignatureFieldGenerator(
                         }
                     }
                 arguments[2] =
-                    aspectKContext.pluginContext.createIrListOf(
+                    aspectKContext.createIrListOf(
                         scope = aspectKContext.annotationInfoSymbol,
                         elements = args,
                     )
 
                 arguments[3] =
-                    aspectKContext.pluginContext.createIrListOf(
+                    aspectKContext.createIrListOf(
                         scope = aspectKContext.annotationInfoSymbol,
                         elements = parameterNames,
                         elementType = aspectKContext.pluginContext.irBuiltIns.stringType,

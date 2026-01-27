@@ -8,10 +8,10 @@ internal data class AspectKIrCompilerContext(
     val pluginContext: IrPluginContext,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
 ) {
-    val joinPointSymbol: IrClassSymbol = pluginContext.getSymbol(JOIN_POINT_FQ_NAME)
-    val methodSignatureSymbol: IrClassSymbol = pluginContext.getSymbol(METHOD_SIGNATURE_FQ_NAME)
-    val methodParameterSymbol: IrClassSymbol = pluginContext.getSymbol(METHOD_PARAMETER_FQ_NAME)
-    val annotationInfoSymbol: IrClassSymbol = pluginContext.getSymbol(ANNOTATION_INFO_FQ_NAME)
+    val joinPointSymbol: IrClassSymbol = getSymbol(JOIN_POINT_FQ_NAME)
+    val methodSignatureSymbol: IrClassSymbol = getSymbol(METHOD_SIGNATURE_FQ_NAME)
+    val methodParameterSymbol: IrClassSymbol = getSymbol(METHOD_PARAMETER_FQ_NAME)
+    val annotationInfoSymbol: IrClassSymbol = getSymbol(ANNOTATION_INFO_FQ_NAME)
 
     companion object {
         val ADVICE_ANNOTATIONS_FQ_NAME =

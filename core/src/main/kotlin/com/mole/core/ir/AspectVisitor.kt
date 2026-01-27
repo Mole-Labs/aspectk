@@ -1,5 +1,6 @@
 package com.mole.core.ir
 
+import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
@@ -40,7 +41,7 @@ internal class AspectVisitor(
             func.annotations.forEach { annotation ->
                 val fqName = annotation.type.classFqName ?: return@forEach
                 if (fqName !in AspectKIrCompilerContext.ADVICE_ANNOTATIONS_FQ_NAME) return@forEach
-                val kind = AspectContext.find(fqName) ?: error("kind not found: $fqName")
+                val kind = AspectContext.find(fqName) ?: reportCompilerBug("kind not found: $fqName")
                 when (val targetArg = annotation.arguments[0]) {
                     is IrVararg -> {
                         targetArg.elements.forEach { element ->
@@ -49,7 +50,7 @@ internal class AspectVisitor(
                     }
 
                     else -> {
-                        error("invalid targetArg: $targetArg")
+                        reportCompilerBug("invalid targetArg: $targetArg")
                     }
                 }
             }
@@ -65,7 +66,7 @@ internal class AspectVisitor(
         if (element is IrClassReference) {
             val targetFqName =
                 element.classType.classFqName
-                    ?: return // 여기서 에러 리포팅 권장
+                    ?: reportCompilerBug("advice argument type should not be null")
 
             aspectkContext.aspectLookUp.add(
                 fqName = targetFqName,

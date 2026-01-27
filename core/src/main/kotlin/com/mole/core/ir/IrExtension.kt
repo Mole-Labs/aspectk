@@ -1,7 +1,8 @@
 package com.mole.core.ir
 
-import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
+import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
+import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irVararg
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
@@ -20,22 +21,23 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal fun IrPluginContext.createIrListOf(
+internal fun AspectKIrCompilerContext.createIrListOf(
     scope: IrSymbol,
     elements: List<IrExpression>,
-    elementType: IrType = irBuiltIns.anyNType,
+    elementType: IrType = pluginContext.irBuiltIns.anyNType,
 ): IrExpression {
     val listOfFunc =
-        referenceFunctions(
-            CallableId(FqName("kotlin.collections"), Name.identifier("listOf")),
-        ).first {
-            it.owner.parameters
-                .firstOrNull { it.kind == IrParameterKind.Regular }
-                ?.varargElementType != null
-        }
+        pluginContext
+            .referenceFunctions(
+                CallableId(FqName("kotlin.collections"), Name.identifier("listOf")),
+            ).first {
+                it.owner.parameters
+                    .firstOrNull { it.kind == IrParameterKind.Regular }
+                    ?.varargElementType != null
+            }
 
     // 2. 리스트에 들어갈 요소들을 irVararg로 묶기
-    return DeclarationIrBuilder(this, scope).run {
+    return DeclarationIrBuilder(pluginContext, scope).run {
         irCall(listOfFunc).apply {
             typeArguments[0] = elementType
             arguments[0] = irVararg(elementType, elements)
@@ -44,7 +46,7 @@ internal fun IrPluginContext.createIrListOf(
 }
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal fun IrPluginContext.createKClassExpression(
+internal fun AspectKIrCompilerContext.createKClassExpression(
     startOffset: Int,
     endOffset: Int,
     classType: IrType,
@@ -56,12 +58,23 @@ internal fun IrPluginContext.createKClassExpression(
     return IrClassReferenceImpl(
         startOffset = startOffset,
         endOffset = endOffset,
-        type = irBuiltIns.kClassClass.typeWith(classType),
+        type = pluginContext.irBuiltIns.kClassClass.typeWith(classType),
         symbol = classSymbol,
         classType = classType,
     )
 }
 
-internal fun IrPluginContext.getSymbol(fqName: String): IrClassSymbol =
-    referenceClass(ClassId.topLevel(FqName(fqName)))
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
+    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
         ?: error("Cannot find symbol for $fqName")
+
+internal fun <T> AspectKIrCompilerContext.withIrBuilder(
+    symbol: IrSymbol,
+    generatorContext: IrGeneratorContext = pluginContext,
+    startOffset: Int = -1,
+    endOffset: Int = -1,
+    block: IrBuilderWithScope.() -> T,
+): T =
+    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+        block()
+    }

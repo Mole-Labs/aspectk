@@ -1,7 +1,6 @@
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
@@ -47,11 +46,13 @@ internal class AspectTransformer(
         val joinPoint =
             joinPointGenerator.generate(declaration, signature.deepCopyWithSymbols())
         val adviceCalls =
-            DeclarationIrBuilder(aspectKContext.pluginContext, declaration.symbol).irBlock {
-                aspectKContext.aspectLookUp[target].forEach {
-                    +irCall(it.advice.symbol).apply {
-                        dispatchReceiver = irGetObject(it.aspect)
-                        arguments[1] = joinPoint
+            aspectKContext.withIrBuilder(declaration.symbol) {
+                irBlock {
+                    aspectKContext.aspectLookUp[target].forEach {
+                        +irCall(it.advice.symbol).apply {
+                            dispatchReceiver = irGetObject(it.aspect)
+                            arguments[1] = joinPoint
+                        }
                     }
                 }
             }

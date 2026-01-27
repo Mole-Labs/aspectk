@@ -1,6 +1,5 @@
 package com.mole.core.ir
 
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irNull
@@ -19,7 +18,7 @@ internal class JoinPointGenerator(
         declaration: IrFunction,
         methodSignature: IrExpression,
     ): IrExpression =
-        DeclarationIrBuilder(aspectKContext.pluginContext, declaration.symbol).run {
+        aspectKContext.withIrBuilder(declaration.symbol) {
             irCall(joinPointConstructor).apply {
                 arguments[0] =
                     declaration.dispatchReceiverParameter?.let {
@@ -27,7 +26,7 @@ internal class JoinPointGenerator(
                     } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
                 arguments[1] = methodSignature
                 arguments[2] =
-                    aspectKContext.pluginContext.createIrListOf(
+                    aspectKContext.createIrListOf(
                         scope = declaration.symbol,
                         elements =
                             declaration.parameters.map {
