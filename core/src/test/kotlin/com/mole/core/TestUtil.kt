@@ -29,6 +29,7 @@ fun compile(
             jvmDefault = JvmDefaultMode.DISABLE.description
             languageVersion = "2.2"
             sources = sourceFiles
+            verbose = true
             this.compilerPluginRegistrars = listOf(plugin)
             inheritClassPath = true
         }.compile()
