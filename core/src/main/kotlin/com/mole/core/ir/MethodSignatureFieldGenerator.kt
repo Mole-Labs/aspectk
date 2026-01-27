@@ -1,5 +1,6 @@
 package com.mole.core.ir
 
+import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
@@ -85,7 +86,11 @@ internal class MethodSignatureFieldGenerator(
                     endOffset = declaration.endOffset,
                     classType = declaration.returnType,
                 )
-            arguments[4] = irString(declaration.returnType.classFqName?.asString() ?: error("not found"))
+            arguments[4] =
+                irString(
+                    declaration.returnType.classFqName?.asString()
+                        ?: reportCompilerBug("function return type should not be null"),
+                )
         }
 
     private fun createMethodParameterInitializer(
@@ -101,7 +106,11 @@ internal class MethodSignatureFieldGenerator(
                         endOffset = declaration.endOffset,
                         classType = param.type,
                     )
-                arguments[2] = irString(param.type.classFqName?.asString() ?: error("Not found"))
+                arguments[2] =
+                    irString(
+                        param.type.classFqName?.asString()
+                            ?: reportCompilerBug("value parameter type should not be null"),
+                    )
 
                 arguments[3] =
                     aspectKContext.pluginContext.createIrListOf(
@@ -117,8 +126,8 @@ internal class MethodSignatureFieldGenerator(
             }
         }
 
-    private fun createAnnotationInfoInitializer(annotation: IrConstructorCall): IrExpression {
-        return DeclarationIrBuilder(aspectKContext.pluginContext, aspectKContext.annotationInfoSymbol).run {
+    private fun createAnnotationInfoInitializer(annotation: IrConstructorCall): IrExpression =
+        DeclarationIrBuilder(aspectKContext.pluginContext, aspectKContext.annotationInfoSymbol).run {
             irCall(aspectKContext.annotationInfoSymbol.constructors.first()).apply {
                 arguments[0] =
                     aspectKContext.pluginContext.createKClassExpression(
@@ -126,22 +135,37 @@ internal class MethodSignatureFieldGenerator(
                         endOffset = annotation.endOffset,
                         classType = annotation.type,
                     )
-                arguments[1] = irString(annotation.type.classFqName?.asString() ?: error("Not found"))
+                arguments[1] =
+                    irString(
+                        annotation.type.classFqName?.asString()
+                            ?: reportCompilerBug("annotation name type should not be null"),
+                    )
 
-                val parameters = annotation.symbol.owner.parameters
-                val argMap: Map<IrExpression, IrExpression> =
-                    parameters
-                        .mapIndexedNotNull { index, param ->
-                            val value = annotation.arguments[index] ?: return@mapIndexedNotNull null
-                            irString(param.name.asString()) to value
-                        }.toMap()
-
+                val args = annotation.arguments.filterNotNull()
+                val parameterNames =
+                    annotation.arguments.mapIndexedNotNull { idx, arg ->
+                        if (arg != null) {
+                            irString(
+                                annotation.symbol.owner.parameters[idx]
+                                    .name
+                                    .asString(),
+                            )
+                        } else {
+                            null
+                        }
+                    }
                 arguments[2] =
-                    aspectKContext.pluginContext.createIrMapOf(
+                    aspectKContext.pluginContext.createIrListOf(
                         scope = aspectKContext.annotationInfoSymbol,
-                        elements = argMap,
+                        elements = args,
+                    )
+
+                arguments[3] =
+                    aspectKContext.pluginContext.createIrListOf(
+                        scope = aspectKContext.annotationInfoSymbol,
+                        elements = parameterNames,
+                        elementType = aspectKContext.pluginContext.irBuiltIns.stringType,
                     )
             }
         }
-    }
 }

@@ -29,7 +29,7 @@ class AspectTransformerTest {
                 object ExampleAspect {
                     @Before(TargetExample::class)
                     fun doBefore(joinPoint: JoinPoint) {
-                        System.out.println("hello")
+                        System.out.println(joinPoint.args)
                     }
                 }
                                     
@@ -163,7 +163,8 @@ class AspectTransformerTest {
                         AnnotationInfo(
                             type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
                             typeName = "TargetExample",
-                            arguments = mapOf("name" to "example2"),
+                            args = listOf("example2"),
+                            parameterNames = listOf("name"),
                         ),
                     ),
             )

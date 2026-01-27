@@ -16,7 +16,8 @@ fun singleField(loader: URLClassLoader) =
                 AnnotationInfo(
                     type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
                     typeName = "TargetExample",
-                    arguments = mapOf("name" to "example1"),
+                    args = listOf("example1"),
+                    parameterNames = listOf("name"),
                 ),
             ),
         parameter =
@@ -36,7 +37,8 @@ fun singleFieldWithMethodArgs(loader: URLClassLoader) =
                 AnnotationInfo(
                     type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
                     typeName = "TargetExample",
-                    arguments = mapOf("name" to "example1"),
+                    args = listOf("example1"),
+                    parameterNames = listOf("name"),
                 ),
             ),
         parameter =
@@ -58,7 +60,8 @@ fun singleFieldWithMethodArgs(loader: URLClassLoader) =
                             AnnotationInfo(
                                 type = NotNull::class,
                                 typeName = "org.jetbrains.annotations.NotNull",
-                                arguments = mapOf("value" to "test"),
+                                args = listOf("test"),
+                                parameterNames = listOf("value"),
                             ),
                         ),
                     isNullable = false,
@@ -77,7 +80,8 @@ fun doubleFieldWithMethodArgs(loader: URLClassLoader) =
                 AnnotationInfo(
                     type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
                     typeName = "TargetExample",
-                    arguments = mapOf("name" to "example1"),
+                    args = listOf("example1"),
+                    parameterNames = listOf("name"),
                 ),
             ),
         parameter =
@@ -99,7 +103,8 @@ fun singleFieldWithDoubleClass(
             AnnotationInfo(
                 type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
                 typeName = "TargetExample",
-                arguments = mapOf("name" to "example1"),
+                args = listOf("example1"),
+                parameterNames = listOf("name"),
             ),
         ),
     parameter =
