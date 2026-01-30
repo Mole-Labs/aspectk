@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 aspectk
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
@@ -64,9 +79,8 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
-    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-        ?: error("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
+    ?: error("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -74,7 +88,6 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T =
-    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-        block()
-    }
+): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+    block()
+}

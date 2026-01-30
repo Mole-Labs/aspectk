@@ -3,6 +3,8 @@ kotlin = "2.2.21"
 junitJupiter = "5.8.1"
 pluginId = "com.mole.aspectk.compiler"
 autoService = "1.1.1"
+binaryCompatibilityValidator = "0.18.1"
+spotless = "8.1.0"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
@@ -19,5 +21,6 @@ kotlin-compiler-embeddable = {module = "org.jetbrains.kotlin:kotlin-compiler-emb
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version = "9.2.2" }
-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+diffplug-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+kotlinx-binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
