@@ -20,6 +20,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.reflect.KClass
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -114,12 +115,6 @@ class MethodSignatureFieldGeneratorTest {
                 fieldName = $$"ajc$tjp_0",
             )
 
-//        loader.loadClass("Test").let { clazz ->
-//            val instance = clazz.getDeclaredConstructor().newInstance()
-//            clazz
-//                .getMethod("test1", Integer::class.java, java.lang.String::class.java)
-//                .invoke(instance, 1, "nono")
-//        }
         // then
         val expected = singleFieldWithMethodArgs(loader)
         assertEquals(expected, actual)
@@ -176,14 +171,14 @@ class MethodSignatureFieldGeneratorTest {
             expected1.copy(
                 methodName = "test2",
                 annotations =
-                listOf(
-                    AnnotationInfo(
-                        type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
-                        typeName = "TargetExample",
-                        args = listOf("example2"),
-                        parameterNames = listOf("name"),
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf("example2"),
+                            parameterNames = listOf("name"),
+                        ),
                     ),
-                ),
             )
         assertEquals(expected1, actual1)
         assertEquals(expected2, actual2)
@@ -240,5 +235,46 @@ class MethodSignatureFieldGeneratorTest {
         val expected2 = singleFieldWithDoubleClass(loader, "Test2")
         assertEquals(expected1, actual1)
         assertEquals(expected2, actual2)
+    }
+
+    @Test
+    fun `MethodSignature should be created only for target annotations`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample(
+                    val name:String
+                )
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test1 {
+                    fun test1() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val loader = result.classLoader
+
+        // then
+        assertThrows<NoSuchFieldException> {
+            loader.assertAndGetField(
+                className = "Test1",
+                fieldName = $$"ajc$tjp_0",
+            )
+        }
     }
 }

@@ -24,7 +24,6 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.FqName
 
@@ -40,7 +39,6 @@ data class Context(
 )
  */
 
-// TODO 컴파일러 코드에서 stdlib 의존성 제거 -> 현재 IR트리가 너무 깊습니다.
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
@@ -59,7 +57,7 @@ internal class AspectTransformer(
         parentClass.declarations.add(signatureField)
 
         val joinPoint =
-            joinPointGenerator.generate(declaration, signature.deepCopyWithSymbols())
+            joinPointGenerator.generate(declaration, signatureField)
         val adviceCalls =
             aspectKContext.withIrBuilder(declaration.symbol) {
                 irBlock {
