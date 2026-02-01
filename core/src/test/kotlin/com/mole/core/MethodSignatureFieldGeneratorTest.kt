@@ -20,6 +20,7 @@ import com.tschuchort.compiletesting.KotlinCompilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertAll
 import org.junit.jupiter.api.assertThrows
 import kotlin.reflect.KClass
 
@@ -54,9 +55,12 @@ class MethodSignatureFieldGeneratorTest {
                     fun test1() {
                     }
                 }
+
+                fun main() {
+
+                }
                 """,
             )
-
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
@@ -166,19 +170,20 @@ class MethodSignatureFieldGeneratorTest {
                 fieldName = $$"ajc$tjp_1",
             )
 
+        // then
         val expected1 = doubleFieldWithMethodArgs(loader)
         val expected2 =
             expected1.copy(
                 methodName = "test2",
                 annotations =
-                    listOf(
-                        AnnotationInfo(
-                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
-                            typeName = "TargetExample",
-                            args = listOf("example2"),
-                            parameterNames = listOf("name"),
-                        ),
+                listOf(
+                    AnnotationInfo(
+                        type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                        typeName = "TargetExample",
+                        args = listOf("example2"),
+                        parameterNames = listOf("name"),
                     ),
+                ),
             )
         assertEquals(expected1, actual1)
         assertEquals(expected2, actual2)
@@ -218,6 +223,7 @@ class MethodSignatureFieldGeneratorTest {
                 """,
             )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
         // when
         val loader = result.classLoader
         val actual1 =
@@ -231,10 +237,13 @@ class MethodSignatureFieldGeneratorTest {
                 fieldName = $$"ajc$tjp_1",
             )
 
+        // then
         val expected1 = singleFieldWithDoubleClass(loader, "Test1")
         val expected2 = singleFieldWithDoubleClass(loader, "Test2")
-        assertEquals(expected1, actual1)
-        assertEquals(expected2, actual2)
+        assertAll(
+            { assertEquals(expected1, actual1) },
+            { assertEquals(expected2, actual2) },
+        )
     }
 
     @Test
@@ -265,16 +274,296 @@ class MethodSignatureFieldGeneratorTest {
                 """,
             )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when
         val loader = result.classLoader
 
-        // then
+        // when - then
         assertThrows<NoSuchFieldException> {
             loader.assertAndGetField(
                 className = "Test1",
                 fieldName = $$"ajc$tjp_0",
             )
         }
+    }
+
+    @Test
+    fun `MethodSignature should be created for multiple target annotations`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample1
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample2
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample3
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample1::class, TargetExample2::class, TargetExample3::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample1
+                    fun test1() {}
+
+                    @TargetExample2
+                    fun test2() {}
+
+                    @TargetExample3
+                    fun test3() {}
+                }
+                """,
+            )
+
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        val actual2 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_1",
+            )
+
+        val actual3 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_2",
+            )
+
+        // then
+        val expected1 = singleFieldWithNoArgs(loader, "test1", "TargetExample1")
+        val expected2 = singleFieldWithNoArgs(loader, "test2", "TargetExample2")
+        val expected3 = singleFieldWithNoArgs(loader, "test3", "TargetExample3")
+
+        assertAll(
+            { assertEquals(expected1, actual1) },
+            { assertEquals(expected2, actual2) },
+            { assertEquals(expected3, actual3) },
+        )
+    }
+
+    @Test
+    fun `MethodSignature should be created only once when multiple target annotations exists`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample1
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample2
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample3
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample1::class, TargetExample2::class, TargetExample3::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample1
+                    @TargetExample2
+                    @TargetExample3
+                    fun test1() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        val expected1 =
+            singleFieldWithMultipleAnnotations(
+                loader,
+                "test1",
+                "TargetExample1",
+                "TargetExample2",
+                "TargetExample3",
+            )
+
+        assertAll(
+            { assertEquals(expected1, actual1) },
+            {
+                assertThrows<NoSuchFieldException> {
+                    loader.assertAndGetField(
+                        className = "Test",
+                        fieldName = $$"ajc$tjp_1",
+                    )
+                }
+            },
+            {
+                assertThrows<NoSuchFieldException> {
+                    loader.assertAndGetField(
+                        className = "Test",
+                        fieldName = $$"ajc$tjp_2",
+                    )
+                }
+            },
+        )
+    }
+
+    @Test
+    fun `MethodSignature should be created once for multiple advices`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample1
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample1::class)
+                    fun doBefore1(joinPoint: JoinPoint) {
+                    }
+
+                    @Before(TargetExample1::class)
+                    fun doBefore2(joinPoint: JoinPoint) {
+                    }
+
+                    @Before(TargetExample1::class)
+                    fun doBefore3(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample1
+                    fun test1() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        val expected1 =
+            singleFieldWithMultipleAnnotations(
+                loader,
+                "test1",
+                "TargetExample1",
+            )
+
+        assertEquals(expected1, actual1)
+    }
+
+    @Test
+    fun `MethodSignatures should be created for many-to-many relationship between advices and targets`() {
+        // given
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample1
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample2
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample3
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample1::class, TargetExample2::class, TargetExample3::class)
+                fun doBefore1(joinPoint: JoinPoint) {
+                }
+
+                @Before(TargetExample1::class, TargetExample3::class)
+                fun doBefore2(joinPoint: JoinPoint) {
+                }
+
+                @Before(TargetExample2::class)
+                fun doBefore3(joinPoint: JoinPoint) {
+                }
+            }
+
+            class Test {
+                @TargetExample1
+                @TargetExample2
+                fun test1() {}
+
+                @TargetExample3
+                fun test2() {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual1 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        val actual2 =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_1",
+            )
+
+        val expected1 =
+            singleFieldWithMultipleAnnotations(
+                loader,
+                "test1",
+                "TargetExample1",
+                "TargetExample2",
+            )
+
+        val expected2 =
+            singleFieldWithMultipleAnnotations(
+                loader,
+                "test2",
+                "TargetExample3",
+            )
+
+        assertAll(
+            { assertEquals(expected1, actual1) },
+            { assertEquals(expected2, actual2) },
+        )
     }
 }

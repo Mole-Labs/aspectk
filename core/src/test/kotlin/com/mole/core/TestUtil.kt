@@ -50,13 +50,13 @@ fun compile(
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
-    source: String,
+    vararg source: String,
     name: String = "aspectk-test.kt",
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
 ): JvmCompilationResult = compile(
-    listOf(
-        SourceFile.kotlin(name = name, contents = source),
-    ),
+    source.mapIndexed { idx, source ->
+        SourceFile.kotlin(name = "${idx}_$name", contents = source)
+    },
     plugin,
 )
 

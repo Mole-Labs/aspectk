@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.FqName
 
@@ -64,7 +65,7 @@ internal class AspectTransformer(
                     aspectKContext.aspectLookUp[target].forEach {
                         +irCall(it.advice.symbol).apply {
                             dispatchReceiver = irGetObject(it.aspect)
-                            arguments[1] = joinPoint
+                            arguments[1] = joinPoint.deepCopyWithSymbols()
                         }
                     }
                 }

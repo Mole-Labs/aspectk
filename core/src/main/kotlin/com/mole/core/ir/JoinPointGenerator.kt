@@ -34,24 +34,23 @@ internal class JoinPointGenerator(
     fun generate(
         declaration: IrFunction,
         methodSignatureField: IrField,
-    ): IrExpression =
-        aspectKContext.withIrBuilder(declaration.symbol) {
-            irCall(joinPointConstructor).apply {
-                val receiver =
-                    declaration.dispatchReceiverParameter?.let {
-                        irGet(it)
-                    } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
+    ): IrExpression = aspectKContext.withIrBuilder(declaration.symbol) {
+        irCall(joinPointConstructor).apply {
+            val receiver =
+                declaration.dispatchReceiverParameter?.let {
+                    irGet(it)
+                } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
 
-                arguments[0] = receiver
-                arguments[1] = irGetField(null, methodSignatureField, methodSignatureField.type)
-                arguments[2] =
-                    aspectKContext.createIrListOf(
-                        scope = declaration.symbol,
-                        elements =
-                            declaration.parameters.map {
-                                irGet(it)
-                            },
-                    )
-            }
+            arguments[0] = receiver
+            arguments[1] = irGetField(null, methodSignatureField, methodSignatureField.type)
+            arguments[2] =
+                aspectKContext.createIrListOf(
+                    scope = declaration.symbol,
+                    elements =
+                    declaration.parameters.map {
+                        irGet(it)
+                    },
+                )
         }
+    }
 }

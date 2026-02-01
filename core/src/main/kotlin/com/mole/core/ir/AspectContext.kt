@@ -70,7 +70,7 @@ internal data class AspectContext(
     val advice: IrFunction,
     val aspect: IrClassSymbol,
     val kind: Kind,
-    val methodSignature: IrExpression? = null,
+    val methodSignature: IrExpression? = null, // TODO mapping context to methodSignature when compiling. currently, it is always null
 ) {
     enum class Kind {
         BEFORE, // 추후 After, Around 추가 예정
