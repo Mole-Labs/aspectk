@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.name.FqName
 
 /*
@@ -46,7 +47,7 @@ internal class AspectVisitor(
     private val aspectkContext: AspectKIrCompilerContext,
 ) : IrVisitorVoid() {
     override fun visitFile(declaration: IrFile) {
-        declaration.acceptChildren(this, null)
+        declaration.acceptChildrenVoid(this)
     }
 
     override fun visitClass(declaration: IrClass) {
@@ -86,15 +87,16 @@ internal class AspectVisitor(
             aspectkContext.aspectLookUp.add(
                 fqName = targetFqName,
                 aspectContext =
-                AspectContext(
-                    advice = func,
-                    aspect = aspectClass.symbol,
-                    kind = kind,
-                    methodSignature = null,
-                ),
+                    AspectContext(
+                        advice = func,
+                        aspect = aspectClass.symbol,
+                        kind = kind,
+                        methodSignature = null,
+                    ),
             )
         }
     }
 
-    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean =
+        !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
 }

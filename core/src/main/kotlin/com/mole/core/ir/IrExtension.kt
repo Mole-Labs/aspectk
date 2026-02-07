@@ -16,10 +16,13 @@
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
+import org.jetbrains.kotlin.descriptors.ClassKind
+import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irVararg
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
@@ -79,8 +82,9 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-    ?: error("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
+    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
+        ?: error("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -88,6 +92,18 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-    block()
+): T =
+    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+        block()
+    }
+
+internal fun IrClass.isInheritable(): Boolean {
+    val isInterface = kind == ClassKind.INTERFACE
+    val isAbstractClass =
+        kind == ClassKind.CLASS &&
+            modality == Modality.ABSTRACT
+    val isOpenClass =
+        kind == ClassKind.CLASS &&
+            modality == Modality.OPEN
+    return isInterface || isOpenClass || isAbstractClass
 }

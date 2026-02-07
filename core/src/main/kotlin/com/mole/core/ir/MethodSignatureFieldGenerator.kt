@@ -40,7 +40,7 @@ internal class MethodSignatureFieldGenerator(
 
     private val methodSignatureConstructor = aspectKContext.methodSignatureSymbol.constructors.first()
 
-    private lateinit var parentClass: IrClass
+    private lateinit var parentClass: IrDeclarationParent
 
     fun toField(methodSignature: IrExpression): IrField = aspectKContext.pluginContext.irFactory
         .buildField {
@@ -61,10 +61,10 @@ internal class MethodSignatureFieldGenerator(
 
     fun generate(
         declaration: IrFunction,
-        parentClass: IrClass,
+        parentClass: IrDeclarationParent,
     ): IrExpression {
         this.parentClass = parentClass
-        return aspectKContext.withIrBuilder(parentClass.symbol) {
+        return aspectKContext.withIrBuilder(declaration.symbol) {
             createMethodSignatureInitializer(declaration)
         }
     }

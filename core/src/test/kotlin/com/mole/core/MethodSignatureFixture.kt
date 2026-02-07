@@ -128,7 +128,7 @@ fun singleFieldWithDoubleClass(
 )
 
 @Suppress("UNCHECKED_CAST")
-fun singleFieldWithNoArgs(
+fun singleFieldWithNoAnnotationArgs(
     loader: URLClassLoader,
     methodName: String,
     annotationName: String,
@@ -171,6 +171,28 @@ fun singleFieldWithMultipleAnnotations(
     listOf(
         loader.thisParameterInfo(),
     ),
+    returnType = Unit::class,
+    returnTypeName = "kotlin.Unit",
+)
+
+@Suppress("UNCHECKED_CAST")
+fun singleFieldWithNoThisParameter(
+    loader: URLClassLoader,
+    methodName: String,
+    vararg annotationNames: String,
+) = MethodSignature(
+    methodName = methodName,
+    annotations =
+    annotationNames.map { name ->
+        AnnotationInfo(
+            type = loader.loadClass(name).kotlin as KClass<out Annotation>,
+            typeName = name,
+            args = listOf(),
+            parameterNames = listOf(),
+        )
+    },
+    parameter =
+    listOf(),
     returnType = Unit::class,
     returnTypeName = "kotlin.Unit",
 )

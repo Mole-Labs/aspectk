@@ -20,42 +20,57 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGetObject
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.util.allOverridden
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.FqName
-
-/*
-일단 acceptChild로 IrCall, IrSymbol 객체 저장
-자료구조가 Map<FqName, List<Context>>
-
-data class Context(
-    val irCall:IrCall,
-    val symbol:IrSymbol,
-    val methodSignature:
-    val kind:AspectKind
-)
- */
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
     private val methodSignatureFieldGenerator: MethodSignatureFieldGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
-    private val targetAnnotations: List<FqName>,
 ) : IrElementTransformerVoidWithContext() {
-    override fun visitFunctionNew(declaration: IrFunction): IrStatement {
-        val target =
-            targetAnnotation(declaration)
-                ?: return super.visitFunctionNew(declaration)
-        val parentClass =
-            currentClass?.irElement as? IrClass ?: return super.visitFunctionNew(declaration)
-        val signature = methodSignatureFieldGenerator.generate(declaration, parentClass)
+    private val targetAnnotations = aspectKContext.aspectLookUp.targets
+
+    override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+        if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
+        val parent = declaration.parent as? IrClass ?: return super.visitFunctionNew(declaration)
+        val target = targetAnnotation(declaration)
+
+        // 상속 가능한 클래스가 아니며, 타겟에 해당되는 경우
+        if (!parent.isInheritable() && target != null) {
+            generateInner(declaration, target)
+            return super.visitFunctionNew(declaration)
+        }
+
+        // 부모타입 어노테이션 체크
+        val allOverridden = declaration.allOverridden().map { it.parent }
+
+        targetAnnotations.forEach { targetAnnotation ->
+            val inheritable = aspectKContext.aspectLookUp.getInheritable(targetAnnotation)
+            val isOverridden = allOverridden.any { inheritable.contains(it) }
+
+            if (isOverridden) {
+                generateInner(declaration, targetAnnotation)
+            }
+        }
+
+        return super.visitSimpleFunction(declaration)
+    }
+
+    private fun generateInner(
+        declaration: IrFunction,
+        target: FqName,
+    ) {
+        val parent = findParent(declaration) ?: return
+        val signature = methodSignatureFieldGenerator.generate(declaration, parent)
         val signatureField = methodSignatureFieldGenerator.toField(signature)
-        parentClass.declarations.add(signatureField)
+        parent.declarations.add(signatureField)
 
         val joinPoint =
             joinPointGenerator.generate(declaration, signatureField)
@@ -71,8 +86,14 @@ internal class AspectTransformer(
                 }
             }
         (declaration.body as? IrBlockBody)?.statements?.add(0, adviceCalls)
+    }
 
-        return super.visitFunctionNew(declaration)
+    private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
+        var current = declaration.parent
+        while (current !is IrDeclarationContainer) {
+            current = (current as? IrDeclaration)?.parent ?: return null
+        }
+        return current
     }
 
     private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.find(declaration::hasAnnotation)

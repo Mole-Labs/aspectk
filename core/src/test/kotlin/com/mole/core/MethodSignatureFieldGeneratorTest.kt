@@ -16,9 +16,12 @@
 package com.mole.core
 
 import com.mole.runtime.AnnotationInfo
+import com.mole.runtime.MethodParameter
+import com.mole.runtime.MethodSignature
 import com.tschuchort.compiletesting.KotlinCompilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 import org.junit.jupiter.api.assertThrows
@@ -176,14 +179,14 @@ class MethodSignatureFieldGeneratorTest {
             expected1.copy(
                 methodName = "test2",
                 annotations =
-                listOf(
-                    AnnotationInfo(
-                        type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
-                        typeName = "TargetExample",
-                        args = listOf("example2"),
-                        parameterNames = listOf("name"),
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf("example2"),
+                            parameterNames = listOf("name"),
+                        ),
                     ),
-                ),
             )
         assertEquals(expected1, actual1)
         assertEquals(expected2, actual2)
@@ -347,9 +350,9 @@ class MethodSignatureFieldGeneratorTest {
             )
 
         // then
-        val expected1 = singleFieldWithNoArgs(loader, "test1", "TargetExample1")
-        val expected2 = singleFieldWithNoArgs(loader, "test2", "TargetExample2")
-        val expected3 = singleFieldWithNoArgs(loader, "test3", "TargetExample3")
+        val expected1 = singleFieldWithNoAnnotationArgs(loader, "test1", "TargetExample1")
+        val expected2 = singleFieldWithNoAnnotationArgs(loader, "test2", "TargetExample2")
+        val expected3 = singleFieldWithNoAnnotationArgs(loader, "test3", "TargetExample3")
 
         assertAll(
             { assertEquals(expected1, actual1) },
@@ -565,5 +568,701 @@ class MethodSignatureFieldGeneratorTest {
             { assertEquals(expected1, actual1) },
             { assertEquals(expected2, actual2) },
         )
+    }
+
+    @Test
+    fun `MethodSignatures should be created for inline functions`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample
+                    inline fun inlineFun() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected = singleFieldWithNoAnnotationArgs(loader, "inlineFun", "TargetExample")
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for suspend functions`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample
+                    suspend fun suspendFun() {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected = singleFieldWithNoAnnotationArgs(loader, "suspendFun", "TargetExample")
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for top-level functions`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                @TargetExample
+                fun test() {}
+                """,
+                name = "Test.kt",
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "_0_TestKt",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected =
+            singleFieldWithNoThisParameter(loader, "test", "TargetExample")
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for property getter`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    var property: String
+                        @TargetExample
+                        get() = "Hello"
+                        set(value) {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected =
+            singleFieldWithNoAnnotationArgs(loader, "<get-property>", "TargetExample")
+                .copy(
+                    returnType = String::class,
+                    returnTypeName = "kotlin.String",
+                )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for property setter`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.PROPERTY_SETTER, AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    var property: String
+                        get() = "Hello"
+                        @TargetExample
+                        set(value) {}
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "Test",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected =
+            singleFieldWithNoAnnotationArgs(loader, "<set-property>", "TargetExample")
+                .copy(
+                    parameter =
+                        listOf(
+                            loader.thisParameterInfo(),
+                            MethodParameter(
+                                name = "value",
+                                type = String::class,
+                                typeName = "kotlin.String",
+                                annotations = listOf(),
+                                isNullable = false,
+                            ),
+                        ),
+                )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for extension functions`() {
+        // given
+        val result =
+            compile(
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test
+
+                @TargetExample
+                fun Test.extensionFun() {}
+                """,
+                name = "Test.kt",
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val actual =
+            loader.assertAndGetField(
+                className = "_0_TestKt",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected = singleFieldWithNoAnnotationArgs(loader, "extensionFun", "TargetExample")
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for functions with vararg parameters`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class Test {
+                @TargetExample
+                fun varargFun(vararg names: String) {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+
+        val expected =
+            MethodSignature(
+                methodName = "varargFun",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        loader.thisParameterInfo(),
+                        MethodParameter(
+                            name = "names",
+                            type = Array<String>::class,
+                            typeName = "kotlin.Array",
+                            annotations = listOf(),
+                            isNullable = false,
+                        ),
+                    ),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for functions with default parameters`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class Test {
+                @TargetExample
+                fun defaultParamFun(name: String = "default") {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+
+        val expected =
+            MethodSignature(
+                methodName = "defaultParamFun",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        loader.thisParameterInfo(),
+                        MethodParameter(
+                            name = "name",
+                            type = String::class,
+                            typeName = "kotlin.String",
+                            annotations = listOf(),
+                            isNullable = false,
+                        ),
+                    ),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for functions returning suspend functions`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+            import kotlin.reflect.KClass
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class Test {
+                @TargetExample
+                fun returnsSuspendFun(): suspend () -> Unit {
+                    return {}
+                }
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+
+        val expected =
+            MethodSignature(
+                methodName = "returnsSuspendFun",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+                parameter = listOf(loader.thisParameterInfo()),
+                returnType = kotlin.jvm.functions.Function1::class,
+                returnTypeName = "kotlin.Function1",
+            )
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for local functions`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class Test {
+                fun outer() {
+                    @TargetExample
+                    fun localFun() {}
+                    localFun()
+                }
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0") as MethodSignature
+
+        assertEquals("localFun", actual.methodName)
+        assertNotNull(actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for operator functions`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class Point(val x: Int, val y: Int) {
+                @TargetExample
+                operator fun plus(other: Point): Point {
+                    return Point(x + other.x, y + other.y)
+                }
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "Point", fieldName = $$"ajc$tjp_0")
+
+        val pointClass = loader.loadClass("Point").kotlin
+        val expected =
+            MethodSignature(
+                methodName = "plus",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        MethodParameter(
+                            name = "<this>",
+                            type = pointClass,
+                            typeName = "Point",
+                            annotations = listOf(),
+                            isNullable = false,
+                        ),
+                        MethodParameter(
+                            name = "other",
+                            type = pointClass,
+                            typeName = "Point",
+                            annotations = listOf(),
+                            isNullable = false,
+                        ),
+                    ),
+                returnType = pointClass,
+                returnTypeName = "Point",
+            )
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for implementations of annotated interface methods`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+            
+            interface MyInterface {
+                @TargetExample
+                fun work()
+            }
+
+            class MyClass : MyInterface {
+                override fun work() {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+        val actual = loader.assertAndGetField(className = "MyClass", fieldName = $$"ajc$tjp_0")
+
+        val expected =
+            MethodSignature(
+                methodName = "work",
+                annotations = listOf(),
+                parameter = listOf(loader.thisParameterInfo("MyClass")),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+
+        assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for overriding methods with annotation on superclass`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            open class Base {
+                @TargetExample
+                open fun work() {}
+            }
+
+            class Derived : Base() {
+                override fun work() {
+                    super.work()
+                }
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // A field is created for the overridden method in the derived class
+        val actual = loader.assertAndGetField(className = "Derived", fieldName = $$"ajc$tjp_0")
+
+        val expected =
+            MethodSignature(
+                methodName = "work",
+                annotations =
+                    listOf(),
+                parameter = listOf(loader.thisParameterInfo("Derived")),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+
+        assertEquals(expected, actual)
+
+        // A field should also be created for the base class method itself
+        val baseActual = loader.assertAndGetField(className = "Base", fieldName = $$"ajc$tjp_0")
+        val baseExpected = expected.copy(parameter = listOf(loader.thisParameterInfo("Base")))
+        assertEquals(baseExpected, baseActual)
+    }
+
+    @Test
+    fun `MethodSignature should be created for annotated functions in a companion object`() {
+        val result =
+            compile(
+                """
+            import com.mole.runtime.Aspect
+            import com.mole.runtime.Before
+            import com.mole.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Before(TargetExample::class)
+                fun doBefore(joinPoint: JoinPoint) {}
+            }
+
+            class MyClassWithCompanion {
+                companion object {
+                    @TargetExample
+                    fun work() {}
+                }
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        val companionClassName = $$"MyClassWithCompanion$Companion"
+        val actual = loader.assertAndGetField(className = companionClassName, fieldName = $$"ajc$tjp_0")
+
+        val companionClass = loader.loadClass(companionClassName).kotlin
+        val expected =
+            MethodSignature(
+                methodName = "work",
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+                parameter =
+                    listOf(
+                        MethodParameter(
+                            name = "<this>",
+                            type = companionClass,
+                            typeName = "MyClassWithCompanion.Companion",
+                            annotations = listOf(),
+                            isNullable = false,
+                        ),
+                    ),
+                returnType = Unit::class,
+                returnTypeName = "kotlin.Unit",
+            )
+        assertEquals(expected, actual)
     }
 }
