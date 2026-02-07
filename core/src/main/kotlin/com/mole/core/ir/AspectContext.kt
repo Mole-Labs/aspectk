@@ -16,53 +16,38 @@
 package com.mole.core.ir
 
 import com.mole.core.ir.AspectContext.Kind.BEFORE
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.name.FqName
+import java.util.concurrent.ConcurrentHashMap
 
 // Target Annotation과 AspectContext는 다대다관계
 // 즉 하나의 Target에 여러 Advice를 가질 수 있고
 // 하나의 Advice에 여러 Target을 가질 수 있음
 internal class AspectLookUp {
-    private val _targets = mutableListOf<FqName>()
-    val targets: List<FqName> get() = _targets.toList()
-    private val targetToIdx = mutableMapOf<FqName, Int>()
+    private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> = ConcurrentHashMap()
+    private val inheritableAspects: ConcurrentHashMap<FqName, MutableList<IrClass>> = ConcurrentHashMap()
 
-    private val contexts = mutableListOf<AspectContext>()
-    private val contextToIdx = mutableMapOf<AspectContext, Int>()
+    val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
-    private val targetToContextsMap = mutableMapOf<Int, MutableList<Int>>()
-    private val contextToTargetsMap = mutableMapOf<Int, MutableList<Int>>()
+    operator fun get(fqName: FqName): List<AspectContext> = aspectContexts[fqName]?.toList() ?: emptyList()
 
-    operator fun get(fqName: FqName): List<AspectContext> {
-        val tIdx = targetToIdx[fqName] ?: return emptyList()
-        return targetToContextsMap[tIdx]?.map { contexts[it] } ?: emptyList()
-    }
+    fun getInheritable(fqName: FqName): List<IrClass> = inheritableAspects[fqName]?.toList() ?: emptyList()
 
-    operator fun get(context: AspectContext): List<FqName> {
-        val cIdx = contextToIdx[context] ?: return emptyList()
-        return contextToTargetsMap[cIdx]?.map { _targets[it] } ?: emptyList()
+    fun addInheritable(
+        fqName: FqName,
+        target: IrClass,
+    ) {
+        inheritableAspects.computeIfAbsent(fqName) { mutableListOf() }.add(target)
     }
 
     fun add(
         fqName: FqName,
         aspectContext: AspectContext,
     ) {
-        val tIdx =
-            targetToIdx.getOrPut(fqName) {
-                _targets.add(fqName)
-                _targets.size - 1
-            }
-
-        val cIdx =
-            contextToIdx.getOrPut(aspectContext) {
-                contexts.add(aspectContext)
-                contexts.size - 1
-            }
-
-        targetToContextsMap.getOrPut(tIdx) { mutableListOf() }.add(cIdx)
-        contextToTargetsMap.getOrPut(cIdx) { mutableListOf() }.add(tIdx)
+        aspectContexts.computeIfAbsent(fqName) { mutableListOf() }.add(aspectContext)
     }
 }
 
@@ -77,9 +62,10 @@ internal data class AspectContext(
     }
 
     companion object {
-        fun find(fqName: FqName) = when (fqName.asString()) {
-            AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
-            else -> null
-        }
+        fun find(fqName: FqName) =
+            when (fqName.asString()) {
+                AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
+                else -> null
+            }
     }
 }
