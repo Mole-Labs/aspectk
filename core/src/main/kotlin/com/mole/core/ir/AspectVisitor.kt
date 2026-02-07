@@ -87,16 +87,15 @@ internal class AspectVisitor(
             aspectkContext.aspectLookUp.add(
                 fqName = targetFqName,
                 aspectContext =
-                    AspectContext(
-                        advice = func,
-                        aspect = aspectClass.symbol,
-                        kind = kind,
-                        methodSignature = null,
-                    ),
+                AspectContext(
+                    advice = func,
+                    aspect = aspectClass.symbol,
+                    kind = kind,
+                    methodSignature = null,
+                ),
             )
         }
     }
 
-    private fun canSkip(declaration: IrClass): Boolean =
-        !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
 }

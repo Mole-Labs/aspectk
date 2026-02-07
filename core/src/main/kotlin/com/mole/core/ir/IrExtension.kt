@@ -85,9 +85,8 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
-    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-        ?: error("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
+    ?: error("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -95,10 +94,9 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T =
-    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-        block()
-    }
+): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+    block()
+}
 
 internal fun IrBody.add(element: IrStatement) {
     (this as? IrBlockBody)?.statements?.add(0, element)

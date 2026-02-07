@@ -69,10 +69,9 @@ internal data class AspectContext(
     }
 
     companion object {
-        fun find(fqName: FqName) =
-            when (fqName.asString()) {
-                AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
-                else -> null
-            }
+        fun find(fqName: FqName) = when (fqName.asString()) {
+            AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
+            else -> null
+        }
     }
 }

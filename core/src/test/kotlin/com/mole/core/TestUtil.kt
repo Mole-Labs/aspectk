@@ -75,7 +75,7 @@ fun URLClassLoader.assertAndGetField(
             assertNotNull(this@apply)
         }.get(targetClass)
 
-fun URLClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
+fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
     MethodParameter(
         name = "<this>",
         type = loadClass(className).kotlin,
