@@ -16,14 +16,17 @@
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
+import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irVararg
 import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
+import org.jetbrains.kotlin.ir.expressions.IrBlockBody
+import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -97,13 +100,13 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
         block()
     }
 
-internal fun IrClass.isInheritable(): Boolean {
-    val isInterface = kind == ClassKind.INTERFACE
-    val isAbstractClass =
-        kind == ClassKind.CLASS &&
-            modality == Modality.ABSTRACT
-    val isOpenClass =
-        kind == ClassKind.CLASS &&
-            modality == Modality.OPEN
-    return isInterface || isOpenClass || isAbstractClass
+internal fun IrBody.add(element: IrStatement) {
+    (this as? IrBlockBody)?.statements?.add(0, element)
 }
+
+internal fun IrDeclarationParent.isAbstract(): Boolean {
+    if (this !is IrClass) return false
+    return modality == Modality.ABSTRACT
+}
+
+internal fun IrClass.isInheritable(): Boolean = modality == Modality.ABSTRACT || modality == Modality.OPEN

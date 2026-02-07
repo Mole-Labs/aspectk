@@ -155,7 +155,7 @@ class AspectLookUpTest {
             val fqName = FqName("com.example.ConcurrentInheritableTarget")
 
             val jobs =
-                List(numThreads) { threadId ->
+                List(numThreads) {
                     launch {
                         repeat(numAddsPerThread) {
                             val irClass = mockIrClass()

@@ -1000,7 +1000,7 @@ class MethodSignatureFieldGeneratorTest {
                     ),
                 parameter = listOf(loader.thisParameterInfo()),
                 returnType = kotlin.jvm.functions.Function1::class,
-                returnTypeName = "kotlin.Function1",
+                returnTypeName = "kotlin.coroutines.SuspendFunction0",
             )
 
         assertEquals(expected, actual)
@@ -1185,13 +1185,12 @@ class MethodSignatureFieldGeneratorTest {
         val loader = result.classLoader
 
         // A field is created for the overridden method in the derived class
-        val actual = loader.assertAndGetField(className = "Derived", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = "Derived", fieldName = $$"ajc$tjp_1")
 
         val expected =
             MethodSignature(
                 methodName = "work",
-                annotations =
-                    listOf(),
+                annotations = listOf(),
                 parameter = listOf(loader.thisParameterInfo("Derived")),
                 returnType = Unit::class,
                 returnTypeName = "kotlin.Unit",
@@ -1201,7 +1200,19 @@ class MethodSignatureFieldGeneratorTest {
 
         // A field should also be created for the base class method itself
         val baseActual = loader.assertAndGetField(className = "Base", fieldName = $$"ajc$tjp_0")
-        val baseExpected = expected.copy(parameter = listOf(loader.thisParameterInfo("Base")))
+        val baseExpected =
+            expected.copy(
+                parameter = listOf(loader.thisParameterInfo("Base")),
+                annotations =
+                    listOf(
+                        AnnotationInfo(
+                            type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                            typeName = "TargetExample",
+                            args = listOf(),
+                            parameterNames = listOf(),
+                        ),
+                    ),
+            )
         assertEquals(baseExpected, baseActual)
     }
 

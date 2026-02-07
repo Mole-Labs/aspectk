@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.name.FqName
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 // Target Annotation과 AspectContext는 다대다관계
@@ -40,14 +41,20 @@ internal class AspectLookUp {
         fqName: FqName,
         target: IrClass,
     ) {
-        inheritableAspects.computeIfAbsent(fqName) { mutableListOf() }.add(target)
+        inheritableAspects
+            .computeIfAbsent(fqName) {
+                Collections.synchronizedList(mutableListOf<IrClass>())
+            }.add(target)
     }
 
     fun add(
         fqName: FqName,
         aspectContext: AspectContext,
     ) {
-        aspectContexts.computeIfAbsent(fqName) { mutableListOf() }.add(aspectContext)
+        aspectContexts
+            .computeIfAbsent(fqName) {
+                Collections.synchronizedList(mutableListOf<AspectContext>())
+            }.add(aspectContext)
     }
 }
 

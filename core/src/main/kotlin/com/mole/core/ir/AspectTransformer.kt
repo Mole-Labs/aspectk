@@ -20,9 +20,12 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGetObject
-import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
+import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.expressions.IrBlockBody
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.allOverridden
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
@@ -38,22 +41,22 @@ internal class AspectTransformer(
     private val targetAnnotations = aspectKContext.aspectLookUp.targets
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
+        // Fake Override 메서드는 패스
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
-        val parent = declaration.parent as? IrClass ?: return super.visitFunctionNew(declaration)
         val target = targetAnnotation(declaration)
 
-        // 상속 가능한 클래스가 아니며, 타겟에 해당되는 경우
-        if (!parent.isInheritable() && target != null) {
+        // 추상 클래스가 아니며, 타겟에 해당되는 경우
+        if (!declaration.parent.isAbstract() && target != null) {
             generateInner(declaration, target)
             return super.visitFunctionNew(declaration)
         }
 
         // 부모타입 어노테이션 체크
-        val allOverridden = declaration.allOverridden().map { it.parent }
+        val overriddenParents = declaration.allOverridden().map { it.parent }
 
         targetAnnotations.forEach { targetAnnotation ->
             val inheritable = aspectKContext.aspectLookUp.getInheritable(targetAnnotation)
-            val isOverridden = allOverridden.any { inheritable.contains(it) }
+            val isOverridden = overriddenParents.any { inheritable.contains(it) }
 
             if (isOverridden) {
                 generateInner(declaration, targetAnnotation)
@@ -72,21 +75,26 @@ internal class AspectTransformer(
         val signatureField = methodSignatureFieldGenerator.toField(signature)
         parent.declarations.add(signatureField)
 
-        val joinPoint =
-            joinPointGenerator.generate(declaration, signatureField)
-        val adviceCalls =
-            aspectKContext.withIrBuilder(declaration.symbol) {
-                irBlock {
-                    aspectKContext.aspectLookUp[target].forEach {
-                        +irCall(it.advice.symbol).apply {
-                            dispatchReceiver = irGetObject(it.aspect)
-                            arguments[1] = joinPoint.deepCopyWithSymbols()
-                        }
+        val joinPoint = joinPointGenerator.generate(declaration, signatureField)
+        val adviceCalls = generateAdviceCalls(declaration, target, joinPoint)
+        declaration.body?.add(adviceCalls)
+    }
+
+    private fun generateAdviceCalls(
+        declaration: IrFunction,
+        target: FqName,
+        joinPoint: IrExpression,
+    ): IrStatement =
+        aspectKContext.withIrBuilder(declaration.symbol) {
+            irBlock {
+                aspectKContext.aspectLookUp[target].forEach {
+                    +irCall(it.advice.symbol).apply {
+                        dispatchReceiver = irGetObject(it.aspect)
+                        arguments[1] = joinPoint.deepCopyWithSymbols()
                     }
                 }
             }
-        (declaration.body as? IrBlockBody)?.statements?.add(0, adviceCalls)
-    }
+        }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
         var current = declaration.parent
