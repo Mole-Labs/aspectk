@@ -16,15 +16,15 @@
 package com.mole.core.ir
 
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
+import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
+import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irVararg
-import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
-import org.jetbrains.kotlin.ir.declarations.IrParameterKind
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -85,8 +85,9 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-    ?: error("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
+    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
+        ?: error("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -94,9 +95,10 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-    block()
-}
+): T =
+    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+        block()
+    }
 
 internal fun IrBody.add(element: IrStatement) {
     (this as? IrBlockBody)?.statements?.add(0, element)
@@ -108,3 +110,14 @@ internal fun IrDeclarationParent.isAbstract(): Boolean {
 }
 
 internal fun IrClass.isInheritable(): Boolean = modality == Modality.ABSTRACT || modality == Modality.OPEN
+
+internal fun IrField.toProperty(context: AspectKIrCompilerContext): IrProperty =
+    context.pluginContext.irFactory
+        .buildProperty {
+            name = this@toProperty.name
+            visibility = DescriptorVisibilities.PRIVATE
+            origin = IrDeclarationOrigin.DEFINED
+        }.apply {
+            parent = parent
+            backingField = this@toProperty
+        }

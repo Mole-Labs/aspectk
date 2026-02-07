@@ -59,7 +59,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -100,7 +100,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -140,7 +140,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "_0_TestKt",
+                className = $$$"$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -185,7 +185,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -233,7 +233,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -289,7 +289,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = "_0_TestKt",
+                className = $$$"$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -327,7 +327,7 @@ class MethodSignatureFunctionTypeTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = $$$"Test$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val expected = varargFunMethodSignature(loader)
 
         // then
@@ -363,7 +363,7 @@ class MethodSignatureFunctionTypeTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = $$$"Test$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val expected = defaultParamFunMethodSignature(loader)
 
         // then
@@ -402,7 +402,7 @@ class MethodSignatureFunctionTypeTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = $$$"Test$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val expected = returnsSuspendFunMethodSignature(loader)
 
         // then
@@ -441,7 +441,11 @@ class MethodSignatureFunctionTypeTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Test", fieldName = $$"ajc$tjp_0") as MethodSignature
+        val actual =
+            loader.assertAndGetField(
+                className = $$$"Test$$MethodSignatures",
+                fieldName = $$"ajc$tjp_0",
+            ) as MethodSignature
 
         // then
         assertEquals("localFun", actual.methodName)
@@ -479,7 +483,7 @@ class MethodSignatureFunctionTypeTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Point", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = $$$"Point$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val expected = operatorPlusMethodSignature(loader)
 
         // then
@@ -516,10 +520,12 @@ class MethodSignatureFunctionTypeTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
-        val companionClassName = $$"MyClassWithCompanion$Companion"
-
         // when
-        val actual = loader.assertAndGetField(className = companionClassName, fieldName = $$"ajc$tjp_0")
+        val actual =
+            loader.assertAndGetField(
+                className = $$$"MyClassWithCompanion$Companion$$MethodSignatures",
+                fieldName = $$"ajc$tjp_0",
+            )
         val expected = companionObjectWorkMethodSignature(loader)
 
         // then

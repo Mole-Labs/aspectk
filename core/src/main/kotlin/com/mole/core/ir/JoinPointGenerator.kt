@@ -15,12 +15,13 @@
  */
 package com.mole.core.ir
 
+import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irGetField
 import org.jetbrains.kotlin.ir.builders.irNull
-import org.jetbrains.kotlin.ir.declarations.IrField
 import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.constructors
@@ -33,24 +34,30 @@ internal class JoinPointGenerator(
 
     fun generate(
         declaration: IrFunction,
-        methodSignatureField: IrField,
-    ): IrExpression = aspectKContext.withIrBuilder(declaration.symbol) {
-        irCall(joinPointConstructor).apply {
-            val receiver =
-                declaration.dispatchReceiverParameter?.let {
-                    irGet(it)
-                } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
-
-            arguments[0] = receiver
-            arguments[1] = irGetField(null, methodSignatureField, methodSignatureField.type)
-            arguments[2] =
-                aspectKContext.createIrListOf(
-                    scope = declaration.symbol,
-                    elements =
-                    declaration.parameters.map {
+        methodSignatureProperty: IrProperty,
+    ): IrExpression =
+        aspectKContext.withIrBuilder(declaration.symbol) {
+            irCall(joinPointConstructor).apply {
+                val receiver =
+                    declaration.dispatchReceiverParameter?.let {
                         irGet(it)
-                    },
-                )
+                    } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
+
+                val signatureField =
+                    methodSignatureProperty.backingField ?: reportCompilerBug(
+                        "method signature backing field is null",
+                    )
+
+                arguments[0] = receiver
+                arguments[1] = irGetField(null, signatureField, signatureField.type)
+                arguments[2] =
+                    aspectKContext.createIrListOf(
+                        scope = declaration.symbol,
+                        elements =
+                            declaration.parameters.map {
+                                irGet(it)
+                            },
+                    )
+            }
         }
-    }
 }

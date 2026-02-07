@@ -58,9 +58,9 @@ class MethodSignatureTargetingTest {
         val loader = result.classLoader
 
         // when - then
-        assertThrows<NoSuchFieldException> {
+        assertThrows<ClassNotFoundException> {
             loader.assertAndGetField(
-                className = "Test1",
+                className = $$$"Test1$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
         }
@@ -111,19 +111,19 @@ class MethodSignatureTargetingTest {
         // when
         val actual1 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
         val actual2 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_1",
             )
 
         val actual3 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_2",
             )
 
@@ -179,7 +179,7 @@ class MethodSignatureTargetingTest {
         // when
         val actual1 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -198,7 +198,7 @@ class MethodSignatureTargetingTest {
             {
                 assertThrows<NoSuchFieldException> {
                     loader.assertAndGetField(
-                        className = "Test",
+                        className = $$$"Test$$MethodSignatures",
                         fieldName = $$"ajc$tjp_1",
                     )
                 }
@@ -206,7 +206,7 @@ class MethodSignatureTargetingTest {
             {
                 assertThrows<NoSuchFieldException> {
                     loader.assertAndGetField(
-                        className = "Test",
+                        className = $$$"Test$$MethodSignatures",
                         fieldName = $$"ajc$tjp_2",
                     )
                 }
@@ -254,7 +254,7 @@ class MethodSignatureTargetingTest {
         // when
         val actual1 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -318,13 +318,13 @@ class MethodSignatureTargetingTest {
         // when
         val actual1 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
         val actual2 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_1",
             )
 

@@ -30,15 +30,15 @@ class AdviceGenerationExtension : IrGenerationExtension {
     ) {
         val aspectkContext = AspectKIrCompilerContext(pluginContext)
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
-        val methodSignatureGenerator = MethodSignatureFieldGenerator(aspectkContext)
+        val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
 
         aspectkContext
             .tracer(
                 tag =
-                moduleFragment.name
-                    .asString()
-                    .removePrefix("<")
-                    .removeSuffix(">"),
+                    moduleFragment.name
+                        .asString()
+                        .removePrefix("<")
+                        .removeSuffix(">"),
                 description = "Advice Generation",
             ).trace {
                 moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)

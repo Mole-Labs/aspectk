@@ -66,7 +66,7 @@ class MethodSignatureGenerationTest {
         val loader = result.classLoader
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -114,7 +114,7 @@ class MethodSignatureGenerationTest {
         val loader = result.classLoader
         val actual =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -160,12 +160,12 @@ class MethodSignatureGenerationTest {
         val loader = result.classLoader
         val actual1 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
         val actual2 =
             loader.assertAndGetField(
-                className = "Test",
+                className = $$$"Test$$MethodSignatures",
                 fieldName = $$"ajc$tjp_1",
             )
 
@@ -215,12 +215,12 @@ class MethodSignatureGenerationTest {
         val loader = result.classLoader
         val actual1 =
             loader.assertAndGetField(
-                className = "Test1",
+                className = $$$"Test1$$MethodSignatures",
                 fieldName = $$"ajc$tjp_0",
             )
         val actual2 =
             loader.assertAndGetField(
-                className = "Test2",
+                className = $$$"Test2$$MethodSignatures",
                 fieldName = $$"ajc$tjp_1",
             )
 

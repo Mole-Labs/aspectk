@@ -20,10 +20,7 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGetObject
-import org.jetbrains.kotlin.ir.declarations.IrDeclaration
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
-import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -35,7 +32,7 @@ import org.jetbrains.kotlin.name.FqName
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
-    private val methodSignatureFieldGenerator: MethodSignatureFieldGenerator,
+    private val methodSignatureGenerator: MethodSignatureGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targetAnnotations = aspectKContext.aspectLookUp.targets
@@ -71,11 +68,16 @@ internal class AspectTransformer(
         target: FqName,
     ) {
         val parent = findParent(declaration) ?: return
-        val signature = methodSignatureFieldGenerator.generate(declaration, parent)
-        val signatureField = methodSignatureFieldGenerator.toField(signature)
-        parent.declarations.add(signatureField)
+        val innerObjectName = $$"$MethodSignatures"
 
-        val joinPoint = joinPointGenerator.generate(declaration, signatureField)
+        val innerObject =
+            parent.getOrPutAspectObject(innerObjectName) {
+                methodSignatureGenerator.generateInnerObject(innerObjectName, it)
+            }
+
+        val signature = methodSignatureGenerator.generate(declaration, parent)
+        val signatureProperty = methodSignatureGenerator.toProperty(innerObject, signature)
+        val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
         val adviceCalls = generateAdviceCalls(declaration, target, joinPoint)
         declaration.body?.add(adviceCalls)
     }
@@ -105,4 +107,13 @@ internal class AspectTransformer(
     }
 
     private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.find(declaration::hasAnnotation)
+
+    fun IrDeclarationContainer.getOrPutAspectObject(
+        name: String,
+        factory: (IrDeclarationContainer) -> IrClass,
+    ): IrClass =
+        declarations
+            .filterIsInstance<IrClass>()
+            .firstOrNull { it.name.asString() == name }
+            ?: factory(this).also { declarations.add(it) }
 }

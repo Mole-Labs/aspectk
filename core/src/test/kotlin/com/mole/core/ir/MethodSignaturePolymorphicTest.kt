@@ -43,7 +43,7 @@ class MethodSignaturePolymorphicTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "MyClass", fieldName = $$"ajc$tjp_0")
+        val actual = loader.assertAndGetField(className = $$$"MyClass$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val expected = interfaceWorkMethodSignature(loader)
 
         // then
@@ -85,10 +85,10 @@ class MethodSignaturePolymorphicTest {
         val loader = result.classLoader
 
         // when
-        val actual = loader.assertAndGetField(className = "Derived", fieldName = $$"ajc$tjp_1")
+        val actual = loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_1")
         val expected = derivedClassWorkMethodSignature(loader)
 
-        val baseActual = loader.assertAndGetField(className = "Base", fieldName = $$"ajc$tjp_0")
+        val baseActual = loader.assertAndGetField(className = $$$"Base$$MethodSignatures", fieldName = $$"ajc$tjp_0")
         val baseExpected = baseClassWorkMethodSignature(loader)
 
         // then
