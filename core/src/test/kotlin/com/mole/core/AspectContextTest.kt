@@ -23,7 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.name.FqName
@@ -34,13 +34,9 @@ import java.util.concurrent.ConcurrentHashMap
 class AspectLookUpTest {
     private lateinit var aspectLookUp: AspectLookUp
 
-    private val inheritableClass1: IrClass = mockk(relaxed = true)
-    private val inheritableClass2: IrClass = mockk(relaxed = true)
-    private val inheritableClass3: IrClass = mockk(relaxed = true)
-
-    private val aspectContext1 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE)
-    private val aspectContext2 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE)
-    private val aspectContext3 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE)
+    private val aspectContext1 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
+    private val aspectContext2 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
+    private val aspectContext3 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
 
     @Test
     fun `add and get AspectContexts for a single FqName`() {
@@ -87,50 +83,6 @@ class AspectLookUpTest {
     }
 
     @Test
-    fun `add and get inheritable IrClasses for a single FqName`() {
-        // given
-        aspectLookUp = AspectLookUp()
-        val fqName = FqName("com.example.InheritableTarget1")
-
-        // when
-        aspectLookUp.addInheritable(fqName, inheritableClass1)
-        aspectLookUp.addInheritable(fqName, inheritableClass2)
-
-        // then
-        val inheritable = aspectLookUp.getInheritable(fqName)
-        assertAll(
-            { assertEquals(2, inheritable.size) },
-            { assertTrue(inheritable.contains(inheritableClass1)) },
-            { assertTrue(inheritable.contains(inheritableClass2)) },
-        )
-    }
-
-    @Test
-    fun `add and get inheritable IrClasses for multiple FqNames`() {
-        // given
-        aspectLookUp = AspectLookUp()
-        val fqName1 = FqName("com.example.InheritableTarget1")
-        val fqName2 = FqName("com.example.InheritableTarget2")
-
-        // when
-        aspectLookUp.addInheritable(fqName1, inheritableClass1)
-        aspectLookUp.addInheritable(fqName2, inheritableClass2)
-        aspectLookUp.addInheritable(fqName1, inheritableClass3)
-
-        // then
-        val inheritable1 = aspectLookUp.getInheritable(fqName1)
-        val inheritable2 = aspectLookUp.getInheritable(fqName2)
-
-        assertAll(
-            { assertEquals(2, inheritable1.size) },
-            { assertEquals(1, inheritable2.size) },
-            { assertTrue(inheritable1.contains(inheritableClass1)) },
-            { assertTrue(inheritable1.contains(inheritableClass3)) },
-            { assertTrue(inheritable2.contains(inheritableClass2)) },
-        )
-    }
-
-    @Test
     fun `targets property should reflect added FqNames`() {
         // given
         aspectLookUp = AspectLookUp()
@@ -141,7 +93,6 @@ class AspectLookUpTest {
         // when
         aspectLookUp.add(fqName1, aspectContext1)
         aspectLookUp.add(fqName2, aspectContext2)
-        aspectLookUp.addInheritable(fqName3, inheritableClass1)
 
         // then
         val targets = aspectLookUp.targets
@@ -150,6 +101,53 @@ class AspectLookUpTest {
             { assertTrue(targets.contains(fqName1)) },
             { assertTrue(targets.contains(fqName2)) },
             { assertFalse(targets.contains(fqName3)) },
+        )
+    }
+
+    @Test
+    fun `add and get overridden declarations for a single IrElement`() {
+        // given
+        aspectLookUp = AspectLookUp()
+        val irElement1 = mockIrElement()
+
+        // when
+        aspectLookUp.addOverridden(irElement1)
+
+        // then
+        assertTrue(aspectLookUp.getOverridden(irElement1))
+    }
+
+    @Test
+    fun `getOverridden should return false for a non-overridden IrElement`() {
+        // given
+        aspectLookUp = AspectLookUp()
+        val irElement1 = mockIrElement()
+        val irElement2 = mockIrElement()
+
+        // when
+        aspectLookUp.addOverridden(irElement1)
+
+        // then
+        assertFalse(aspectLookUp.getOverridden(irElement2))
+    }
+
+    @Test
+    fun `add and get overridden declarations for multiple IrElements`() {
+        // given
+        aspectLookUp = AspectLookUp()
+        val irElement1 = mockIrElement()
+        val irElement2 = mockIrElement()
+        val irElement3 = mockIrElement()
+
+        // when
+        aspectLookUp.addOverridden(irElement1)
+        aspectLookUp.addOverridden(irElement2)
+
+        // then
+        assertAll(
+            { assertTrue(aspectLookUp.getOverridden(irElement1)) },
+            { assertTrue(aspectLookUp.getOverridden(irElement2)) },
+            { assertFalse(aspectLookUp.getOverridden(irElement3)) },
         )
     }
 
@@ -172,6 +170,7 @@ class AspectLookUpTest {
                                     mockIrFunction(),
                                     mockIrClassSymbol(),
                                     Kind.BEFORE,
+                                    false,
                                 )
                             aspectLookUp.add(fqName, context)
                         }
@@ -187,40 +186,10 @@ class AspectLookUpTest {
             contexts.forEach { distinctContexts.add(it) }
             assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
         }
-
-    @Test
-    fun `thread-safe addition of inheritable IrClasses`() =
-        runBlocking(Dispatchers.Default) {
-            // given
-            aspectLookUp = AspectLookUp()
-            val numThreads = 10
-            val numAddsPerThread = 100
-            val fqName = FqName("com.example.ConcurrentInheritableTarget")
-
-            // when
-            val jobs =
-                List(numThreads) {
-                    launch {
-                        repeat(numAddsPerThread) {
-                            val irClass = mockIrClass()
-                            aspectLookUp.addInheritable(fqName, irClass)
-                        }
-                    }
-                }
-            jobs.joinAll()
-
-            // then
-            val inheritable = aspectLookUp.getInheritable(fqName)
-            assertEquals(numThreads * numAddsPerThread, inheritable.size)
-
-            val distinctIrClasses = ConcurrentHashMap.newKeySet<IrClass>()
-            inheritable.forEach { distinctIrClasses.add(it) }
-            assertEquals(numThreads * numAddsPerThread, distinctIrClasses.size)
-        }
 }
 
 fun mockIrFunction(): IrFunction = mockk(relaxed = true)
 
-fun mockIrClass(): IrClass = mockk(relaxed = true)
-
 fun mockIrClassSymbol(): IrClassSymbol = mockk(relaxed = true)
+
+fun mockIrElement(): IrElement = mockk(relaxed = true)

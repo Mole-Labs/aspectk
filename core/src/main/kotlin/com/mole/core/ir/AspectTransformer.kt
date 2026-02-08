@@ -15,17 +15,14 @@
  */
 package com.mole.core.ir
 
+import com.mole.core.ir.generator.AdviceCallGenerator
+import com.mole.core.ir.generator.JoinPointGenerator
+import com.mole.core.ir.generator.MethodSignatureGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.builders.irBlock
-import org.jetbrains.kotlin.ir.builders.irCall
-import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
-import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.util.allOverridden
-import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.FqName
 
@@ -33,6 +30,7 @@ import org.jetbrains.kotlin.name.FqName
 internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
     private val methodSignatureGenerator: MethodSignatureGenerator,
+    private val adviceCallGenerator: AdviceCallGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targetAnnotations = aspectKContext.aspectLookUp.targets
@@ -42,21 +40,15 @@ internal class AspectTransformer(
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
         val target = targetAnnotation(declaration)
 
-        // 추상 클래스가 아니며, 타겟에 해당되는 경우
-        if (!declaration.parent.isAbstract() && target != null) {
-            generateInner(declaration, target)
-            return super.visitFunctionNew(declaration)
+        // 함수 본문이 있으며, 타겟에 해당되는 경우
+        if (target != null && declaration.hasBody()) {
+            generateInner(declaration, target, false)
         }
 
-        // 부모타입 어노테이션 체크
-        val overriddenParents = declaration.allOverridden().map { it.parent }
-
         targetAnnotations.forEach { targetAnnotation ->
-            val inheritable = aspectKContext.aspectLookUp.getInheritable(targetAnnotation)
-            val isOverridden = overriddenParents.any { inheritable.contains(it) }
-
+            val isOverridden = aspectKContext.aspectLookUp.getOverridden(declaration.attributeOwnerId)
             if (isOverridden) {
-                generateInner(declaration, targetAnnotation)
+                generateInner(declaration, targetAnnotation, true)
             }
         }
 
@@ -66,6 +58,7 @@ internal class AspectTransformer(
     private fun generateInner(
         declaration: IrFunction,
         target: FqName,
+        checkInherits: Boolean,
     ) {
         val parent = findParent(declaration) ?: return
         val innerObjectName = $$"$MethodSignatures"
@@ -78,25 +71,8 @@ internal class AspectTransformer(
         val signature = methodSignatureGenerator.generate(declaration, parent)
         val signatureProperty = methodSignatureGenerator.toProperty(innerObject, signature)
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
-        val adviceCalls = generateAdviceCalls(declaration, target, joinPoint)
-        declaration.body?.add(adviceCalls)
+        adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
     }
-
-    private fun generateAdviceCalls(
-        declaration: IrFunction,
-        target: FqName,
-        joinPoint: IrExpression,
-    ): IrStatement =
-        aspectKContext.withIrBuilder(declaration.symbol) {
-            irBlock {
-                aspectKContext.aspectLookUp[target].forEach {
-                    +irCall(it.advice.symbol).apply {
-                        dispatchReceiver = irGetObject(it.aspect)
-                        arguments[1] = joinPoint.deepCopyWithSymbols()
-                    }
-                }
-            }
-        }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
         var current = declaration.parent
@@ -108,7 +84,7 @@ internal class AspectTransformer(
 
     private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.find(declaration::hasAnnotation)
 
-    fun IrDeclarationContainer.getOrPutAspectObject(
+    private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
         factory: (IrDeclarationContainer) -> IrClass,
     ): IrClass =

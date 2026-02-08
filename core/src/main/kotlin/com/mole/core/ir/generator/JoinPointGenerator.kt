@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mole.core.ir
+package com.mole.core.ir.generator
 
+import com.mole.core.ir.AspectKIrCompilerContext
+import com.mole.core.ir.createIrListOf
+import com.mole.core.ir.withIrBuilder
 import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet

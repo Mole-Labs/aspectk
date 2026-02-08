@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrClassReference
+import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.IrVarargElement
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -58,10 +59,12 @@ internal class AspectVisitor(
                 val fqName = annotation.type.classFqName ?: return@forEach
                 if (fqName !in AspectKIrCompilerContext.ADVICE_ANNOTATIONS_FQ_NAME) return@forEach
                 val kind = AspectContext.find(fqName) ?: reportCompilerBug("kind not found: $fqName")
+                val inherits = (annotation.arguments[1] as? IrConst)?.value as? Boolean
+
                 when (val targetArg = annotation.arguments[0]) {
                     is IrVararg -> {
                         targetArg.elements.forEach { element ->
-                            processElement(element, func, declaration, kind)
+                            processElement(element, func, declaration, kind, inherits)
                         }
                     }
 
@@ -78,24 +81,27 @@ internal class AspectVisitor(
         func: IrSimpleFunction,
         aspectClass: IrClass,
         kind: AspectContext.Kind,
+        inherits: Boolean?,
     ) {
         if (element is IrClassReference) {
             val targetFqName =
                 element.classType.classFqName
                     ?: reportCompilerBug("advice argument type should not be null")
-
-            aspectkContext.aspectLookUp.add(
-                fqName = targetFqName,
-                aspectContext =
+            val context =
                 AspectContext(
                     advice = func,
                     aspect = aspectClass.symbol,
                     kind = kind,
                     methodSignature = null,
-                ),
+                )
+
+            aspectkContext.aspectLookUp.add(
+                fqName = targetFqName,
+                aspectContext = inherits?.let { context.copy(inherits = it) } ?: context,
             )
         }
     }
 
-    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean =
+        !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
 }

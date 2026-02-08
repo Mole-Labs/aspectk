@@ -16,7 +16,7 @@
 package com.mole.core.ir
 
 import com.mole.core.ir.AspectContext.Kind.BEFORE
-import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -29,23 +29,11 @@ import java.util.concurrent.ConcurrentHashMap
 // 하나의 Advice에 여러 Target을 가질 수 있음
 internal class AspectLookUp {
     private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> = ConcurrentHashMap()
-    private val inheritableAspects: ConcurrentHashMap<FqName, MutableList<IrClass>> = ConcurrentHashMap()
+    private val overriddenDeclarations: ConcurrentHashMap.KeySetView<IrElement, Boolean> = ConcurrentHashMap.newKeySet()
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
     operator fun get(fqName: FqName): List<AspectContext> = aspectContexts[fqName]?.toList() ?: emptyList()
-
-    fun getInheritable(fqName: FqName): List<IrClass> = inheritableAspects[fqName]?.toList() ?: emptyList()
-
-    fun addInheritable(
-        fqName: FqName,
-        target: IrClass,
-    ) {
-        inheritableAspects
-            .computeIfAbsent(fqName) {
-                Collections.synchronizedList(mutableListOf<IrClass>())
-            }.add(target)
-    }
 
     fun add(
         fqName: FqName,
@@ -56,12 +44,19 @@ internal class AspectLookUp {
                 Collections.synchronizedList(mutableListOf<AspectContext>())
             }.add(aspectContext)
     }
+
+    fun addOverridden(attributeOwnerId: IrElement) {
+        overriddenDeclarations.add(attributeOwnerId)
+    }
+
+    fun getOverridden(attributeOwnerId: IrElement): Boolean = overriddenDeclarations.contains(attributeOwnerId)
 }
 
 internal data class AspectContext(
     val advice: IrFunction,
     val aspect: IrClassSymbol,
     val kind: Kind,
+    val inherits: Boolean = false,
     val methodSignature: IrExpression? = null, // TODO mapping context to methodSignature when compiling. currently, it is always null
 ) {
     enum class Kind {
@@ -69,9 +64,10 @@ internal data class AspectContext(
     }
 
     companion object {
-        fun find(fqName: FqName) = when (fqName.asString()) {
-            AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
-            else -> null
-        }
+        fun find(fqName: FqName) =
+            when (fqName.asString()) {
+                AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
+                else -> null
+            }
     }
 }

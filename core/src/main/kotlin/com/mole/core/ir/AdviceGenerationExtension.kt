@@ -15,6 +15,9 @@
  */
 package com.mole.core.ir
 
+import com.mole.core.ir.generator.AdviceCallGenerator
+import com.mole.core.ir.generator.JoinPointGenerator
+import com.mole.core.ir.generator.MethodSignatureGenerator
 import com.mole.core.trace
 import com.mole.core.tracer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -31,6 +34,7 @@ class AdviceGenerationExtension : IrGenerationExtension {
         val aspectkContext = AspectKIrCompilerContext(pluginContext)
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
         val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
+        val adviceCallGenerator = AdviceCallGenerator(aspectkContext)
 
         aspectkContext
             .tracer(
@@ -47,6 +51,7 @@ class AdviceGenerationExtension : IrGenerationExtension {
                     AspectTransformer(
                         joinPointGenerator,
                         methodSignatureGenerator,
+                        adviceCallGenerator,
                         aspectkContext,
                     ),
                     null,

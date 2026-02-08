@@ -25,7 +25,7 @@ class MethodSignaturePolymorphicTest {
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
+                @Before(TargetExample::class, inherits = true)
                 fun doBefore(joinPoint: JoinPoint) {}
             }
             
@@ -65,7 +65,7 @@ class MethodSignaturePolymorphicTest {
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
+                @Before(TargetExample::class, inherits = true)
                 fun doBefore(joinPoint: JoinPoint) {}
             }
 
