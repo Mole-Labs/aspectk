@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 // 하나의 Advice에 여러 Target을 가질 수 있음
 internal class AspectLookUp {
     private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> = ConcurrentHashMap()
-    private val overriddenDeclarations: ConcurrentHashMap.KeySetView<IrElement, Boolean> = ConcurrentHashMap.newKeySet()
+    private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> = ConcurrentHashMap()
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
@@ -45,11 +45,17 @@ internal class AspectLookUp {
             }.add(aspectContext)
     }
 
-    fun addOverridden(attributeOwnerId: IrElement) {
-        overriddenDeclarations.add(attributeOwnerId)
+    fun addOverridden(
+        attributeOwnerId: IrElement,
+        target: FqName,
+    ) {
+        overriddenDeclarations
+            .computeIfAbsent(attributeOwnerId) {
+                Collections.synchronizedSet(mutableSetOf<FqName>())
+            }.add(target)
     }
 
-    fun getOverridden(attributeOwnerId: IrElement): Boolean = overriddenDeclarations.contains(attributeOwnerId)
+    fun getOverridden(attributeOwnerId: IrElement): Set<FqName> = overriddenDeclarations[attributeOwnerId]?.toSet() ?: emptySet()
 }
 
 internal data class AspectContext(

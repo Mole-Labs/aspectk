@@ -109,12 +109,13 @@ class AspectLookUpTest {
         // given
         aspectLookUp = AspectLookUp()
         val irElement1 = mockIrElement()
+        val target1 = mockFqName()
 
         // when
-        aspectLookUp.addOverridden(irElement1)
+        aspectLookUp.addOverridden(irElement1, target1)
 
         // then
-        assertTrue(aspectLookUp.getOverridden(irElement1))
+        assertTrue(aspectLookUp.getOverridden(irElement1).contains(target1))
     }
 
     @Test
@@ -123,12 +124,13 @@ class AspectLookUpTest {
         aspectLookUp = AspectLookUp()
         val irElement1 = mockIrElement()
         val irElement2 = mockIrElement()
+        val target1 = mockFqName()
 
         // when
-        aspectLookUp.addOverridden(irElement1)
+        aspectLookUp.addOverridden(irElement1, target1)
 
         // then
-        assertFalse(aspectLookUp.getOverridden(irElement2))
+        assertFalse(aspectLookUp.getOverridden(irElement2).contains(target1))
     }
 
     @Test
@@ -138,16 +140,20 @@ class AspectLookUpTest {
         val irElement1 = mockIrElement()
         val irElement2 = mockIrElement()
         val irElement3 = mockIrElement()
+        val target1 = mockFqName()
+        val target2 = mockFqName()
 
         // when
-        aspectLookUp.addOverridden(irElement1)
-        aspectLookUp.addOverridden(irElement2)
+        aspectLookUp.addOverridden(irElement1, target1)
+        aspectLookUp.addOverridden(irElement1, target2)
+        aspectLookUp.addOverridden(irElement2, target2)
 
         // then
         assertAll(
-            { assertTrue(aspectLookUp.getOverridden(irElement1)) },
-            { assertTrue(aspectLookUp.getOverridden(irElement2)) },
-            { assertFalse(aspectLookUp.getOverridden(irElement3)) },
+            { assertTrue(aspectLookUp.getOverridden(irElement1).contains(target1)) },
+            { assertTrue(aspectLookUp.getOverridden(irElement1).contains(target2)) },
+            { assertTrue(aspectLookUp.getOverridden(irElement2).contains(target2)) },
+            { assertFalse(aspectLookUp.getOverridden(irElement3).contains(target1)) },
         )
     }
 
@@ -186,6 +192,36 @@ class AspectLookUpTest {
             contexts.forEach { distinctContexts.add(it) }
             assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
         }
+
+    @Test
+    fun `thread-safe addition of overridden declarations for multiple IrElements`() =
+        runBlocking(Dispatchers.Default) {
+            // given
+            aspectLookUp = AspectLookUp()
+            val numThreads = 10
+            val numAddsPerThread = 100
+            val irElement = mockIrElement()
+
+            // when
+            val jobs =
+                List(numThreads) { threadId ->
+                    launch {
+                        repeat(numAddsPerThread) { i ->
+                            val target = FqName("com.example.ConcurrentTarget${i}_$threadId")
+                            aspectLookUp.addOverridden(irElement, target)
+                        }
+                    }
+                }
+            jobs.joinAll()
+
+            // then
+            val contexts = aspectLookUp.getOverridden(irElement)
+            val distinctContexts = ConcurrentHashMap.newKeySet<FqName>()
+
+            assertEquals(numThreads * numAddsPerThread, contexts.size)
+            contexts.forEach { distinctContexts.add(it) }
+            assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
+        }
 }
 
 fun mockIrFunction(): IrFunction = mockk(relaxed = true)
@@ -193,3 +229,5 @@ fun mockIrFunction(): IrFunction = mockk(relaxed = true)
 fun mockIrClassSymbol(): IrClassSymbol = mockk(relaxed = true)
 
 fun mockIrElement(): IrElement = mockk(relaxed = true)
+
+fun mockFqName(): FqName = mockk(relaxed = true)

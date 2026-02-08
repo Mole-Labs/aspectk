@@ -46,8 +46,9 @@ internal class AspectTransformer(
         }
 
         targetAnnotations.forEach { targetAnnotation ->
-            val isOverridden = aspectKContext.aspectLookUp.getOverridden(declaration.attributeOwnerId)
-            if (isOverridden) {
+            val isOverridden = aspectKContext.aspectLookUp.getOverridden(declaration.attributeOwnerId).contains(targetAnnotation)
+            val inherits = aspectKContext.aspectLookUp[targetAnnotation].any { it.inherits }
+            if (isOverridden && inherits) {
                 generateInner(declaration, targetAnnotation, true)
             }
         }

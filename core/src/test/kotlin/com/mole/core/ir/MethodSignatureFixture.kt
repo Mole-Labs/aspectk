@@ -335,17 +335,6 @@ fun operatorPlusMethodSignature(loader: ClassLoader) =
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-fun interfaceWorkMethodSignature(loader: ClassLoader) =
-    MethodSignature(
-        methodName = "work",
-        annotations = listOf(),
-        parameter = listOf(loader.thisParameterInfo("MyClass")),
-        returnType = Unit::class,
-        returnTypeName = "kotlin.Unit",
-    )
-
-@OptIn(ExperimentalCompilerApi::class)
-@Suppress("UNCHECKED_CAST")
 fun derivedClassWorkMethodSignature(loader: ClassLoader) =
     MethodSignature(
         methodName = "work",
@@ -357,19 +346,22 @@ fun derivedClassWorkMethodSignature(loader: ClassLoader) =
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-fun baseClassWorkMethodSignature(loader: ClassLoader) =
-    derivedClassWorkMethodSignature(loader).copy(
-        parameter = listOf(loader.thisParameterInfo("Base")),
-        annotations =
-            listOf(
-                AnnotationInfo(
-                    type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
-                    typeName = "TargetExample",
-                    args = listOf(),
-                    parameterNames = listOf(),
-                ),
+fun baseClassWorkMethodSignature(
+    loader: ClassLoader,
+    targetName: String = "TargetExample",
+    className: String = "Base",
+) = derivedClassWorkMethodSignature(loader).copy(
+    parameter = listOf(loader.thisParameterInfo(className)),
+    annotations =
+        listOf(
+            AnnotationInfo(
+                type = loader.loadClass(targetName).kotlin as KClass<out Annotation>,
+                typeName = targetName,
+                args = listOf(),
+                parameterNames = listOf(),
             ),
-    )
+        ),
+)
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")

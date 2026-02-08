@@ -40,14 +40,17 @@ internal class InheritableVisitor(
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction) {
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
-
-        declaration.allOverridden().forEach {
-            targetAnnotation(it) ?: return@forEach
-            aspectkContext.aspectLookUp.addOverridden(declaration.attributeOwnerId)
-        }
+        declaration
+            .allOverridden()
+            .filterIsInstance<IrFunctionImpl>()
+            .forEach { func ->
+                targetAnnotation(func).forEach { target ->
+                    aspectkContext.aspectLookUp.addOverridden(declaration.attributeOwnerId, target)
+                }
+            }
 
         return super.visitSimpleFunction(declaration)
     }
 
-    private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.find(declaration::hasAnnotation)
+    private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.filter(declaration::hasAnnotation)
 }
