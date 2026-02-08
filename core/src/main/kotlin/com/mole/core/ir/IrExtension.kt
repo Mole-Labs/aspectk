@@ -15,14 +15,13 @@
  */
 package com.mole.core.ir
 
+import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irVararg
-import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
@@ -31,9 +30,13 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
+import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.types.IrSimpleType
 import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
+import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.name.CallableId
@@ -72,16 +75,22 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     endOffset: Int,
     classType: IrType,
 ): IrExpression {
-    val classSymbol =
-        classType.classOrNull
-            ?: throw IllegalArgumentException("Type ${classType.render()} has no class symbol")
+    val (targetType, targetSymbol) =
+        if (classType.isGeneric()) {
+            classType.getUpperBound()
+        } else {
+            val symbol =
+                classType.classOrNull
+                    ?: throw IllegalArgumentException("Type ${classType.render()} has no class symbol")
+            classType to symbol
+        }
 
     return IrClassReferenceImpl(
         startOffset = startOffset,
         endOffset = endOffset,
-        type = pluginContext.irBuiltIns.kClassClass.typeWith(classType),
-        symbol = classSymbol,
-        classType = classType,
+        type = pluginContext.irBuiltIns.kClassClass.typeWith(targetType),
+        symbol = targetSymbol,
+        classType = targetType,
     )
 }
 
@@ -104,6 +113,25 @@ internal fun IrBody.add(element: IrStatement) {
     (this as? IrBlockBody)?.statements?.add(0, element)
 }
 
-internal fun IrClass.isInheritable(): Boolean = modality == Modality.ABSTRACT || modality == Modality.OPEN
-
 internal fun IrFunction.hasBody(): Boolean = body != null && body is IrBlockBody
+
+internal fun IrType.isGeneric(): Boolean = (this as? IrSimpleType)?.classifier is IrTypeParameterSymbol
+
+internal fun AspectKIrCompilerContext.anyTypeClassName(): String? =
+    pluginContext.irBuiltIns.anyType.classFqName
+        ?.asString()
+
+@OptIn(UnsafeDuringIrConstructionAPI::class)
+internal fun IrType.getUpperBound(): Pair<IrType, IrClassSymbol> {
+    var currentType = this
+    while (true) {
+        val symbol = currentType.classifierOrNull as? IrTypeParameterSymbol ?: break
+        currentType = symbol.owner.superTypes.firstOrNull() ?: break
+    }
+    return currentType to (
+        currentType.classOrNull
+            ?: reportCompilerBug("$currentType class should not be null")
+    )
+}
+
+internal fun IrType.getUpperBoundClassName(): String? = getUpperBound().first.classFqName?.asString()

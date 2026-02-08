@@ -18,16 +18,28 @@ package com.mole.core.ir.generator
 import com.mole.core.ir.AspectKIrCompilerContext
 import com.mole.core.ir.createIrListOf
 import com.mole.core.ir.createKClassExpression
+import com.mole.core.ir.getUpperBoundClassName
+import com.mole.core.ir.isGeneric
 import com.mole.core.ir.withIrBuilder
 import com.mole.core.reportCompilerBug
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
-import org.jetbrains.kotlin.ir.builders.declarations.*
+import org.jetbrains.kotlin.ir.builders.declarations.IrValueParameterBuilder
+import org.jetbrains.kotlin.ir.builders.declarations.buildClass
+import org.jetbrains.kotlin.ir.builders.declarations.buildField
+import org.jetbrains.kotlin.ir.builders.declarations.buildProperty
+import org.jetbrains.kotlin.ir.builders.declarations.buildValueParameter
 import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irString
-import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
+import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrProperty
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.declarations.createExpressionBody
 import org.jetbrains.kotlin.ir.expressions.IrConstructorCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -45,7 +57,8 @@ internal class MethodSignatureGenerator(
 ) {
     private var fieldCounter: Int = 0
 
-    private val methodSignatureConstructor = aspectKContext.methodSignatureSymbol.constructors.first()
+    private val methodSignatureConstructor =
+        aspectKContext.methodSignatureSymbol.constructors.first()
 
     private lateinit var parentClass: IrDeclarationParent
 
@@ -176,7 +189,11 @@ internal class MethodSignatureGenerator(
                     )
                 arguments[2] =
                     irString(
-                        param.type.classFqName?.asString()
+                        if (param.type.isGeneric()) {
+                            param.type.getUpperBoundClassName()
+                        } else {
+                            param.type.classFqName?.asString()
+                        }
                             ?: reportCompilerBug("value parameter type should not be null"),
                     )
 

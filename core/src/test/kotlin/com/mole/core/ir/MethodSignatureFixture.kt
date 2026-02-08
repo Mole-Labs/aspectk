@@ -406,3 +406,139 @@ fun doubleFieldWithMethodArgsCopy(loader: ClassLoader) =
                 ),
             ),
     )
+
+@OptIn(ExperimentalCompilerApi::class)
+@Suppress("UNCHECKED_CAST")
+fun singleGenericField(
+    loader: URLClassLoader,
+    type: KClass<*> = Any::class,
+    typeName: String = "kotlin.Any",
+    nullable: Boolean = false,
+    className: String = "Test",
+) = MethodSignature(
+    methodName = "test1",
+    annotations =
+        listOf(
+            AnnotationInfo(
+                type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                typeName = "TargetExample",
+                args = listOf("example1"),
+                parameterNames = listOf("name"),
+            ),
+        ),
+    parameter =
+        listOf(
+            loader.thisParameterInfo(className),
+            MethodParameter(
+                name = "arg1",
+                type = type,
+                typeName = typeName,
+                annotations = listOf(),
+                isNullable = nullable,
+            ),
+        ),
+    returnType = Unit::class,
+    returnTypeName = "kotlin.Unit",
+)
+
+@OptIn(ExperimentalCompilerApi::class)
+@Suppress("UNCHECKED_CAST")
+fun doubleGenericField(
+    loader: URLClassLoader,
+    type: KClass<*> = Any::class,
+    typeName: String = "kotlin.Any",
+    nullable: Boolean = false,
+) = singleField(loader).copy(
+    parameter =
+        listOf(
+            loader.thisParameterInfo(),
+            MethodParameter(
+                name = "arg1",
+                type = type,
+                typeName = typeName,
+                annotations = listOf(),
+                isNullable = nullable,
+            ),
+            MethodParameter(
+                name = "arg2",
+                type = List::class,
+                typeName = "kotlin.collections.List",
+                annotations = listOf(),
+                isNullable = false,
+            ),
+        ),
+)
+
+@OptIn(ExperimentalCompilerApi::class)
+@Suppress("UNCHECKED_CAST")
+fun stringConsumerConsumeMethodSignature(
+    loader: ClassLoader,
+    className: String = "StringConsumer",
+) = MethodSignature(
+    methodName = "consume",
+    annotations = listOf(),
+    parameter =
+        listOf(
+            loader.thisParameterInfo(className),
+            MethodParameter(
+                name = "item",
+                type = String::class,
+                typeName = "kotlin.String",
+                annotations = listOf(),
+                isNullable = false,
+            ),
+        ),
+    returnType = Unit::class,
+    returnTypeName = "kotlin.Unit",
+)
+
+@OptIn(ExperimentalCompilerApi::class)
+@Suppress("UNCHECKED_CAST")
+fun stringProducerProduceMethodSignature(
+    loader: ClassLoader,
+    className: String = "StringProducer",
+) = MethodSignature(
+    methodName = "produce",
+    annotations = listOf(),
+    parameter = listOf(loader.thisParameterInfo(className)),
+    returnType = String::class,
+    returnTypeName = "kotlin.String",
+)
+
+@OptIn(ExperimentalCompilerApi::class)
+@Suppress("UNCHECKED_CAST")
+fun complexGenericMethodSignature(
+    loader: ClassLoader,
+    className: String = "TestClass",
+) = MethodSignature(
+    methodName = "process",
+    annotations =
+        listOf(
+            AnnotationInfo(
+                type = loader.loadClass("TargetExample").kotlin as KClass<out Annotation>,
+                typeName = "TargetExample",
+                args = listOf("process"),
+                parameterNames = listOf("name"),
+            ),
+        ),
+    parameter =
+        listOf(
+            loader.thisParameterInfo(className),
+            MethodParameter(
+                name = "input",
+                type = List::class,
+                typeName = "java.util.List",
+                annotations = listOf(),
+                isNullable = false,
+            ),
+            MethodParameter(
+                name = "output",
+                type = Map::class,
+                typeName = "java.util.Map",
+                annotations = listOf(),
+                isNullable = false,
+            ),
+        ),
+    returnType = Unit::class,
+    returnTypeName = "kotlin.Unit",
+)

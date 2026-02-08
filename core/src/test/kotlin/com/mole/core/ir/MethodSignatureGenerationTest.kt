@@ -27,7 +27,7 @@ import org.junit.jupiter.api.assertAll
 @Suppress("UNCHECKED_CAST")
 class MethodSignatureGenerationTest {
     @Test
-    fun `MethodSignature should be created in with static field`() {
+    fun `MethodSignature should be created in with nested object`() {
         // given
         val result =
             compile(
@@ -53,10 +53,6 @@ class MethodSignatureGenerationTest {
                     @TargetExample("example1")
                     fun test1() {
                     }
-                }
-
-                fun main() {
-
                 }
                 """,
             )
