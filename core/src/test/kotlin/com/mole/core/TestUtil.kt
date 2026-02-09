@@ -19,6 +19,7 @@ import com.mole.runtime.MethodParameter
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import org.intellij.lang.annotations.Language
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.JvmDefaultMode
@@ -42,7 +43,7 @@ fun compile(
                     "-Xno-optimize",
                 )
             jvmDefault = JvmDefaultMode.DISABLE.description
-            languageVersion = "2.2"
+            languageVersion = "2.3"
             sources = sourceFiles
             verbose = true
             this.compilerPluginRegistrars = listOf(plugin)
@@ -51,7 +52,7 @@ fun compile(
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
-    vararg source: String,
+    @Language("kotlin") vararg source: String,
     name: String = "aspectk-test.kt",
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
 ): JvmCompilationResult =
@@ -83,3 +84,28 @@ fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
         annotations = listOf(),
         isNullable = false,
     )
+
+fun ClassLoader.execute(
+    vararg args: Any?,
+    className: String = "Test",
+    methodName: String = "test1",
+): Any? {
+    val testClass = loadClass(className)
+    val method =
+        testClass.declaredMethods.find { it.name == methodName } ?: error("Method not found")
+    val instance = testClass.getDeclaredConstructor().newInstance()
+    return method.invoke(instance, *args)
+}
+
+fun ClassLoader.getAspectField(
+    className: String = "ExampleAspect",
+    fieldName: String = "executed",
+): Any {
+    val aspectObject =
+        loadClass(className)
+            .getField("INSTANCE")
+            .get(null)
+    val executedField = aspectObject::class.java.getDeclaredField(fieldName)
+    executedField.isAccessible = true
+    return executedField.get(aspectObject)
+}
