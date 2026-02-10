@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 aspectk
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.mole.core.ir
 
 import com.mole.core.assertAndGetField
@@ -31,7 +46,7 @@ class MethodSignaturePolymorphicTest {
                 @Before(TargetExample::class)
                 fun doBefore(joinPoint: JoinPoint) {}
             }
-            
+
             interface MyInterface {
                 @TargetExample
                 fun work()
@@ -312,7 +327,7 @@ class MethodSignaturePolymorphicTest {
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample1
-            
+
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample2
 
@@ -327,14 +342,14 @@ class MethodSignaturePolymorphicTest {
                 fun work1() {
                     println("Hello AspectK")
                 }
-                
+
                 @TargetExample2
                 fun work2()
             }
 
             class Derived : Base {
                 override fun work1() {}
-                
+
                 override fun work2() {}
             }
             """,
@@ -385,10 +400,10 @@ class MethodSignaturePolymorphicTest {
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample1
-            
+
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample2
-            
+
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample3
 
@@ -396,25 +411,25 @@ class MethodSignaturePolymorphicTest {
             object ExampleAspect {
                 @Before(TargetExample1::class, TargetExample2::class, inherits = true)
                 fun doBefore1(joinPoint: JoinPoint) {}
-                
+
                 @Before(TargetExample1::class, inherits = true)
                 fun doBefore2(joinPoint: JoinPoint) {}
-                
+
                 @Before(TargetExample2::class, TargetExample3::class)
                 fun doBefore3(joinPoint: JoinPoint) {}
             }
-                        
+
             interface Base1 {
                 @TargetExample1
                 fun work1() {
                     println("Hello AspectK")
                 }
-                
+
                 @TargetExample2
                 @TargetExample3
                 fun work2()
             }
-            
+
             abstract class Base2 : Base1 {
                 @TargetExample3
                 abstract fun work3()
@@ -422,9 +437,9 @@ class MethodSignaturePolymorphicTest {
 
             class Derived : Base2() {
                 override fun work1() {}
-                
+
                 override fun work2() {}
-                
+
                 @TargetExample2
                 override fun work3() {}
             }
@@ -455,7 +470,7 @@ class MethodSignaturePolymorphicTest {
             baseClassWorkMethodSignature(loader, "TargetExample2", "Derived").copy(
                 methodName = "work2",
                 annotations =
-                    listOf(),
+                listOf(),
             )
 
         val derivedExpected3 =

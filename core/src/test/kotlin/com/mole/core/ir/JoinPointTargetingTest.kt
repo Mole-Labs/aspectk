@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 aspectk
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.mole.core.ir
 
 import com.mole.core.compile
@@ -26,12 +41,12 @@ class JoinPointTargetingTest {
                 import com.mole.runtime.JoinPoint
                 import org.junit.jupiter.api.Assertions.assertEquals
                 import kotlin.test.assertIs
-                
+
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
                     val name:String
                 )
- 
+
                 @Aspect
                 object ExampleAspect {
                     var executed:Boolean = false
@@ -40,7 +55,7 @@ class JoinPointTargetingTest {
                     fun doBefore(joinPoint: JoinPoint) {
                         executed = true
                         assertEquals(2, joinPoint.args.size)
-                        assertEquals(null, joinPoint.target)    
+                        assertEquals(null, joinPoint.target)
                         assertIs<Test>(joinPoint.args[0])
                         assertEquals("extensionArg", joinPoint.args[1])
                     }
@@ -137,7 +152,7 @@ class JoinPointTargetingTest {
                 import com.mole.runtime.JoinPoint
                 import org.junit.jupiter.api.Assertions.assertEquals
                 import kotlin.test.assertNull
-                
+
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
                     val name:String
@@ -160,7 +175,7 @@ class JoinPointTargetingTest {
                 fun topLevelFunction(arg: String) {
                     assertEquals(ExampleAspect.executed, true)
                 }
-                
+
                 class Test {
                     fun test1(arg:String) {
                         topLevelFunction(arg)
@@ -186,7 +201,7 @@ class JoinPointTargetingTest {
                 import org.junit.jupiter.api.Assertions.assertEquals
                 import kotlin.test.assertIs
 
-                
+
                 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER)
                 annotation class TargetExample(
                     val name:String
@@ -208,13 +223,13 @@ class JoinPointTargetingTest {
                 fun topLevelFunction(arg: String) {
                     assertEquals(true, ExampleAspect.executed)
                 }
-                
+
                 class Test {
-                    private val arg1:String 
+                    private val arg1:String
                         @TargetExample("example1")
                         get() = "hello"
 
-                    fun test1() { 
+                    fun test1() {
                         arg1
                     }
                 }
@@ -238,7 +253,7 @@ class JoinPointTargetingTest {
                 import org.junit.jupiter.api.Assertions.assertEquals
                 import kotlin.test.assertIs
 
-                
+
                 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_SETTER)
                 annotation class TargetExample(
                     val name:String
@@ -261,13 +276,13 @@ class JoinPointTargetingTest {
                 fun topLevelFunction(arg: String) {
                     assertEquals(true, ExampleAspect.executed)
                 }
-                
-                
+
+
                 class Test {
                     private var arg1:String = ""
                         @TargetExample("example1")
                         set(value) {}
-                
+
                     fun test1() {
                         arg1 = "hello"
                     }

@@ -158,70 +158,68 @@ class AspectLookUpTest {
     }
 
     @Test
-    fun `thread-safe addition of AspectContexts`() =
-        runBlocking(Dispatchers.Default) {
-            // given
-            aspectLookUp = AspectLookUp()
-            val numThreads = 10
-            val numAddsPerThread = 100
-            val fqName = FqName("com.example.ConcurrentTarget")
+    fun `thread-safe addition of AspectContexts`() = runBlocking(Dispatchers.Default) {
+        // given
+        aspectLookUp = AspectLookUp()
+        val numThreads = 10
+        val numAddsPerThread = 100
+        val fqName = FqName("com.example.ConcurrentTarget")
 
-            // when
-            val jobs =
-                List(numThreads) {
-                    launch {
-                        repeat(numAddsPerThread) {
-                            val context =
-                                AspectContext(
-                                    mockIrFunction(),
-                                    mockIrClassSymbol(),
-                                    Kind.BEFORE,
-                                    false,
-                                )
-                            aspectLookUp.add(fqName, context)
-                        }
+        // when
+        val jobs =
+            List(numThreads) {
+                launch {
+                    repeat(numAddsPerThread) {
+                        val context =
+                            AspectContext(
+                                mockIrFunction(),
+                                mockIrClassSymbol(),
+                                Kind.BEFORE,
+                                false,
+                            )
+                        aspectLookUp.add(fqName, context)
                     }
                 }
-            jobs.joinAll()
+            }
+        jobs.joinAll()
 
-            // then
-            val contexts = aspectLookUp[fqName]
-            val distinctContexts = ConcurrentHashMap.newKeySet<AspectContext>()
+        // then
+        val contexts = aspectLookUp[fqName]
+        val distinctContexts = ConcurrentHashMap.newKeySet<AspectContext>()
 
-            assertEquals(numThreads * numAddsPerThread, contexts.size)
-            contexts.forEach { distinctContexts.add(it) }
-            assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
-        }
+        assertEquals(numThreads * numAddsPerThread, contexts.size)
+        contexts.forEach { distinctContexts.add(it) }
+        assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
+    }
 
     @Test
-    fun `thread-safe addition of overridden declarations for multiple IrElements`() =
-        runBlocking(Dispatchers.Default) {
-            // given
-            aspectLookUp = AspectLookUp()
-            val numThreads = 10
-            val numAddsPerThread = 100
-            val irElement = mockIrElement()
+    fun `thread-safe addition of overridden declarations for multiple IrElements`() = runBlocking(Dispatchers.Default) {
+        // given
+        aspectLookUp = AspectLookUp()
+        val numThreads = 10
+        val numAddsPerThread = 100
+        val irElement = mockIrElement()
 
-            // when
-            val jobs =
-                List(numThreads) { threadId ->
-                    launch {
-                        repeat(numAddsPerThread) { i ->
-                            val target = FqName("com.example.ConcurrentTarget${i}_$threadId")
-                            aspectLookUp.addOverridden(irElement, target)
-                        }
+        // when
+        val jobs =
+            List(numThreads) { threadId ->
+                launch {
+                    repeat(numAddsPerThread) { i ->
+                        val target = FqName("com.example.ConcurrentTarget${i}_$threadId")
+                        aspectLookUp.addOverridden(irElement, target)
                     }
                 }
-            jobs.joinAll()
+            }
+        jobs.joinAll()
 
-            // then
-            val contexts = aspectLookUp.getOverridden(irElement)
-            val distinctContexts = ConcurrentHashMap.newKeySet<FqName>()
+        // then
+        val contexts = aspectLookUp.getOverridden(irElement)
+        val distinctContexts = ConcurrentHashMap.newKeySet<FqName>()
 
-            assertEquals(numThreads * numAddsPerThread, contexts.size)
-            contexts.forEach { distinctContexts.add(it) }
-            assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
-        }
+        assertEquals(numThreads * numAddsPerThread, contexts.size)
+        contexts.forEach { distinctContexts.add(it) }
+        assertEquals(numThreads * numAddsPerThread, distinctContexts.size)
+    }
 }
 
 fun mockIrFunction(): IrFunction = mockk(relaxed = true)

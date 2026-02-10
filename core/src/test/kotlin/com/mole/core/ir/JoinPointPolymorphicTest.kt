@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2026 aspectk
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.mole.core.ir
 
 import com.mole.core.compile
@@ -25,12 +40,12 @@ class JoinPointPolymorphicTest {
                 @Aspect
                 object ExampleAspect {
                     var executed = false
-                    @Before(TargetExample::class) 
+                    @Before(TargetExample::class)
                     fun doBefore(joinPoint: JoinPoint) {
                         executed = true
                     }
                 }
-                
+
                 interface MyInterface {
                     @TargetExample
                     fun work()
@@ -78,7 +93,7 @@ class JoinPointPolymorphicTest {
 
                 class Derived : Base() {
                     override fun work() {
-                        
+
                     }
                 }
                 """,
@@ -318,10 +333,10 @@ class JoinPointPolymorphicTest {
 
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample1
-                
+
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample2
-                
+
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample3
 
@@ -330,13 +345,13 @@ class JoinPointPolymorphicTest {
                     var executionCount1 = 0
                     var executionCount2 = 0
                     var executionCount3 = 0
-                    
+
                     @Before(TargetExample1::class, TargetExample2::class, inherits = true)
                     fun doBefore1(joinPoint: JoinPoint) { executionCount1++ }
-                    
+
                     @Before(TargetExample1::class, inherits = true)
                     fun doBefore2(joinPoint: JoinPoint) { executionCount2++ }
-                    
+
                     @Before(TargetExample2::class, TargetExample3::class) // inherits = false
                     fun doBefore3(joinPoint: JoinPoint) { executionCount3++ }
 
@@ -346,15 +361,15 @@ class JoinPointPolymorphicTest {
                         executionCount3 = 0
                     }
                 }
-                            
+
                 interface Base1 {
                     @TargetExample1
                     fun work1() {}
-                    
+
                     @TargetExample2 @TargetExample3
                     fun work2() {}
                 }
-                
+
                 abstract class Base2 : Base1 {
                     @TargetExample3
                     abstract fun work3()
@@ -363,7 +378,7 @@ class JoinPointPolymorphicTest {
                 class Derived : Base2() {
                     override fun work1() {}
                     override fun work2() {}
-                    
+
                     @TargetExample2
                     override fun work3() {}
                 }

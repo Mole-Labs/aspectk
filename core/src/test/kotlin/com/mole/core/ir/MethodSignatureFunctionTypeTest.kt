@@ -242,16 +242,16 @@ class MethodSignatureFunctionTypeTest {
             singleFieldWithNoAnnotationArgs(loader, "<set-property>", "TargetExample")
                 .copy(
                     parameter =
-                        listOf(
-                            loader.thisParameterInfo(),
-                            MethodParameter(
-                                name = "value",
-                                type = String::class,
-                                typeName = "kotlin.String",
-                                annotations = listOf(),
-                                isNullable = false,
-                            ),
+                    listOf(
+                        loader.thisParameterInfo(),
+                        MethodParameter(
+                            name = "value",
+                            type = String::class,
+                            typeName = "kotlin.String",
+                            annotations = listOf(),
+                            isNullable = false,
                         ),
+                    ),
                 )
         assertEquals(expected, actual)
     }

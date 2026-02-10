@@ -88,9 +88,8 @@ internal class AspectTransformer(
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
         factory: (IrDeclarationContainer) -> IrClass,
-    ): IrClass =
-        declarations
-            .filterIsInstance<IrClass>()
-            .firstOrNull { it.name.asString() == name }
-            ?: factory(this).also { declarations.add(it) }
+    ): IrClass = declarations
+        .filterIsInstance<IrClass>()
+        .firstOrNull { it.name.asString() == name }
+        ?: factory(this).also { declarations.add(it) }
 }

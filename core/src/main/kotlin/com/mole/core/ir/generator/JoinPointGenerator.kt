@@ -38,29 +38,28 @@ internal class JoinPointGenerator(
     fun generate(
         declaration: IrFunction,
         methodSignatureProperty: IrProperty,
-    ): IrExpression =
-        aspectKContext.withIrBuilder(declaration.symbol) {
-            irCall(joinPointConstructor).apply {
-                val receiver =
-                    declaration.dispatchReceiverParameter?.let {
+    ): IrExpression = aspectKContext.withIrBuilder(declaration.symbol) {
+        irCall(joinPointConstructor).apply {
+            val receiver =
+                declaration.dispatchReceiverParameter?.let {
+                    irGet(it)
+                } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
+
+            val signatureField =
+                methodSignatureProperty.backingField ?: reportCompilerBug(
+                    "method signature backing field is null",
+                )
+
+            arguments[0] = receiver
+            arguments[1] = irGetField(null, signatureField, signatureField.type)
+            arguments[2] =
+                aspectKContext.createIrListOf(
+                    scope = declaration.symbol,
+                    elements =
+                    declaration.parameters.map {
                         irGet(it)
-                    } ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
-
-                val signatureField =
-                    methodSignatureProperty.backingField ?: reportCompilerBug(
-                        "method signature backing field is null",
-                    )
-
-                arguments[0] = receiver
-                arguments[1] = irGetField(null, signatureField, signatureField.type)
-                arguments[2] =
-                    aspectKContext.createIrListOf(
-                        scope = declaration.symbol,
-                        elements =
-                            declaration.parameters.map {
-                                irGet(it)
-                            },
-                    )
-            }
+                    },
+                )
         }
+    }
 }
