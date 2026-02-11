@@ -52,6 +52,7 @@ internal class AspectVisitor(
     }
 
     override fun visitClass(declaration: IrClass) {
+        declaration.acceptChildrenVoid(this)
         if (canSkip(declaration)) return super.visitClass(declaration)
 
         declaration.functions.forEach { func ->
@@ -102,5 +103,6 @@ internal class AspectVisitor(
         }
     }
 
-    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean =
+        !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
 }
