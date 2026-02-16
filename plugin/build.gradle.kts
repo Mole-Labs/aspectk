@@ -16,9 +16,14 @@
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("java-library")
+    id("com.mole.aspectK.build")
     alias(libs.plugins.buildConfig)
     kotlin("kapt")
     `java-gradle-plugin`
+}
+
+aspectKBuild {
+    enableBackwardsCompatibility()
 }
 
 gradlePlugin {

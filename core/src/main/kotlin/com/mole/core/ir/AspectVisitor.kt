@@ -103,6 +103,5 @@ internal class AspectVisitor(
         }
     }
 
-    private fun canSkip(declaration: IrClass): Boolean =
-        !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
 }
