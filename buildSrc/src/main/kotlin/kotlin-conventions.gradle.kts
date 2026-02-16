@@ -22,8 +22,6 @@ kotlin {
             listOf(
                 "kotlin.ExperimentalMultiplatform",
                 "kotlin.ExperimentalSubclassOptIn",
-                "kotlinx.serialization.InternalSerializationApi",
-                "kotlinx.serialization.SealedSerializationApi",
             ),
         )
 

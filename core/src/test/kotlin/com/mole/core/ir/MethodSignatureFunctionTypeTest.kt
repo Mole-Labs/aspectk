@@ -15,7 +15,13 @@
  */
 package com.mole.core
 
-import com.mole.core.ir.*
+import com.mole.core.ir.companionObjectWorkMethodSignature
+import com.mole.core.ir.defaultParamFunMethodSignature
+import com.mole.core.ir.operatorPlusMethodSignature
+import com.mole.core.ir.returnsSuspendFunMethodSignature
+import com.mole.core.ir.singleFieldWithNoAnnotationArgs
+import com.mole.core.ir.singleFieldWithNoThisParameter
+import com.mole.core.ir.varargFunMethodSignature
 import com.mole.runtime.MethodParameter
 import com.mole.runtime.MethodSignature
 import com.tschuchort.compiletesting.KotlinCompilation

@@ -1,4 +1,6 @@
-import org.jetbrains.kotlin.gradle.plugin.mpp.*
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetWithTests
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
 
 plugins {
     kotlin("multiplatform")
@@ -27,20 +29,6 @@ kotlin {
     androidNativeArm64()
     androidNativeX86()
     androidNativeX64()
-
-    // Deprecated, but not removed
-    @Suppress("DEPRECATION")
-    linuxArm32Hfp()
-
-    // Deprecated
-    @Suppress("DEPRECATION")
-    macosX64()
-    @Suppress("DEPRECATION")
-    iosX64()
-    @Suppress("DEPRECATION")
-    watchosX64()
-    @Suppress("DEPRECATION")
-    tvosX64()
 
     // setup tests running in RELEASE mode
     targets.withType<KotlinNativeTarget>().configureEach {

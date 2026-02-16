@@ -29,3 +29,4 @@ rootProject.name = "aspectk"
 include(":core")
 include(":plugin")
 include(":runtime")
+include(":core-tests")
