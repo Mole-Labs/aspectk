@@ -13,23 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
     id("java-library")
     id("org.jetbrains.kotlin.jvm")
-    alias(libs.plugins.shadow)
     alias(libs.plugins.diffplug.spotless)
     kotlin("kapt")
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_24
+    targetCompatibility = JavaVersion.VERSION_24
 }
 kotlin {
+    jvmToolchain(24)
     compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_24
     }
 }
 
@@ -44,8 +43,6 @@ repositories {
 dependencies {
     compileOnly(libs.kotlin.compiler)
     compileOnly(libs.google.autoservice.annotations)
-    compileOnly(libs.kotlin.gradlePlugin)
-    compileOnly(libs.kotlin.gradlePlugin.api)
     testRuntimeOnly(libs.kotlin.compiler)
     testImplementation(project(":runtime"))
     testImplementation(libs.test.mockk)
@@ -56,23 +53,6 @@ dependencies {
     testImplementation(libs.kotlin.compile.testing)
     testImplementation(libs.kotlin.test)
     kapt(libs.google.autoservice)
-}
-
-val embedded by configurations.dependencyScope("embedded")
-
-val embeddedClasspath by configurations.resolvable("embeddedClasspath") { extendsFrom(embedded) }
-
-tasks.named<ShadowJar>("shadowJar") {
-    from(java.sourceSets.main.map { it.output })
-    configurations.add(embeddedClasspath)
-
-    dependencies {
-        exclude(dependency("org.jetbrains:.*"))
-        exclude(dependency("org.intellij:.*"))
-        exclude(dependency("org.jetbrains.kotlin:.*"))
-    }
-
-    mergeServiceFiles()
 }
 
 tasks.test {

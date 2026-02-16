@@ -1,13 +1,12 @@
-import org.gradle.kotlin.dsl.*
-import org.jetbrains.kotlin.gradle.*
-import org.jetbrains.kotlin.gradle.dsl.*
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 
 plugins {
     kotlin("multiplatform")
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 8
+    options.release = 24
 }
 
 internal fun Project.versionCatalog(): VersionCatalog = versionCatalogs.named("libs")
@@ -15,7 +14,7 @@ internal fun Project.versionCatalog(): VersionCatalog = versionCatalogs.named("l
 kotlin {
     explicitApi()
     jvm()
-    jvmToolchain(8)
+    jvmToolchain(24)
 
     compilerOptions {
         progressiveMode = true
@@ -25,7 +24,7 @@ kotlin {
                 "kotlin.ExperimentalSubclassOptIn",
                 "kotlinx.serialization.InternalSerializationApi",
                 "kotlinx.serialization.SealedSerializationApi",
-            )
+            ),
         )
 
         freeCompilerArgs.add("-Xexpect-actual-classes")
