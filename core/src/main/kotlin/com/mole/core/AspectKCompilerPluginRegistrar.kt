@@ -22,12 +22,18 @@ import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
+// Entry point for the AspectK Kotlin compiler plugin.
+// @AutoService writes a service-provider file into META-INF at compile time so that the
+// K2 compiler discovers and loads this registrar automatically at startup.
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
+    // Declares that this plugin targets the K2 (FIR + IR) compiler.
     override val supportsK2: Boolean
         get() = true
 
+    // Registers AdviceGenerationExtension to participate in the IR generation phase,
+    // which is where the compile-time AOP transformations are applied.
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         IrGenerationExtension.registerExtension(
             AdviceGenerationExtension(),

@@ -15,7 +15,30 @@
  */
 package com.mole.runtime
 
+/**
+ * Marks a class or object as an AspectK aspect.
+ *
+ * The AspectK compiler plugin scans all classes annotated with `@Aspect` to discover
+ * advice declarations. Inside an aspect class, use [Before] to define advice methods
+ * that are injected at compile time before the body of any matching target function.
+ *
+ * Aspects are typically declared as Kotlin `object`s to avoid instantiation overhead,
+ * but regular classes are also supported.
+ *
+ * ### Example
+ * ```kotlin
+ * @Aspect
+ * object LoggingAspect {
+ *     @Before(target = [Authenticated::class])
+ *     fun log(joinPoint: JoinPoint) {
+ *         println("Calling: ${joinPoint.signature.methodName}")
+ *     }
+ * }
+ * ```
+ *
+ * @see Before
+ */
 @Target(AnnotationTarget.CLASS)
-@Retention(AnnotationRetention.BINARY) // 또는 RUNTIME
+@Retention(AnnotationRetention.BINARY) // or RUNTIME
 @MustBeDocumented
 public annotation class Aspect

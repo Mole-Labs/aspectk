@@ -17,6 +17,22 @@ package com.mole.runtime
 
 import kotlin.reflect.KClass
 
+/**
+ * Holds metadata about a single annotation instance present on a method or parameter.
+ *
+ * Instances are created at compile time by the AspectK compiler plugin and embedded
+ * inside [MethodSignature] or [MethodParameter]. They allow advice methods to inspect
+ * annotation details at runtime without incurring additional reflection overhead.
+ *
+ * Only arguments that are explicitly provided in source are included in [args]; omitted
+ * optional arguments (those relying on their default values) are not present.
+ *
+ * @property type The [KClass] of the annotation.
+ * @property typeName The fully-qualified class name of the annotation as a [String].
+ * @property args The list of argument values supplied to the annotation, in declaration order.
+ * @property parameterNames The names of the annotation parameters corresponding to each
+ *   entry in [args], in the same order.
+ */
 public data class AnnotationInfo(
     public val type: KClass<out Annotation>,
     public val typeName: String,

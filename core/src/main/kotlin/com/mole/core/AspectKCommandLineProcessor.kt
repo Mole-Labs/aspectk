@@ -20,6 +20,10 @@ import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
+// Handles -P plugin:<pluginId>:<key>=<value> arguments passed to the Kotlin compiler.
+// AspectK requires no configuration options at this time, so pluginOptions is empty and
+// processOption is a no-op. The pluginId must match the subpluginId declared in the
+// Gradle plugin (AspectKGradleSubPlugin).
 @OptIn(ExperimentalCompilerApi::class)
 class AspectKCommandLineProcessor : CommandLineProcessor {
     override val pluginId: String = "com.mole.aspectk"

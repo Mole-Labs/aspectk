@@ -40,3 +40,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Agents ###
+.gemini/**
+CLAUDE.md

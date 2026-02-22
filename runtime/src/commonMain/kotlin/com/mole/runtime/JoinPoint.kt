@@ -15,8 +15,43 @@
  */
 package com.mole.runtime
 
+/**
+ * Provides contextual information about an intercepted function call.
+ *
+ * A `JoinPoint` instance is constructed by the AspectK compiler plugin at each intercepted
+ * call site and passed to every matching advice function. It exposes the receiver object,
+ * static method-signature metadata, and the runtime arguments of the call.
+ *
+ * The concrete implementation injected at runtime is
+ * [com.mole.runtime.internal.DefaultJoinPoint]. Advice code should program to this
+ * interface rather than the concrete type.
+ *
+ * ### Usage in advice
+ * ```kotlin
+ * @Before(target = [Authenticated::class])
+ * fun checkAuth(joinPoint: JoinPoint) {
+ *     val receiver = joinPoint.target
+ *     val name    = joinPoint.signature.methodName
+ *     val firstArg = joinPoint.args.firstOrNull()
+ * }
+ * ```
+ *
+ * @see com.mole.runtime.internal.DefaultJoinPoint
+ * @see MethodSignature
+ */
 public interface JoinPoint {
+    /**
+     * The receiver object on which the intercepted function is called,
+     * or `null` for top-level or static functions.
+     */
     public val target: Any?
+
+    /**
+     * Compile-time metadata describing the intercepted function,
+     * including its name, annotations, and parameter list.
+     */
     public val signature: MethodSignature
+
+    /** The runtime arguments passed to the intercepted function, in declaration order. */
     public val args: List<Any?>
 }

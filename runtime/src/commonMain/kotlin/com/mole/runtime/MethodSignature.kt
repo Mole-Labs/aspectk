@@ -17,6 +17,24 @@ package com.mole.runtime
 
 import kotlin.reflect.KClass
 
+/**
+ * Compile-time metadata describing the signature of an intercepted method.
+ *
+ * A single `MethodSignature` instance is generated per intercepted function and stored as
+ * a static field in a synthetic inner object that the AspectK compiler plugin adds to the
+ * enclosing class or file. This ensures that signature metadata is allocated once per
+ * function definition, not once per invocation.
+ *
+ * **Generic type erasure**: When a function's return type is a generic type parameter,
+ * [returnType] and [returnTypeName] are resolved to the upper bound at compile time.
+ *
+ * @property methodName The simple name of the intercepted function.
+ * @property annotations Metadata for all annotations present on the intercepted function.
+ * @property parameter The ordered list of [MethodParameter] descriptors, one per parameter
+ *   in declaration order.
+ * @property returnType The erased [KClass] of the function's return type.
+ * @property returnTypeName The fully-qualified class name of the return type as a [String].
+ */
 public data class MethodSignature(
     val methodName: String,
     val annotations: List<AnnotationInfo>,
