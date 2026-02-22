@@ -6,15 +6,14 @@ plugins {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release = 24
+    options.release = 17
 }
 
 internal fun Project.versionCatalog(): VersionCatalog = versionCatalogs.named("libs")
 
 kotlin {
-    explicitApi()
     jvm()
-    jvmToolchain(24)
+    jvmToolchain(17)
 
     compilerOptions {
         progressiveMode = true

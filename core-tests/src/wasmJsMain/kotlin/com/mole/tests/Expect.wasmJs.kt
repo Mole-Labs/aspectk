@@ -13,12 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.mole.tests
 
-plugins {
-    id("kotlin-conventions")
-    id("native-conventions")
-}
-
-kotlin {
-    explicitApi()
+@ExpectTarget(name = "example1")
+actual fun expectRun(arg1: String) {
 }

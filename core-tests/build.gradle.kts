@@ -38,8 +38,9 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(24)
-    sourceSets.commonTest.dependencies {
+    applyDefaultHierarchyTemplate()
+    jvmToolchain(17)
+    sourceSets.commonMain.dependencies {
         implementation(project(":runtime"))
         implementation(libs.kotlin.coroutine.core)
         implementation(libs.kotlin.coroutine.test)

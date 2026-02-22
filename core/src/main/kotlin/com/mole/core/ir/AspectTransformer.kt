@@ -20,8 +20,14 @@ import com.mole.core.ir.generator.JoinPointGenerator
 import com.mole.core.ir.generator.MethodSignatureGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
-import org.jetbrains.kotlin.ir.declarations.*
+import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
+import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.FqName
@@ -46,7 +52,10 @@ internal class AspectTransformer(
         }
 
         targetAnnotations.forEach { targetAnnotation ->
-            val isOverridden = aspectKContext.aspectLookUp.getOverridden(declaration.attributeOwnerId).contains(targetAnnotation)
+            val isOverridden =
+                aspectKContext.aspectLookUp
+                    .getOverridden(declaration.attributeOwnerId)
+                    .contains(targetAnnotation)
             val inherits = aspectKContext.aspectLookUp[targetAnnotation].any { it.inherits }
             if (isOverridden && inherits) {
                 generateInner(declaration, targetAnnotation, true)
@@ -62,7 +71,7 @@ internal class AspectTransformer(
         checkInherits: Boolean,
     ) {
         val parent = findParent(declaration) ?: return
-        val innerObjectName = $$"$MethodSignatures"
+        val innerObjectName = parent.toNormalizedName($$"$MethodSignatures")
 
         val innerObject =
             parent.getOrPutAspectObject(innerObjectName) {
@@ -92,4 +101,6 @@ internal class AspectTransformer(
         .filterIsInstance<IrClass>()
         .firstOrNull { it.name.asString() == name }
         ?: factory(this).also { declarations.add(it) }
+
+    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename$${(this as? IrFile)?.name.orEmpty().replace(".", "")}"
 }

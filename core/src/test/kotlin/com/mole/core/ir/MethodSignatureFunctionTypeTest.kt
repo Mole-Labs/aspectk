@@ -138,7 +138,24 @@ class MethodSignatureFunctionTypeTest {
                 @TargetExample
                 fun test() {}
                 """,
-                name = "Test.kt",
+                """
+                import com.mole.runtime.Aspect
+                import com.mole.runtime.Before
+                import com.mole.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample1
+
+                @Aspect
+                object ExampleAspect1 {
+                    @Before(TargetExample1::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                @TargetExample1
+                fun test1() {}
+                """.trimIndent(),
             )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
@@ -146,7 +163,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = $$$"$MethodSignatures",
+                className = $$$"$MethodSignatures$0_aspectk-testkt",
                 fieldName = $$"ajc$tjp_0",
             )
 

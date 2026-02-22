@@ -202,11 +202,20 @@ class JoinPointTargetingTest {
     fun `JoinPoint should be injected into setter`() {
         Example5().run()
     }
+
+    @Test
+    fun `JoinPoint should be injected into expect function`() {
+        expectRun("hello")
+        assertEquals(true, ExpectAspect.executed)
+        assertEquals(1, ExpectAspect.size)
+        assertEquals(null, ExpectAspect.type)
+        assertEquals("hello", ExpectAspect.arg1)
+    }
 }
 
 @TargetExample3("example1")
 private fun topLevelFunction(arg: String) {
-    assertEquals(ExampleAspect3.executed, true)
+    assertEquals(true, ExampleAspect3.executed)
 }
 
 @TargetExample1("example1")
