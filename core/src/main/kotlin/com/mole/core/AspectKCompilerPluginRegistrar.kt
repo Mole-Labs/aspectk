@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 // K2 compiler discovers and loads this registrar automatically at startup.
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
-class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
+internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
     // Declares that this plugin targets the K2 (FIR + IR) compiler.
     override val supportsK2: Boolean
         get() = true

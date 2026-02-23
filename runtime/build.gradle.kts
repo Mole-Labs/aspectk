@@ -17,6 +17,12 @@
 plugins {
     id("kotlin-conventions")
     id("native-conventions")
+    id("com.mole.aspectK.build")
+}
+
+aspectKBuild {
+    publish("AspectK Runtime")
+    enableBackwardsCompatibility()
 }
 
 kotlin {

@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 // processOption is a no-op. The pluginId must match the subpluginId declared in the
 // Gradle plugin (AspectKGradleSubPlugin).
 @OptIn(ExperimentalCompilerApi::class)
-class AspectKCommandLineProcessor : CommandLineProcessor {
+internal class AspectKCommandLineProcessor : CommandLineProcessor {
     override val pluginId: String = "com.mole.aspectk"
 
     override val pluginOptions: Collection<AbstractCliOption> = emptyList()

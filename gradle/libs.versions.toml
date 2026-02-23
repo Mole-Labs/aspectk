@@ -8,6 +8,7 @@ spotless = "8.1.0"
 kotlinx-coroutines = "1.10.2"
 mockk = "1.13.8"
 jetbrainsKotlinJvm = "2.2.21"
+mavenPublish = "0.34.0"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
@@ -24,9 +25,11 @@ google-autoservice-annotations = { module = "com.google.auto.service:auto-servic
 google-autoservice = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
 kotlin-compile-testing = { module = "dev.zacsweers.kctfork:core", version = "0.12.1" }
 kotlin-compiler-embeddable = {module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin"}
+vanniktech-publish-gradle = { group = "com.vanniktech", name = "gradle-maven-publish-plugin", version.ref = "mavenPublish" }
 
 [plugins]
 diffplug-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlinx-binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }
 buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
+

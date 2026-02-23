@@ -4,6 +4,7 @@ plugins {
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
 }
 
 kotlin {
@@ -14,6 +15,7 @@ kotlin {
 
 dependencies {
     implementation(libs.kotlin.gradlePlugin)
+    implementation(libs.vanniktech.publish.gradle)
 }
 
 gradlePlugin {

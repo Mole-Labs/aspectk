@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-class AdviceGenerationExtension : IrGenerationExtension {
+internal class AdviceGenerationExtension : IrGenerationExtension {
     override fun generate(
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext,
@@ -39,10 +39,10 @@ class AdviceGenerationExtension : IrGenerationExtension {
         aspectkContext
             .tracer(
                 tag =
-                moduleFragment.name
-                    .asString()
-                    .removePrefix("<")
-                    .removeSuffix(">"),
+                    moduleFragment.name
+                        .asString()
+                        .removePrefix("<")
+                        .removeSuffix(">"),
                 description = "Advice Generation",
             ).trace {
                 moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)

@@ -1,6 +1,7 @@
 pluginManagement {
     repositories {
         mavenCentral()
+        mavenLocal() // only for local published version
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -16,6 +17,7 @@ dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
         mavenCentral()
+        mavenLocal() // only for local published version
         google()
         gradlePluginPortal()
     }
@@ -25,7 +27,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
-rootProject.name = "aspectk"
+rootProject.name = "aspectK"
 include(":core")
 include(":plugin")
 include(":runtime")

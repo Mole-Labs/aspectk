@@ -19,6 +19,7 @@ public abstract interface annotation class com/mole/runtime/Aspect : java/lang/a
 }
 
 public abstract interface annotation class com/mole/runtime/Before : java/lang/annotation/Annotation {
+	public abstract fun inherits ()Z
 	public abstract fun target ()[Ljava/lang/Class;
 }
 

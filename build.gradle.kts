@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlinx.binaryCompatibilityValidator)
+    alias(libs.plugins.kotlinx.binaryCompatibilityValidator) apply false
     alias(libs.plugins.diffplug.spotless) apply false
 }
 

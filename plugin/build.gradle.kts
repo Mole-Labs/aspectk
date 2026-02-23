@@ -23,13 +23,14 @@ plugins {
 }
 
 aspectKBuild {
+    publish("AspectK Gradle Plugin")
     enableBackwardsCompatibility()
 }
 
 gradlePlugin {
     this.plugins {
-        register("aspectKPlugin") {
-            id = "com.mole.aspectk"
+        create("aspectK") {
+            id = "com.mole.aspectK"
             implementationClass = "AspectKGradleSubPlugin"
         }
     }

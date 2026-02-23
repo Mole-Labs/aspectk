@@ -17,8 +17,14 @@
 plugins {
     id("java-library")
     id("org.jetbrains.kotlin.jvm")
+    id("com.mole.aspectK.build")
     alias(libs.plugins.diffplug.spotless)
     kotlin("kapt")
+}
+
+aspectKBuild {
+    publish("AspectK Compiler Plugin")
+    enableBackwardsCompatibility()
 }
 
 java {

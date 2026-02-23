@@ -14,6 +14,7 @@ internal fun Project.versionCatalog(): VersionCatalog = versionCatalogs.named("l
 kotlin {
     jvm()
     jvmToolchain(17)
+    applyDefaultHierarchyTemplate()
 
     compilerOptions {
         progressiveMode = true
