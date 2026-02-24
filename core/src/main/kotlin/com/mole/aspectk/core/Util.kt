@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.mole.aspectk.tests
+package com.mole.aspectk.core
 
-@ExpectTarget(name = "example1")
-actual fun expectRun(arg1: String) {
+import org.jetbrains.kotlin.util.suffixIfNot
+
+internal const val REPORT_ASPECTK_MESSAGE =
+    "This is possibly a bug in the AspectK compiler, please report it with details and/or a reproducer to https://github.com/Mole-Labs/aspectk."
+
+internal fun reportCompilerBug(message: String): Nothing {
+    error("${message.suffixIfNot(".")} $REPORT_ASPECTK_MESSAGE ")
 }

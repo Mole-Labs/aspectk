@@ -15,6 +15,5 @@
  */
 package com.mole.aspectk.tests
 
-@ExpectTarget(name = "example1")
-actual fun expectRun(arg1: String) {
-}
+@ExpectTarget("example1")
+actual fun expectRun(arg1: String) {}

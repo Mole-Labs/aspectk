@@ -23,7 +23,7 @@ gradlePlugin {
     plugins {
         create("build") {
             id = "com.mole.aspectk.build"
-            implementationClass = "com.mole.build.AspectKBuildPlugin"
+            implementationClass = "com.mole.aspectk.build.AspectKBuildPlugin"
         }
     }
 }
