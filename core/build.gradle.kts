@@ -49,8 +49,8 @@ repositories {
 dependencies {
     compileOnly(libs.kotlin.compiler)
     compileOnly(libs.google.autoservice.annotations)
+    implementation(project(":runtime"))
     testRuntimeOnly(libs.kotlin.compiler)
-    testImplementation(project(":runtime"))
     testImplementation(libs.test.mockk)
     testImplementation(libs.kotlin.coroutine.core)
     testImplementation(libs.kotlin.coroutine.test)

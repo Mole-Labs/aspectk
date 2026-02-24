@@ -1,8 +1,8 @@
 package com.mole.sample.aspects
 
-import com.mole.runtime.Aspect
-import com.mole.runtime.Before
-import com.mole.runtime.JoinPoint
+import com.mole.aspectk.runtime.Aspect
+import com.mole.aspectk.runtime.Before
+import com.mole.aspectk.runtime.JoinPoint
 import com.mole.sample.annotations.Trace
 
 /**
@@ -25,7 +25,6 @@ import com.mole.sample.annotations.Trace
  */
 @Aspect
 object TracingAspect {
-
     /** 현재 추적 중인 스팬 스택. 들여쓰기 깊이 계산에 사용됩니다. */
     val callStack = mutableListOf<String>()
 
@@ -34,14 +33,16 @@ object TracingAspect {
 
     @Before(Trace::class)
     fun trace(joinPoint: JoinPoint) {
-        val annotationInfo = joinPoint.signature.annotations.firstOrNull {
-            it.typeName.contains("Trace")
-        }
-        val spanName = annotationInfo
-            ?.let { info ->
-                val idx = info.parameterNames.indexOf("spanName")
-                (info.args.getOrNull(idx) as? String)?.takeIf { it.isNotEmpty() }
-            } ?: joinPoint.signature.methodName
+        val annotationInfo =
+            joinPoint.signature.annotations.firstOrNull {
+                it.typeName.contains("Trace")
+            }
+        val spanName =
+            annotationInfo
+                ?.let { info ->
+                    val idx = info.parameterNames.indexOf("spanName")
+                    (info.args.getOrNull(idx) as? String)?.takeIf { it.isNotEmpty() }
+                } ?: joinPoint.signature.methodName
 
         val depth = callStack.size
         val indent = "  ".repeat(depth)

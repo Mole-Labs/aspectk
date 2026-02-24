@@ -1,8 +1,8 @@
 package com.mole.sample.aspects
 
-import com.mole.runtime.Aspect
-import com.mole.runtime.Before
-import com.mole.runtime.JoinPoint
+import com.mole.aspectk.runtime.Aspect
+import com.mole.aspectk.runtime.Before
+import com.mole.aspectk.runtime.JoinPoint
 import com.mole.sample.annotations.RequirePermission
 import com.mole.sample.exceptions.PermissionDeniedException
 
@@ -21,7 +21,6 @@ import com.mole.sample.exceptions.PermissionDeniedException
  */
 @Aspect
 object PermissionAspect {
-
     /**
      * 현재 부여된 권한 목록.
      * 실제 앱에서는 세션 또는 인증 서비스에서 동적으로 주입합니다.
@@ -30,9 +29,10 @@ object PermissionAspect {
 
     @Before(RequirePermission::class)
     fun checkPermission(joinPoint: JoinPoint) {
-        val annotationInfo = joinPoint.signature.annotations.firstOrNull {
-            it.typeName.contains("RequirePermission")
-        } ?: return
+        val annotationInfo =
+            joinPoint.signature.annotations.firstOrNull {
+                it.typeName.contains("RequirePermission")
+            } ?: return
 
         val idx = annotationInfo.parameterNames.indexOf("permission")
         val permission = annotationInfo.args.getOrNull(idx) as? String ?: return

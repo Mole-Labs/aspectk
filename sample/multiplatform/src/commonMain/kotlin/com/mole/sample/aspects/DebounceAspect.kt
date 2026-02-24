@@ -1,8 +1,8 @@
 package com.mole.sample.aspects
 
-import com.mole.runtime.Aspect
-import com.mole.runtime.Before
-import com.mole.runtime.JoinPoint
+import com.mole.aspectk.runtime.Aspect
+import com.mole.aspectk.runtime.Before
+import com.mole.aspectk.runtime.JoinPoint
 import com.mole.sample.annotations.PreventDoubleClick
 import com.mole.sample.exceptions.DoubleClickException
 import com.mole.sample.platform.currentTimeMillis
@@ -22,7 +22,6 @@ import com.mole.sample.platform.currentTimeMillis
  */
 @Aspect
 object DebounceAspect {
-
     /**
      * 현재 시각을 밀리초로 반환하는 제공자.
      * 테스트에서 시간을 제어하기 위해 교체할 수 있습니다.
@@ -37,14 +36,16 @@ object DebounceAspect {
         val methodName = joinPoint.signature.methodName
         val now = timeProvider()
 
-        val annotationInfo = joinPoint.signature.annotations.firstOrNull {
-            it.typeName.contains("PreventDoubleClick")
-        }
-        val cooldownMs = annotationInfo
-            ?.let { info ->
-                val idx = info.parameterNames.indexOf("cooldownMs")
-                info.args.getOrNull(idx) as? Long
-            } ?: 1000L
+        val annotationInfo =
+            joinPoint.signature.annotations.firstOrNull {
+                it.typeName.contains("PreventDoubleClick")
+            }
+        val cooldownMs =
+            annotationInfo
+                ?.let { info ->
+                    val idx = info.parameterNames.indexOf("cooldownMs")
+                    info.args.getOrNull(idx) as? Long
+                } ?: 1000L
 
         val lastTime = lastCallTime[methodName] ?: 0L
         val elapsed = now - lastTime
