@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import com.mole.aspectk.PLUGIN_ID
-import com.mole.aspectk.VERSION
+package com.mole.aspectk.plugin
+
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
@@ -27,14 +27,13 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         return project.provider { emptyList() }
     }
 
-    override fun getCompilerPluginId(): String = PLUGIN_ID
+    override fun getCompilerPluginId(): String = BuildConfig.COMPILER_PLUGIN_ID
 
-    override fun getPluginArtifact(): SubpluginArtifact =
-        SubpluginArtifact(
-            groupId = "com.mole.core",
-            artifactId = "compiler",
-            version = VERSION,
-        )
+    override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
+        groupId = BuildConfig.GROUP,
+        artifactId = BuildConfig.COMPILER_PLUGIN_ARTIFACT,
+        version = BuildConfig.VERSION,
+    )
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
 }

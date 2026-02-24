@@ -17,7 +17,7 @@
 plugins {
     id("kotlin-conventions")
     id("native-conventions")
-    id("com.mole.aspectK.build")
+    id("com.mole.aspectk.build")
 }
 
 aspectKBuild {

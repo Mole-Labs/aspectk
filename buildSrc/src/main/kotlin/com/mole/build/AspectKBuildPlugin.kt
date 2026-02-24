@@ -1,11 +1,13 @@
 package com.mole.build
 
+import com.github.gmazzo.buildconfig.BuildConfigExtension
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import org.gradle.api.Action
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.AppliedPlugin
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.kotlin.dsl.buildConfigField
 import org.gradle.kotlin.dsl.getByType
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
@@ -100,6 +102,19 @@ class AspectKBuildPlugin : Plugin<Project> {
                 }
             project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm", kotlinPluginHandler)
             project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform", kotlinPluginHandler)
+        }
+
+        override fun generateBuildConfig(basePackage: String) {
+            project.pluginManager.apply("com.github.gmazzo.buildconfig")
+
+            val buildConfig = project.extensions.getByName("buildConfig") as BuildConfigExtension
+            buildConfig.apply {
+                packageName(basePackage)
+                buildConfigField("GROUP", project.aspectKGroupId)
+                buildConfigField("VERSION", project.aspectKVersion)
+                buildConfigField("COMPILER_PLUGIN_ID", "com.mole.aspectk")
+                buildConfigField("COMPILER_PLUGIN_ARTIFACT", "core")
+            }
         }
 
         override fun enableBackwardsCompatibility(

@@ -16,34 +16,24 @@
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("java-library")
-    id("com.mole.aspectK.build")
-    alias(libs.plugins.buildConfig)
+    id("com.mole.aspectk.build")
     kotlin("kapt")
     `java-gradle-plugin`
 }
 
 aspectKBuild {
     publish("AspectK Gradle Plugin")
+    generateBuildConfig("com.mole.aspectk.plugin")
     enableBackwardsCompatibility()
 }
 
 gradlePlugin {
     this.plugins {
-        create("aspectK") {
-            id = "com.mole.aspectK"
-            implementationClass = "AspectKGradleSubPlugin"
+        create("aspectk") {
+            id = "com.mole.aspectk"
+            implementationClass = "com.mole.aspectk.plugin.AspectKGradleSubPlugin"
         }
     }
-}
-
-buildConfig {
-    packageName("com.mole.aspectk")
-    useKotlinOutput {
-        topLevelConstants = true
-        internalVisibility = true
-    }
-    buildConfigField("String", "VERSION", providers.gradleProperty("VERSION_NAME").map { "\"$it\"" })
-    buildConfigField("String", "PLUGIN_ID", libs.versions.pluginId.map { "\"$it\"" })
 }
 
 dependencies {

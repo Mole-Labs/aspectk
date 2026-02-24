@@ -26,10 +26,10 @@ google-autoservice = { module = "com.google.auto.service:auto-service", version.
 kotlin-compile-testing = { module = "dev.zacsweers.kctfork:core", version = "0.12.1" }
 kotlin-compiler-embeddable = {module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin"}
 vanniktech-publish-gradle = { group = "com.vanniktech", name = "gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+gmazzo-buildconfig = "com.github.gmazzo.buildconfig:plugin:5.6.8"
 
 [plugins]
 diffplug-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 kotlinx-binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }
-buildConfig = { id = "com.github.gmazzo.buildconfig", version = "6.0.7" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
 
