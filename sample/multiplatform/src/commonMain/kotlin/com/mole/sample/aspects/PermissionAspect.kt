@@ -1,8 +1,8 @@
 package com.mole.sample.aspects
 
-import com.mole.aspectk.runtime.Aspect
-import com.mole.aspectk.runtime.Before
-import com.mole.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.Aspect
+import io.github.molelabs.aspectk.runtime.Before
+import io.github.molelabs.aspectk.runtime.JoinPoint
 import com.mole.sample.annotations.RequirePermission
 import com.mole.sample.exceptions.PermissionDeniedException
 

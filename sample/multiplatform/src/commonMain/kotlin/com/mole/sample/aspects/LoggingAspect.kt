@@ -1,8 +1,8 @@
 package com.mole.sample.aspects
 
-import com.mole.aspectk.runtime.Aspect
-import com.mole.aspectk.runtime.Before
-import com.mole.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.Aspect
+import io.github.molelabs.aspectk.runtime.Before
+import io.github.molelabs.aspectk.runtime.JoinPoint
 import com.mole.sample.annotations.LogExecution
 
 /**
@@ -54,8 +54,8 @@ object LoggingAspect {
     fun clearLogs() = logs.clear()
 }
 
-/** [com.mole.aspectk.runtime.AnnotationInfo]에서 파라미터 이름으로 값을 조회하는 헬퍼. */
-private fun com.mole.aspectk.runtime.AnnotationInfo.argByName(name: String): Any? {
+/** [io.github.molelabs.aspectk.runtime.AnnotationInfo]에서 파라미터 이름으로 값을 조회하는 헬퍼. */
+private fun io.github.molelabs.aspectk.runtime.AnnotationInfo.argByName(name: String): Any? {
     val index = parameterNames.indexOf(name)
     return if (index >= 0) args.getOrNull(index) else null
 }

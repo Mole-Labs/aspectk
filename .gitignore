@@ -44,4 +44,4 @@ bin/
 
 ### Agents ###
 .gemini/**
-CLAUDE.md
+.claude/**

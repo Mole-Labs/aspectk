@@ -28,7 +28,7 @@ plugins {
 }
 
 rootProject.name = "aspectk"
-include(":core")
-include(":plugin")
-include(":runtime")
-include(":core-tests")
+include(":aspectk-core")
+include(":aspectk-plugin")
+include(":aspectk-runtime")
+include(":aspectk-core-tests")

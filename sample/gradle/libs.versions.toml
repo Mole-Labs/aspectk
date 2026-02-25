@@ -1,12 +1,11 @@
 [versions]
 kotlin = "2.2.21"
-aspectk = "0.1.3-ALPHA"
+aspectk = "0.1.4-ALPHA"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-aspectk-runtime = { module = "io.github.oungsi2000:runtime", version.ref = "aspectk" }
+aspectk-runtime = { module = "io.github.mole-labs:aspectk-runtime", version.ref = "aspectk" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-aspectk = { id = "com.mole.aspectk", version.ref = "aspectk" }

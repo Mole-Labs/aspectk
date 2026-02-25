@@ -22,8 +22,8 @@ dependencies {
 gradlePlugin {
     plugins {
         create("build") {
-            id = "com.mole.aspectk.build"
-            implementationClass = "com.mole.aspectk.build.AspectKBuildPlugin"
+            id = "io.github.mole-labs.aspectk.build"
+            implementationClass = "io.github.molelabs.aspectk.build.AspectKBuildPlugin"
         }
     }
 }

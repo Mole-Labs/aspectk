@@ -1,6 +1,6 @@
 plugins {
-    id("org.jetbrains.kotlin.multiplatform") version "2.1.0"
-    id("com.mole.aspectk") version "0.1.3-ALPHA"
+    id("org.jetbrains.kotlin.multiplatform") version "2.2.21"
+    id("io.github.mole-labs.aspectk") version "0.1.4-ALPHA"
 }
 
 kotlin {
