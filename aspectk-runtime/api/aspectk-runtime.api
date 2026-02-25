@@ -1,0 +1,84 @@
+public final class io/github/molelabs/aspectk/runtime/AnnotationInfo {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Lkotlin/reflect/KClass;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lio/github/molelabs/aspectk/runtime/AnnotationInfo;
+	public static synthetic fun copy$default (Lio/github/molelabs/aspectk/runtime/AnnotationInfo;Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/github/molelabs/aspectk/runtime/AnnotationInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/List;
+	public final fun getParameterNames ()Ljava/util/List;
+	public final fun getType ()Lkotlin/reflect/KClass;
+	public final fun getTypeName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/github/molelabs/aspectk/runtime/Aspect : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class io/github/molelabs/aspectk/runtime/Before : java/lang/annotation/Annotation {
+	public abstract fun inherits ()Z
+	public abstract fun target ()[Ljava/lang/Class;
+}
+
+public abstract interface class io/github/molelabs/aspectk/runtime/JoinPoint {
+	public abstract fun getArgs ()Ljava/util/List;
+	public abstract fun getSignature ()Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public abstract fun getTarget ()Ljava/lang/Object;
+}
+
+public final class io/github/molelabs/aspectk/runtime/MethodParameter {
+	public fun <init> (Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Z)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkotlin/reflect/KClass;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Z
+	public final fun copy (Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Z)Lio/github/molelabs/aspectk/runtime/MethodParameter;
+	public static synthetic fun copy$default (Lio/github/molelabs/aspectk/runtime/MethodParameter;Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;ZILjava/lang/Object;)Lio/github/molelabs/aspectk/runtime/MethodParameter;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAnnotations ()Ljava/util/List;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getType ()Lkotlin/reflect/KClass;
+	public final fun getTypeName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isNullable ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/molelabs/aspectk/runtime/MethodSignature {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lkotlin/reflect/KClass;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public static synthetic fun copy$default (Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;ILjava/lang/Object;)Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAnnotations ()Ljava/util/List;
+	public final fun getMethodName ()Ljava/lang/String;
+	public final fun getParameter ()Ljava/util/List;
+	public final fun getReturnType ()Lkotlin/reflect/KClass;
+	public final fun getReturnTypeName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
+	public fun <init> (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;)Lio/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint;
+	public static synthetic fun copy$default (Lio/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint;Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;ILjava/lang/Object;)Lio/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getArgs ()Ljava/util/List;
+	public fun getSignature ()Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public fun getTarget ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

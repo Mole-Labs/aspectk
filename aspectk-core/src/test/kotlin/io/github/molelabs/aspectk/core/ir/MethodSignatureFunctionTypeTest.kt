@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core
 
+import com.tschuchort.compiletesting.KotlinCompilation
 import io.github.molelabs.aspectk.core.ir.companionObjectWorkMethodSignature
 import io.github.molelabs.aspectk.core.ir.defaultParamFunMethodSignature
 import io.github.molelabs.aspectk.core.ir.operatorPlusMethodSignature
@@ -24,7 +25,6 @@ import io.github.molelabs.aspectk.core.ir.singleFieldWithNoThisParameter
 import io.github.molelabs.aspectk.core.ir.varargFunMethodSignature
 import io.github.molelabs.aspectk.runtime.MethodParameter
 import io.github.molelabs.aspectk.runtime.MethodSignature
-import com.tschuchort.compiletesting.KotlinCompilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -265,16 +265,16 @@ class MethodSignatureFunctionTypeTest {
             singleFieldWithNoAnnotationArgs(loader, "<set-property>", "TargetExample")
                 .copy(
                     parameter =
-                        listOf(
-                            loader.thisParameterInfo(),
-                            MethodParameter(
-                                name = "value",
-                                type = String::class,
-                                typeName = "kotlin.String",
-                                annotations = listOf(),
-                                isNullable = false,
-                            ),
+                    listOf(
+                        loader.thisParameterInfo(),
+                        MethodParameter(
+                            name = "value",
+                            type = String::class,
+                            typeName = "kotlin.String",
+                            annotations = listOf(),
+                            isNullable = false,
                         ),
+                    ),
                 )
         assertEquals(expected, actual)
     }

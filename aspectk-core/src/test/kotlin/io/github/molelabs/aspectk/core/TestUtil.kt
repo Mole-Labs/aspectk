@@ -15,10 +15,10 @@
  */
 package io.github.molelabs.aspectk.core
 
-import io.github.molelabs.aspectk.runtime.MethodParameter
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
 import com.tschuchort.compiletesting.SourceFile
+import io.github.molelabs.aspectk.runtime.MethodParameter
 import org.intellij.lang.annotations.Language
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi

@@ -15,10 +15,10 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import com.tschuchort.compiletesting.KotlinCompilation
 import io.github.molelabs.aspectk.core.assertAndGetField
 import io.github.molelabs.aspectk.core.compile
 import io.github.molelabs.aspectk.core.thisParameterInfo
-import com.tschuchort.compiletesting.KotlinCompilation
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
