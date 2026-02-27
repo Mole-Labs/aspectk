@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationContainer
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrFunction
+import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.declarations.name
@@ -39,38 +40,46 @@ internal class AspectTransformer(
     private val adviceCallGenerator: AdviceCallGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
-    private val targetAnnotations = aspectKContext.aspectLookUp.targets
+    private val targets = aspectKContext.aspectLookUp.targets
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
         // Fake Override 메서드는 패스
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
-        val target = targetAnnotation(declaration)
+        val targetAnnotations = targetAnnotations(declaration)
 
         // 함수 본문이 있으며, 타겟에 해당되는 경우
-        if (target != null && declaration.hasBody()) {
-            generateInner(declaration, target, false)
+        if (targetAnnotations.isNotEmpty() && declaration.hasBody()) {
+            val parent = findParent(declaration) ?: return super.visitSimpleFunction(declaration)
+            val signatureProperty = generateSignature(parent, declaration)
+            targetAnnotations.forEach { target ->
+                generateInner(declaration, target, false, signatureProperty)
+            }
         }
 
-        targetAnnotations.forEach { targetAnnotation ->
+        // 일반 메서드라도 상속 관계일 경우 처리
+        generateIfOverridden(declaration)
+        return super.visitSimpleFunction(declaration)
+    }
+
+    private fun generateIfOverridden(declaration: IrFunction) {
+        targets.forEach { targetAnnotation ->
             val isOverridden =
                 aspectKContext.aspectLookUp
                     .getOverridden(declaration.attributeOwnerId)
                     .contains(targetAnnotation)
             val inherits = aspectKContext.aspectLookUp[targetAnnotation].any { it.inherits }
             if (isOverridden && inherits) {
-                generateInner(declaration, targetAnnotation, true)
+                val parent = findParent(declaration) ?: return
+                val signatureProperty = generateSignature(parent, declaration)
+                generateInner(declaration, targetAnnotation, true, signatureProperty)
             }
         }
-
-        return super.visitSimpleFunction(declaration)
     }
 
-    private fun generateInner(
+    private fun generateSignature(
+        parent: IrDeclarationContainer,
         declaration: IrFunction,
-        target: FqName,
-        checkInherits: Boolean,
-    ) {
-        val parent = findParent(declaration) ?: return
+    ): IrProperty {
         val innerObjectName = parent.toNormalizedName($$"$MethodSignatures")
 
         val innerObject =
@@ -79,7 +88,15 @@ internal class AspectTransformer(
             }
 
         val signature = methodSignatureGenerator.generate(declaration, parent)
-        val signatureProperty = methodSignatureGenerator.toProperty(innerObject, signature)
+        return methodSignatureGenerator.toProperty(innerObject, signature)
+    }
+
+    private fun generateInner(
+        declaration: IrFunction,
+        target: FqName,
+        checkInherits: Boolean,
+        signatureProperty: IrProperty,
+    ) {
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
         adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
     }
@@ -92,7 +109,7 @@ internal class AspectTransformer(
         return current
     }
 
-    private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.find(declaration::hasAnnotation)
+    private fun targetAnnotations(declaration: IrFunction) = targets.filter(declaration::hasAnnotation)
 
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
