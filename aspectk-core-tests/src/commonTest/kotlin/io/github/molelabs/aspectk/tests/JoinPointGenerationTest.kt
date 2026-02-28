@@ -120,9 +120,10 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `JoinPoint should be injected with reference type arguments into aspect`() = runTest {
-        Example3().run(listOf("hello"), CoroutineScope(StandardTestDispatcher()))
-    }
+    fun `JoinPoint should be injected with reference type arguments into aspect`() =
+        runTest {
+            Example3().run(listOf("hello"), CoroutineScope(StandardTestDispatcher()))
+        }
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetExample4(
@@ -158,10 +159,11 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `JoinPoint with generic argument should be injected into aspect with Any`() = Example4().run(
-        listOf("hello"),
-        123,
-    )
+    fun `JoinPoint with generic argument should be injected into aspect with Any`() =
+        Example4().run(
+            listOf("hello"),
+            123,
+        )
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetExample5(
@@ -259,9 +261,10 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `JoinPoint should capture function type argument`() = Example7().run { arg ->
-        assertEquals("test", arg)
-    }
+    fun `JoinPoint should capture function type argument`() =
+        Example7().run { arg ->
+            assertEquals("test", arg)
+        }
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetExample8(
@@ -304,9 +307,10 @@ class JoinPointGenerationTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
-    fun `JoinPoint should capture suspend function type argument`() = runTest {
-        Example8().run(CoroutineScope(StandardTestDispatcher()))
-    }
+    fun `JoinPoint should capture suspend function type argument`() =
+        runTest {
+            Example8().run(CoroutineScope(StandardTestDispatcher()))
+        }
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetExample9(

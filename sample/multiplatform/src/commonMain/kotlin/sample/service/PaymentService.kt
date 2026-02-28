@@ -23,10 +23,10 @@ class PaymentService {
      * - [RequirePermission]: "PAYMENT" 권한이 있어야 결제할 수 있습니다.
      * - [Trace]: 결제 흐름 추적에 포함됩니다.
      */
-    @LogExecution(tag = "PaymentService", level = "INFO")
+//    @LogExecution(tag = "PaymentService", level = "INFO")
     @PreventDoubleClick(cooldownMs = 1000L)
-    @RequirePermission("PAYMENT")
-    @Trace(spanName = "request-payment")
+//    @RequirePermission("PAYMENT")
+//    @Trace(spanName = "request-payment")
     fun requestPayment(orderId: String, amount: Double): String {
         transactionCount++
         return "TXN-$transactionCount-${orderId.uppercase()}"

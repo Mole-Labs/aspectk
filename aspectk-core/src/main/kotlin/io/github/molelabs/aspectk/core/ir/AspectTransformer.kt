@@ -81,7 +81,6 @@ internal class AspectTransformer(
         declaration: IrFunction,
     ): IrProperty {
         val innerObjectName = parent.toNormalizedName($$"$MethodSignatures")
-
         val innerObject =
             parent.getOrPutAspectObject(innerObjectName) {
                 methodSignatureGenerator.generateInnerObject(innerObjectName, it)

@@ -104,7 +104,7 @@ internal class MethodSignatureGenerator(
                 .buildField {
                     name = Name.identifier($$"ajc$tjp_$${fieldCounter++}") // 유니크한 이름
                     type = aspectKContext.methodSignatureSymbol.defaultType
-                    isStatic = true
+                    isStatic = false
                     isFinal = true
                     visibility = DescriptorVisibilities.PRIVATE
                 }.apply {

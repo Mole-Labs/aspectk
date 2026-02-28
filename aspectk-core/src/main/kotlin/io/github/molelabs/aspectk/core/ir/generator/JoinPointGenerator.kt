@@ -22,7 +22,9 @@ import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
 import org.jetbrains.kotlin.ir.builders.irGetField
+import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irNull
+import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -50,8 +52,10 @@ internal class JoinPointGenerator(
                     "method signature backing field is null",
                 )
 
+            val objectInstance = irGetObject((signatureField.parent as IrClass).symbol)
+
             arguments[0] = receiver
-            arguments[1] = irGetField(null, signatureField, signatureField.type)
+            arguments[1] = irGetField(objectInstance, signatureField, signatureField.type)
             arguments[2] =
                 aspectKContext.createIrListOf(
                     scope = declaration.symbol,
