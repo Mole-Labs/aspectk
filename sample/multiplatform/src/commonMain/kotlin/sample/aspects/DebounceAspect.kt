@@ -33,32 +33,33 @@ object DebounceAspect {
 
     @Before(PreventDoubleClick::class)
     fun checkDebounce(joinPoint: JoinPoint) {
-        val methodName = joinPoint.signature.methodName
-        val now = timeProvider()
-
-        val annotationInfo =
-            joinPoint.signature.annotations.firstOrNull {
-                it.typeName.contains("PreventDoubleClick")
-            }
-        val cooldownMs =
-            annotationInfo
-                ?.let { info ->
-                    val idx = info.parameterNames.indexOf("cooldownMs")
-                    info.args.getOrNull(idx) as? Long
-                } ?: 1000L
-
-        val lastTime = lastCallTime[methodName] ?: 0L
-        val elapsed = now - lastTime
-
-        if (elapsed < cooldownMs) {
-            val remaining = cooldownMs - elapsed
-            throw DoubleClickException(
-                "Function '$methodName' was called too rapidly. " +
-                    "Wait ${remaining}ms before calling again (cooldown: ${cooldownMs}ms).",
-            )
-        }
-
-        lastCallTime[methodName] = now
+        println(joinPoint)
+//        val methodName = joinPoint.signature.methodName
+//        val now = timeProvider()
+//
+//        val annotationInfo =
+//            joinPoint.signature.annotations.firstOrNull {
+//                it.typeName.contains("PreventDoubleClick")
+//            }
+//        val cooldownMs =
+//            annotationInfo
+//                ?.let { info ->
+//                    val idx = info.parameterNames.indexOf("cooldownMs")
+//                    info.args.getOrNull(idx) as? Long
+//                } ?: 1000L
+//
+//        val lastTime = lastCallTime[methodName] ?: -cooldownMs
+//        val elapsed = now - lastTime
+//
+//        if (elapsed < cooldownMs) {
+//            val remaining = cooldownMs - elapsed
+//            throw DoubleClickException(
+//                "Function '$methodName' was called too rapidly. " +
+//                    "Wait ${remaining}ms before calling again (cooldown: ${cooldownMs}ms).",
+//            )
+//        }
+//
+//        lastCallTime[methodName] = now
     }
 
     /** 모든 함수의 마지막 호출 시각을 초기화합니다. 테스트 케이스 간 격리에 사용하세요. */
