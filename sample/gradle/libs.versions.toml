@@ -1,6 +1,7 @@
 [versions]
 kotlin = "2.2.21"
-aspectk = "0.1.4-ALPHA"
+aspectk = "0.1.5-ALPHA"
+compose-multiplatform = "1.8.0"
 
 [libraries]
 kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
@@ -9,3 +10,5 @@ aspectk-runtime = { module = "io.github.mole-labs:aspectk-runtime", version.ref 
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }

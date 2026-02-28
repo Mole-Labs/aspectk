@@ -1,4 +1,4 @@
-package sample.platform
+package sample.multiplatform.platform
 
 import platform.Foundation.NSDate
 import platform.Foundation.NSProcessInfo

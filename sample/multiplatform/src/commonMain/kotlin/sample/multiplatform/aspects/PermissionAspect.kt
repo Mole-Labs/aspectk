@@ -1,10 +1,10 @@
-package sample.aspects
+package sample.multiplatform.aspects
 
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
-import sample.annotations.RequirePermission
-import sample.exceptions.PermissionDeniedException
+import sample.multiplatform.annotations.RequirePermission
+import sample.multiplatform.exceptions.PermissionDeniedException
 
 /**
  * [RequirePermission] 어노테이션이 붙은 함수 실행 전 권한을 검사합니다.

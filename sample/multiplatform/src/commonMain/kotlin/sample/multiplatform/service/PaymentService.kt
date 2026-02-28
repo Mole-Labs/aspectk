@@ -1,9 +1,9 @@
-package sample.service
+package sample.multiplatform.service
 
-import sample.annotations.LogExecution
-import sample.annotations.PreventDoubleClick
-import sample.annotations.RequirePermission
-import sample.annotations.Trace
+import sample.multiplatform.annotations.LogExecution
+import sample.multiplatform.annotations.PreventDoubleClick
+import sample.multiplatform.annotations.RequirePermission
+import sample.multiplatform.annotations.Trace
 
 /**
  * 결제 처리 서비스 샘플.
@@ -20,13 +20,8 @@ class PaymentService {
      * 결제를 요청합니다.
      *
      * - [PreventDoubleClick]: 기본 1000ms 쿨다운으로 중복 결제 요청을 방지합니다.
-     * - [RequirePermission]: "PAYMENT" 권한이 있어야 결제할 수 있습니다.
-     * - [Trace]: 결제 흐름 추적에 포함됩니다.
      */
-//    @LogExecution(tag = "PaymentService", level = "INFO")
     @PreventDoubleClick(cooldownMs = 1000L)
-//    @RequirePermission("PAYMENT")
-//    @Trace(spanName = "request-payment")
     fun requestPayment(orderId: String, amount: Double): String {
         transactionCount++
         return "TXN-$transactionCount-${orderId.uppercase()}"

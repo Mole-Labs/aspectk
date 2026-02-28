@@ -1,8 +1,8 @@
-package sample
+package sample.multiplatform
 
-import sample.aspects.LoggingAspect
-import sample.aspects.PermissionAspect
-import sample.service.UserService
+import sample.multiplatform.aspects.LoggingAspect
+import sample.multiplatform.aspects.PermissionAspect
+import sample.multiplatform.service.UserService
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test

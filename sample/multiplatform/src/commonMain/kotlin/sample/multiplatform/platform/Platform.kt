@@ -1,4 +1,4 @@
-package sample.platform
+package sample.multiplatform.platform
 
 /** 현재 플랫폼의 이름을 반환합니다 (예: "JVM", "iOS", "macOS"). */
 expect fun platformName(): String

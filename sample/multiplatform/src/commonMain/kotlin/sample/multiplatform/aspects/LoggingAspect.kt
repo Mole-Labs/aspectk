@@ -1,9 +1,9 @@
-package sample.aspects
+package sample.multiplatform.aspects
 
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
-import sample.annotations.LogExecution
+import sample.multiplatform.annotations.LogExecution
 
 /**
  * [LogExecution] 어노테이션이 붙은 함수 호출을 가로채서 콘솔에 로그를 출력합니다.

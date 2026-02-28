@@ -1,8 +1,8 @@
-package sample.service
+package sample.multiplatform.service
 
-import sample.annotations.LogExecution
-import sample.annotations.RequirePermission
-import sample.annotations.Trace
+import sample.multiplatform.annotations.LogExecution
+import sample.multiplatform.annotations.RequirePermission
+import sample.multiplatform.annotations.Trace
 
 /**
  * 사용자 관리 서비스 샘플.

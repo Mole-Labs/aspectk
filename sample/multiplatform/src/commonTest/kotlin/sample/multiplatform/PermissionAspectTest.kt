@@ -1,10 +1,10 @@
-package sample
+package sample.multiplatform
 
-import sample.aspects.LoggingAspect
-import sample.aspects.PermissionAspect
-import sample.aspects.TracingAspect
-import sample.exceptions.PermissionDeniedException
-import sample.service.UserService
+import sample.multiplatform.aspects.LoggingAspect
+import sample.multiplatform.aspects.PermissionAspect
+import sample.multiplatform.aspects.TracingAspect
+import sample.multiplatform.exceptions.PermissionDeniedException
+import sample.multiplatform.service.UserService
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test

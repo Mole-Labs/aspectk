@@ -1,4 +1,4 @@
-package sample.annotations
+package sample.multiplatform.annotations
 
 /**
  * 어노테이션이 붙은 함수 호출 시 함수명, 파라미터, 반환 타입 정보를 자동으로 로깅합니다.

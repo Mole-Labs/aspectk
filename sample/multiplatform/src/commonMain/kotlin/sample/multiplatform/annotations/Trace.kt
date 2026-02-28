@@ -1,4 +1,4 @@
-package sample.annotations
+package sample.multiplatform.annotations
 
 /**
  * 함수 호출 계층(스택 깊이)을 추적하여 트레이싱 로그를 출력합니다.

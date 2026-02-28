@@ -1,6 +1,10 @@
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+
 plugins {
-    id("io.github.mole-labs.aspectk") version "0.1.5-ALPHA"
-    id("org.jetbrains.kotlin.multiplatform") version "2.2.21"
+    id("io.github.mole-labs.aspectk") version "0.1.6-ALPHA"
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.compose.multiplatform)
 }
 
 kotlin {
@@ -9,7 +13,6 @@ kotlin {
 
     iosArm64()
     iosSimulatorArm64()
-    macosArm64()
 
     applyDefaultHierarchyTemplate()
 
@@ -17,12 +20,33 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.aspectk.runtime)
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+            }
+        }
+        jvmMain {
+            dependencies {
+                implementation(compose.desktop.currentOs)
             }
         }
         commonTest {
             dependencies {
                 implementation(libs.kotlin.test)
             }
+        }
+    }
+}
+
+compose.desktop {
+    application {
+        mainClass = "sample.multiplatform.MainKt"
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "aspectk-sample"
+            packageVersion = "1.0.0"
         }
     }
 }

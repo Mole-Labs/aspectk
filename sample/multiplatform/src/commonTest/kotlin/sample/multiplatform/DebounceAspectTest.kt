@@ -1,10 +1,10 @@
-package sample
+package sample.multiplatform
 
-import sample.aspects.DebounceAspect
-import sample.aspects.LoggingAspect
-import sample.aspects.PermissionAspect
-import sample.exceptions.DoubleClickException
-import sample.service.PaymentService
+import sample.multiplatform.aspects.DebounceAspect
+import sample.multiplatform.aspects.LoggingAspect
+import sample.multiplatform.aspects.PermissionAspect
+import sample.multiplatform.exceptions.DoubleClickException
+import sample.multiplatform.service.PaymentService
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -34,7 +34,7 @@ class DebounceAspectTest {
     @AfterTest
     fun tearDown() {
         DebounceAspect.reset()
-        DebounceAspect.timeProvider = { sample.platform.currentTimeMillis() }
+        DebounceAspect.timeProvider = { sample.multiplatform.platform.currentTimeMillis() }
         LoggingAspect.clearLogs()
         PermissionAspect.revokeAll()
     }
