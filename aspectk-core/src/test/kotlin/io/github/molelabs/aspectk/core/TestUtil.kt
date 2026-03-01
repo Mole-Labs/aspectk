@@ -30,78 +30,49 @@ import java.net.URLClassLoader
 fun compile(
     sourceFiles: List<SourceFile>,
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
-): JvmCompilationResult = KotlinCompilation()
-    .apply {
-        noOptimize = true
-        kotlincArguments +=
-            listOf(
-                "-jvm-default=no-compatibility",
-                "-Xverify-ir=error",
-                "-Xverify-ir-visibility",
-                "-Xno-inline",
-                "-Xno-optimize",
-            )
-        jvmDefault = JvmDefaultMode.DISABLE.description
-        languageVersion = "2.3"
-        sources = sourceFiles
-        verbose = true
-        this.compilerPluginRegistrars = listOf(plugin)
-        inheritClassPath = true
-    }.compile()
+): JvmCompilationResult =
+    KotlinCompilation()
+        .apply {
+            jvmDefault = JvmDefaultMode.DISABLE.description
+            jvmTarget = "17"
+            languageVersion = "2.3"
+            sources = sourceFiles
+            verbose = true
+            this.compilerPluginRegistrars = listOf(plugin)
+            inheritClassPath = true
+        }.compile()
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
     @Language("kotlin") vararg source: String,
     name: String = "aspectk-test.kt",
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
-): JvmCompilationResult = compile(
-    source.mapIndexed { idx, source ->
-        SourceFile.kotlin(name = "${idx}_$name", contents = source)
-    },
-    plugin,
-)
+): JvmCompilationResult =
+    compile(
+        source.mapIndexed { idx, source ->
+            SourceFile.kotlin(name = "${idx}_$name", contents = source)
+        },
+        plugin,
+    )
 
 fun URLClassLoader.assertAndGetField(
     className: String,
     fieldName: String,
     targetClass: String? = null,
-): Any = this
-    .loadClass(className)
-    .getDeclaredField(fieldName)
-    .apply {
-        setAccessible(true)
-        assertNotNull(this@apply)
-    }.get(targetClass)
+): Any =
+    this
+        .loadClass(className)
+        .getDeclaredField(fieldName)
+        .apply {
+            setAccessible(true)
+            assertNotNull(this@apply)
+        }.get(targetClass)
 
-fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter = MethodParameter(
-    name = "<this>",
-    type = loadClass(className).kotlin,
-    typeName = className,
-    annotations = listOf(),
-    isNullable = false,
-)
-
-fun ClassLoader.execute(
-    vararg args: Any?,
-    className: String = "Test",
-    methodName: String = "test1",
-): Any? {
-    val testClass = loadClass(className)
-    val method =
-        testClass.declaredMethods.find { it.name == methodName } ?: error("Method not found")
-    val instance = testClass.getDeclaredConstructor().newInstance()
-    return method.invoke(instance, *args)
-}
-
-fun ClassLoader.getAspectField(
-    className: String = "ExampleAspect",
-    fieldName: String = "executed",
-): Any {
-    val aspectObject =
-        loadClass(className)
-            .getField("INSTANCE")
-            .get(null)
-    val executedField = aspectObject::class.java.getDeclaredField(fieldName)
-    executedField.isAccessible = true
-    return executedField.get(aspectObject)
-}
+fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
+    MethodParameter(
+        name = "<this>",
+        type = loadClass(className).kotlin,
+        typeName = className,
+        annotations = listOf(),
+        isNullable = false,
+    )

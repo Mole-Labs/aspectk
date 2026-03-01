@@ -265,16 +265,16 @@ class MethodSignatureFunctionTypeTest {
             singleFieldWithNoAnnotationArgs(loader, "<set-property>", "TargetExample")
                 .copy(
                     parameter =
-                    listOf(
-                        loader.thisParameterInfo(),
-                        MethodParameter(
-                            name = "value",
-                            type = String::class,
-                            typeName = "kotlin.String",
-                            annotations = listOf(),
-                            isNullable = false,
+                        listOf(
+                            loader.thisParameterInfo(),
+                            MethodParameter(
+                                name = "value",
+                                type = String::class,
+                                typeName = "kotlin.String",
+                                annotations = listOf(),
+                                isNullable = false,
+                            ),
                         ),
-                    ),
                 )
         assertEquals(expected, actual)
     }
@@ -410,12 +410,19 @@ class MethodSignatureFunctionTypeTest {
             @Aspect
             object ExampleAspect {
                 @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                fun doBefore(joinPoint: JoinPoint) {
+                    joinPoint.signature.methodName
+                    joinPoint.target
+                }
             }
 
             class Test {
+                object A {
+                    val a = 1
+                }
                 @TargetExample
                 fun returnsSuspendFun(): suspend () -> Unit {
+                    Test.A.a
                     return {}
                 }
             }
