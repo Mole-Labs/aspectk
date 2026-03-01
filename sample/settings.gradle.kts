@@ -28,4 +28,4 @@ plugins {
 }
 
 rootProject.name = "aspectk-sample"
-include(":multiplatform")
+include(":composeApp")
