@@ -45,6 +45,7 @@ nav:
     - Compatibility: reference/compatibility.md
     - Changelog: reference/changelog.md
     - FAQ: reference/faq.md
+    - API Docs: api/index.html
   - Contributing: contributing.md
 
 markdown_extensions:
