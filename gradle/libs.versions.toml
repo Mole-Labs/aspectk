@@ -1,8 +1,7 @@
 [versions]
-dokka = "2.0.0"
+dokka = "2.1.0"
 kotlin = "2.2.21"
 junitJupiter = "5.8.1"
-pluginId = "io.github.mole-labs.aspectk.compiler"
 autoService = "1.1.1"
 binaryCompatibilityValidator = "0.18.1"
 spotless = "8.1.0"
