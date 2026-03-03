@@ -36,17 +36,11 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
     js(IR) { browser() }
-
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.mole-labs:aspectk-runtime:LATEST_VERSION")
-        }
-    }
 }
 ```
 
 The AspectK Gradle plugin automatically activates the compiler plugin for all configured
-targets. No per-target configuration is required.
+targets and adds `aspectk-runtime` as a dependency. No per-target configuration is required.
 
 ## Shared Aspects Across Platforms
 

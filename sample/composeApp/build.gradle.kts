@@ -47,7 +47,6 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.aspectk.runtime)
                 implementation(libs.androidx.room.runtime)
                 implementation(libs.androidx.sqlite.bundled)
                 implementation(compose.runtime)
