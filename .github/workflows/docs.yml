@@ -3,8 +3,6 @@ name: Deploy Documentation
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -43,7 +41,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build MkDocs site
-        run: mkdocs build
+        run: mkdocs gh-deploy
 
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
