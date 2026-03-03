@@ -33,12 +33,11 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
 
     override fun getCompilerPluginId(): String = BuildConfig.COMPILER_PLUGIN_ID
 
-    override fun getPluginArtifact(): SubpluginArtifact =
-        SubpluginArtifact(
-            groupId = BuildConfig.GROUP,
-            artifactId = BuildConfig.COMPILER_PLUGIN_ARTIFACT,
-            version = BuildConfig.VERSION,
-        )
+    override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
+        groupId = BuildConfig.GROUP,
+        artifactId = BuildConfig.COMPILER_PLUGIN_ARTIFACT,
+        version = BuildConfig.VERSION,
+    )
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
 
