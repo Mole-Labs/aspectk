@@ -21,10 +21,6 @@ and AspectK weaves the call directly into the intercepted functions during compi
 plugins {
     id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
 }
-
-dependencies {
-    implementation("io.github.mole-labs:aspectk-runtime:LATEST_VERSION")
-}
 ```
 
 For **Kotlin Multiplatform**:
