@@ -34,14 +34,6 @@ plugins {
     kotlin("multiplatform")
     id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
 }
-
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("io.github.mole-labs:aspectk-runtime:LATEST_VERSION")
-        }
-    }
-}
 ```
 
 ### 2. Define a target annotation
@@ -106,24 +98,6 @@ Full documentation: **https://mole-labs.github.io/aspectk/**
 - [Quick Start](https://mole-labs.github.io/aspectk/getting-started/quick-start/)
 - [Core Concepts](https://mole-labs.github.io/aspectk/core-concepts/aspects/)
 - [API Reference](https://mole-labs.github.io/aspectk/api/)
-
----
-
-## Building from Source
-
-```bash
-git clone https://github.com/Mole-Labs/aspectk.git
-cd aspectk
-
-# Build all modules
-./gradlew build
-
-# Run tests
-./gradlew test
-
-# Format code
-./gradlew spotlessApply
-```
 
 ---
 
