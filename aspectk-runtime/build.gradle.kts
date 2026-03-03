@@ -15,6 +15,7 @@
  */
 
 plugins {
+    alias(libs.plugins.jetbrains.dokka)
     id("kotlin-conventions")
     id("native-conventions")
     id("io.github.mole-labs.aspectk.build")
@@ -27,4 +28,19 @@ aspectKBuild {
 
 kotlin {
     explicitApi()
+}
+
+dokka {
+    moduleName.set("AspectK Runtime")
+    dokkaSourceSets.configureEach {
+        sourceLink {
+            localDirectory.set(projectDir.resolve("src/commonMain/kotlin"))
+            remoteUrl("https://github.com/Mole-Labs/aspectk/tree/main/aspectk-runtime/src/commonMain/kotlin")
+            remoteLineSuffix.set("#L")
+        }
+        perPackageOption {
+            matchingRegex.set(".*\\.internal.*")
+            suppress.set(true)
+        }
+    }
 }

@@ -1,23 +1,140 @@
-# aspectk
+# AspectK
 
-This project uses [Gradle](https://gradle.org/).
-To build and run the application, use the *Gradle* tool window by clicking the Gradle icon in the right-hand toolbar,
-or run it directly from the terminal:
+**Compile-time Aspect-Oriented Programming for Kotlin Multiplatform.**
 
-* Run `./gradlew run` to build and run the application.
-* Run `./gradlew build` to only build the application.
-* Run `./gradlew check` to run all checks, including tests.
-* Run `./gradlew clean` to clean all build outputs.
+AspectK is a Kotlin compiler plugin that injects advice code at **compile time** via K2 IR transformation —
+no runtime reflection, no proxies, zero overhead. Declare an `@Aspect`, annotate your advice with `@Before`,
+and AspectK weaves the call directly into the intercepted functions during compilation.
 
-Note the usage of the Gradle Wrapper (`./gradlew`).
-This is the suggested way to use Gradle in production projects.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.x-purple.svg)](https://kotlinlang.org)
+[![KMP](https://img.shields.io/badge/KMP-JVM%20%7C%20JS%20%7C%20WASM%20%7C%20Native-green.svg)](https://kotlinlang.org/docs/multiplatform.html)
 
-[Learn more about the Gradle Wrapper](https://docs.gradle.org/current/userguide/gradle_wrapper.html).
+---
 
-[Learn more about Gradle tasks](https://docs.gradle.org/current/userguide/command_line_interface.html#common_tasks).
+## Quick Setup
 
-This project follows the suggested multi-module setup and consists of the `app` and `utils` subprojects.
-The shared build logic was extracted to a convention plugin located in `buildSrc`.
+### 1. Apply the Gradle plugin
 
-This project uses a version catalog (see `gradle/libs.versions.toml`) to declare and version dependencies
-and both a build cache and a configuration cache (see `gradle.properties`).
+```kotlin
+// build.gradle.kts
+plugins {
+    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+}
+
+dependencies {
+    implementation("io.github.mole-labs:aspectk-runtime:LATEST_VERSION")
+}
+```
+
+For **Kotlin Multiplatform**:
+
+```kotlin
+plugins {
+    kotlin("multiplatform")
+    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation("io.github.mole-labs:aspectk-runtime:LATEST_VERSION")
+        }
+    }
+}
+```
+
+### 2. Define a target annotation
+
+```kotlin
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.BINARY)
+annotation class Logged
+```
+
+### 3. Create an aspect
+
+```kotlin
+import io.github.molelabs.aspectk.runtime.Aspect
+import io.github.molelabs.aspectk.runtime.Before
+import io.github.molelabs.aspectk.runtime.JoinPoint
+
+@Aspect
+object LoggingAspect {
+    @Before(target = [Logged::class])
+    fun log(joinPoint: JoinPoint) {
+        println("→ ${joinPoint.signature.methodName}(${joinPoint.args.joinToString()})")
+    }
+}
+```
+
+### 4. Annotate your functions
+
+```kotlin
+@Logged
+fun processOrder(orderId: String, amount: Double) {
+    // AspectK injects LoggingAspect.log() here at compile time
+}
+```
+
+---
+
+## Features
+
+| Feature | Details |
+|---------|---------|
+| **Zero runtime overhead** | Advice is woven at compile time — the generated code calls the advice function directly |
+| **Kotlin Multiplatform** | JVM, Android, JS (IR), WASM/JS, Native Tier 1–3 |
+| **K2 IR powered** | Built on the Kotlin 2.x IR transformation API |
+| **Many-to-many targeting** | One `@Before` can list multiple target annotations; one function can match multiple aspects |
+| **Inheritance support** | `@Before(inherits = true)` intercepts overriding functions automatically |
+| **Rich join point metadata** | `JoinPoint` exposes receiver, method signature, parameters, annotations, and arguments |
+
+---
+
+## Supported Platforms
+
+JVM · Android · JS (IR) · WASM/JS · macOS (arm64, x64) · iOS (arm64, sim, x64) · Linux (arm64, x64) · Windows (x64) · watchOS · tvOS · Android Native
+
+---
+
+## Documentation
+
+Full documentation: **https://mole-labs.github.io/aspectk/**
+
+- [Installation](https://mole-labs.github.io/aspectk/getting-started/installation/)
+- [Quick Start](https://mole-labs.github.io/aspectk/getting-started/quick-start/)
+- [Core Concepts](https://mole-labs.github.io/aspectk/core-concepts/aspects/)
+- [API Reference](https://mole-labs.github.io/aspectk/api/)
+
+---
+
+## Building from Source
+
+```bash
+git clone https://github.com/Mole-Labs/aspectk.git
+cd aspectk
+
+# Build all modules
+./gradlew build
+
+# Run tests
+./gradlew test
+
+# Format code
+./gradlew spotlessApply
+```
+
+---
+
+## License
+
+```
+Copyright 2026 Mole Labs
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+```

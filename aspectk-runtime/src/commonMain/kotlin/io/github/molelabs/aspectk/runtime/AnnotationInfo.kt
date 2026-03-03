@@ -27,11 +27,22 @@ import kotlin.reflect.KClass
  * Only arguments that are explicitly provided in source are included in [args]; omitted
  * optional arguments (those relying on their default values) are not present.
  *
+ * ### Mapping [args] to [parameterNames]
+ * [args] and [parameterNames] are parallel lists: `args[i]` is the value of the
+ * annotation parameter named `parameterNames[i]`. Use `zip` to iterate them together:
+ * ```kotlin
+ * val annotationInfo: AnnotationInfo = ...
+ * annotationInfo.parameterNames.zip(annotationInfo.args).forEach { (name, value) ->
+ *     println("$name = $value")
+ * }
+ * ```
+ *
  * @property type The [KClass] of the annotation.
  * @property typeName The fully-qualified class name of the annotation as a [String].
  * @property args The list of argument values supplied to the annotation, in declaration order.
+ *   Only explicitly provided arguments are present; default values are omitted.
  * @property parameterNames The names of the annotation parameters corresponding to each
- *   entry in [args], in the same order.
+ *   entry in [args], in the same order. Always has the same length as [args].
  */
 public data class AnnotationInfo(
     public val type: KClass<out Annotation>,

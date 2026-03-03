@@ -1,4 +1,5 @@
 plugins {
+    alias(libs.plugins.jetbrains.dokka) apply false
     alias(libs.plugins.kotlinx.binaryCompatibilityValidator) apply false
     alias(libs.plugins.diffplug.spotless) apply false
 }

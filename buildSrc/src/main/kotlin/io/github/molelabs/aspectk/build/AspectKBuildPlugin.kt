@@ -91,7 +91,7 @@ class AspectKBuildPlugin : Plugin<Project> {
                     automaticRelease = true,
                 )
             }
-//            project.pluginManager.apply("org.jetbrains.dokka")
+            project.pluginManager.apply("org.jetbrains.dokka")
             project.pluginManager.apply("org.jetbrains.kotlinx.binary-compatibility-validator")
 
             // Published modules should be explicit about their API visibility.

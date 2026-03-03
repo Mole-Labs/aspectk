@@ -30,49 +30,45 @@ import java.net.URLClassLoader
 fun compile(
     sourceFiles: List<SourceFile>,
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
-): JvmCompilationResult =
-    KotlinCompilation()
-        .apply {
-            jvmDefault = JvmDefaultMode.DISABLE.description
-            jvmTarget = "17"
-            languageVersion = "2.3"
-            sources = sourceFiles
-            verbose = true
-            this.compilerPluginRegistrars = listOf(plugin)
-            inheritClassPath = true
-        }.compile()
+): JvmCompilationResult = KotlinCompilation()
+    .apply {
+        jvmDefault = JvmDefaultMode.DISABLE.description
+        jvmTarget = "17"
+        languageVersion = "2.3"
+        sources = sourceFiles
+        verbose = true
+        this.compilerPluginRegistrars = listOf(plugin)
+        inheritClassPath = true
+    }.compile()
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
     @Language("kotlin") vararg source: String,
     name: String = "aspectk-test.kt",
     plugin: CompilerPluginRegistrar = AspectKCompilerPluginRegistrar(),
-): JvmCompilationResult =
-    compile(
-        source.mapIndexed { idx, source ->
-            SourceFile.kotlin(name = "${idx}_$name", contents = source)
-        },
-        plugin,
-    )
+): JvmCompilationResult = compile(
+    source.mapIndexed { idx, source ->
+        SourceFile.kotlin(name = "${idx}_$name", contents = source)
+    },
+    plugin,
+)
 
 fun URLClassLoader.assertAndGetField(
     className: String,
     fieldName: String,
     targetClass: String? = null,
-): Any =
-    this
-        .loadClass(className)
-        .getDeclaredField(fieldName)
-        .apply {
-            setAccessible(true)
-            assertNotNull(this@apply)
-        }.get(targetClass)
+): Any = this
+    .loadClass(className)
+    .getDeclaredField(fieldName)
+    .apply {
+        setAccessible(true)
+        assertNotNull(this@apply)
+    }.get(targetClass)
 
-fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter =
-    MethodParameter(
-        name = "<this>",
-        type = loadClass(className).kotlin,
-        typeName = className,
-        annotations = listOf(),
-        isNullable = false,
-    )
+fun ClassLoader.thisParameterInfo(className: String = "Test"): MethodParameter = MethodParameter(
+    name = "<this>",
+    type = loadClass(className).kotlin,
+    typeName = className,
+    annotations = listOf(),
+    isNullable = false,
+)

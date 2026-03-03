@@ -1,0 +1,64 @@
+site_name: AspectK
+site_url: https://mole-labs.github.io/aspectk/
+repo_url: https://github.com/Mole-Labs/aspectk
+repo_name: Mole-Labs/aspectk
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+  - Core Concepts:
+    - AOP Overview: core-concepts/aop-overview.md
+  - Features:
+    - Aspects: features/aspects.md
+    - Advice: features/advice.md
+    - Join Points: features/join-points.md
+    - Multiple Targets: features/multiple-targets.md
+    - Inheritance: features/inheritance.md
+    - Multiplatform: features/multiplatform.md
+  - Reference:
+    - Compatibility: reference/compatibility.md
+    - Changelog: reference/changelog.md
+    - FAQ: reference/faq.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Mole-Labs/aspectk
