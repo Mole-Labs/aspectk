@@ -1,0 +1,4 @@
+#!/bin/sh
+# Delegates to the parent project's Gradle wrapper to ensure the same Gradle version is used.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$SCRIPT_DIR/../gradlew" "$@"

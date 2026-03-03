@@ -1,0 +1,36 @@
+[versions]
+dokka = "2.1.0"
+kotlin = "2.2.21"
+junitJupiter = "5.8.1"
+autoService = "1.1.1"
+binaryCompatibilityValidator = "0.18.1"
+spotless = "8.1.0"
+kotlinx-coroutines = "1.10.2"
+mockk = "1.13.8"
+jetbrainsKotlinJvm = "2.2.21"
+mavenPublish = "0.34.0"
+
+[libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+test-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+kotlin-coroutine-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlin-coroutine-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+
+kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-gradlePlugin-api = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin-api", version.ref = "kotlin" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junitJupiter" }
+kotlin-compiler = { module = "org.jetbrains.kotlin:kotlin-compiler", version.ref = "kotlin" }
+google-autoservice-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
+google-autoservice = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
+kotlin-compile-testing = { module = "dev.zacsweers.kctfork:core", version = "0.12.1" }
+kotlin-compiler-embeddable = {module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin"}
+vanniktech-publish-gradle = { group = "com.vanniktech", name = "gradle-maven-publish-plugin", version.ref = "mavenPublish" }
+gmazzo-buildconfig = "com.github.gmazzo.buildconfig:plugin:5.6.8"
+
+[plugins]
+diffplug-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+jetbrains-dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+kotlinx-binaryCompatibilityValidator = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binaryCompatibilityValidator" }
+jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
+
