@@ -20,7 +20,7 @@ and AspectK weaves the call directly into the intercepted functions during compi
 ```kotlin
 // build.gradle.kts
 plugins {
-    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+    id("io.github.mole-labs.aspectk") version "LATEST_VERSION"
 }
 ```
 
@@ -29,7 +29,7 @@ For **Kotlin Multiplatform**:
 ```kotlin
 plugins {
     kotlin("multiplatform")
-    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+    id("io.github.mole-labs.aspectk") version "LATEST_VERSION"
 }
 ```
 
