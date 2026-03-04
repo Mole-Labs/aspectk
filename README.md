@@ -6,6 +6,7 @@ AspectK is a Kotlin compiler plugin that injects advice code at **compile time**
 no runtime reflection, no proxies, zero overhead. Declare an `@Aspect`, annotate your advice with `@Before`,
 and AspectK weaves the call directly into the intercepted functions during compilation.
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.mole-labs/aspectk-plugin.svg)](https://central.sonatype.com/artifact/io.github.mole-labs/aspectk-plugin)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.x-purple.svg)](https://kotlinlang.org)
 [![KMP](https://img.shields.io/badge/KMP-JVM%20%7C%20JS%20%7C%20WASM%20%7C%20Native-green.svg)](https://kotlinlang.org/docs/multiplatform.html)
@@ -77,6 +78,20 @@ fun processOrder(orderId: String, amount: Double) {
 | **Many-to-many targeting** | One `@Before` can list multiple target annotations; one function can match multiple aspects |
 | **Inheritance support** | `@Before(inherits = true)` intercepts overriding functions automatically |
 | **Rich join point metadata** | `JoinPoint` exposes receiver, method signature, parameters, annotations, and arguments |
+
+## Supported Function Types
+
+AspectK works with the full range of Kotlin function kinds — including those that other AOP
+solutions struggle with. Because advice is injected during the **IR transformation phase**,
+before platform-specific lowering, AspectK intercepts functions exactly as Kotlin defines them:
+
+- Class member functions
+- Top-level functions
+- Extension functions
+- **`suspend` functions** — interception happens before coroutine lowering, so the advice sees the function in its original, unsuspended form
+- **`inline` functions** — intercepted at the call site before the inliner runs
+- Property getters and setters
+- `expect`/`actual` functions across all platforms
 
 ---
 

@@ -139,3 +139,89 @@ jp.signature.annotations.forEach { info ->
 !!! note
     Only arguments **explicitly provided** in source appear in `args`. Arguments using
     default values are omitted. Use `parameterNames` to identify which arguments are present.
+
+## Supported Function Types
+
+AspectK can intercept all of the following function kinds. The `target` and `args` layout
+varies by function type:
+
+### Class member function
+
+```kotlin
+class UserService {
+    @Logged
+    fun getUser(id: String): User { ... }
+}
+// jp.target  → UserService instance
+// jp.args    → [id]
+```
+
+### Top-level function
+
+```kotlin
+@Logged
+fun process(data: String) { ... }
+// jp.target  → null
+// jp.args    → [data]
+```
+
+### Extension function
+
+The extension receiver is prepended to `args`; `target` is `null`.
+
+```kotlin
+@Logged
+fun String.process(suffix: String) { ... }
+// jp.target  → null
+// jp.args    → [receiverString, suffix]
+```
+
+### `suspend` function
+
+Suspension machinery is transparent — `args` contains only the declared parameters.
+
+```kotlin
+@Logged
+suspend fun fetchData(url: String): String { ... }
+// jp.target  → receiver instance (or null for top-level)
+// jp.args    → [url]
+```
+
+### Property getter
+
+The receiver object is passed as `args[0]`; `target` is `null`.
+
+```kotlin
+class Config {
+    val name: String
+        @Logged get() = "aspectk"
+}
+// jp.target  → null
+// jp.args    → [Config instance]
+```
+
+### Property setter
+
+The receiver is `args[0]` and the incoming value is `args[1]`; `target` is `null`.
+
+```kotlin
+class Config {
+    var name: String = ""
+        @Logged set(value) { field = value }
+}
+// jp.target  → null
+// jp.args    → [Config instance, newValue]
+```
+
+### `expect`/`actual` function
+
+Advice is woven into the `actual` declaration on each platform; behaviour mirrors a
+top-level function.
+
+```kotlin
+// commonMain
+@Logged
+expect fun platformGreet(name: String)
+// jp.target  → null
+// jp.args    → [name]
+```
