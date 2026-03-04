@@ -23,6 +23,9 @@ jobs:
       - name: Check code formatting
         run: ./gradlew spotlessCheck
 
+      - name: Check binary API compatibility
+        run: ./gradlew apiCheck
+
       - name: Run aspectk-core tests
         run: ./gradlew :aspectk-core:test
 

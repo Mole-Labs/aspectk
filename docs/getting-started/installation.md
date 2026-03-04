@@ -1,5 +1,7 @@
 # Installation
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.mole-labs/aspectk-plugin.svg)](https://central.sonatype.com/artifact/io.github.mole-labs/aspectk-plugin)
+
 ## Requirements
 
 - Kotlin **2.2.20** or later
