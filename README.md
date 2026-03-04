@@ -6,7 +6,7 @@ AspectK is a Kotlin compiler plugin that injects advice code at **compile time**
 no runtime reflection, no proxies, zero overhead. Declare an `@Aspect`, annotate your advice with `@Before`,
 and AspectK weaves the call directly into the intercepted functions during compilation.
 
-[![Maven Central](https://img.shields.io/maven-central/v/io.github.mole-labs/aspectk-plugin.svg)](https://central.sonatype.com/artifact/io.github.mole-labs/aspectk-plugin)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.mole-labs.aspectk/io.github.mole-labs.aspectk.gradle.plugin)](https://central.sonatype.com/artifact/io.github.mole-labs/aspectk.gradle.plugin)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.x-purple.svg)](https://kotlinlang.org)
 [![KMP](https://img.shields.io/badge/KMP-JVM%20%7C%20JS%20%7C%20WASM%20%7C%20Native-green.svg)](https://kotlinlang.org/docs/multiplatform.html)
