@@ -24,6 +24,7 @@ plugins {
 
 aspectKBuild {
     publish("AspectK Compiler Plugin")
+    generateBuildConfig("io.github.molelabs.aspectk.core")
     enableBackwardsCompatibility()
 }
 
