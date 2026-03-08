@@ -28,6 +28,9 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
+    override val pluginId: String
+        get() = BuildConfig.COMPILER_PLUGIN_ID
+
     // Declares that this plugin targets the K2 (FIR + IR) compiler.
     override val supportsK2: Boolean
         get() = true

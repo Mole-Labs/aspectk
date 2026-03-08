@@ -8,6 +8,7 @@ in Kotlin 2.0 and requires K2 compiler mode.
 | AspectK Version | Supported Kotlin Range |
 |-----------------|----------------------|
 | 0.1.0 | 2.2.20 ~ 2.2.21 |
+| 0.1.1 | 2.2.20 ~ 2.3.10 |
 
 !!! note
     Each AspectK release is tested against a specific Kotlin minor series. Using a Kotlin
