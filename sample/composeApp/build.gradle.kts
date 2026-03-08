@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
-    id("io.github.mole-labs.aspectk") version "0.1.1-LOCAL-0"
     alias(libs.plugins.kotlin.multiplatform)
+    id("io.github.mole-labs.aspectk") version "0.1.1"
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
 }

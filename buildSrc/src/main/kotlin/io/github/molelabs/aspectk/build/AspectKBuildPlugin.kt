@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 
 private val Project.aspectKGroupId get() = property("PUBLISH_GROUP") as String
 private val Project.aspectKVersion get() = property("PUBLISH_VERSION") as String
@@ -101,19 +102,39 @@ class AspectKBuildPlugin : Plugin<Project> {
                     kotlin.explicitApi()
                 }
             project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm", kotlinPluginHandler)
-            project.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform", kotlinPluginHandler)
+            project.pluginManager.withPlugin(
+                "org.jetbrains.kotlin.multiplatform",
+                kotlinPluginHandler,
+            )
         }
 
         override fun generateBuildConfig(basePackage: String) {
             project.pluginManager.apply("com.github.gmazzo.buildconfig")
 
             val buildConfig = project.extensions.getByName("buildConfig") as BuildConfigExtension
+
+            val versionAliasesFile =
+                project.isolated.rootProject.projectDirectory
+                    .file("supported-versions.txt")
+            val supportedVersions =
+                versionAliasesFile.asFile
+                    .readLines()
+                    .filterNot { it.isBlank() || it.startsWith('#') }
+                    .map { KotlinToolingVersion(it) }
+                    .sorted()
+
             buildConfig.apply {
                 packageName(basePackage)
                 buildConfigField("GROUP", project.aspectKGroupId)
                 buildConfigField("VERSION", project.aspectKVersion)
                 buildConfigField("COMPILER_PLUGIN_ID", "io.github.mole-labs.aspectk")
                 buildConfigField("COMPILER_PLUGIN_ARTIFACT", "aspectk-core")
+
+                buildConfigField(
+                    "List<String>",
+                    "SUPPORTED_KOTLIN_VERSIONS",
+                    "listOf(${supportedVersions.joinToString { "\"$it\"" }})",
+                )
             }
         }
 

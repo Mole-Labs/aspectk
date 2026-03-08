@@ -15,15 +15,21 @@
  */
 package io.github.molelabs.aspectk.plugin
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetContainer
+import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet.Companion.COMMON_MAIN_SOURCE_SET_NAME
 import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetContainer
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.kotlinToolingVersion
+import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 
 internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
@@ -41,19 +47,54 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
 
     override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
 
+    @OptIn(ExperimentalBuildToolsApi::class, ExperimentalKotlinGradlePluginApi::class)
     override fun apply(target: Project) {
+        val compilerVersionProvider =
+            target.kotlinExtension.compilerVersion.map { KotlinToolingVersion(it) }
+                ?: target.provider { target.kotlinToolingVersion }
+
+        val compilerVersion = compilerVersionProvider.get()
+        val supportedVersions = BuildConfig.SUPPORTED_KOTLIN_VERSIONS.map(::KotlinToolingVersion)
+        val minSupported = supportedVersions.min()
+        val maxSupported = supportedVersions.max()
+        val isSupported = compilerVersion in minSupported..maxSupported
+
+        if (!isSupported) {
+            if (compilerVersion < minSupported) {
+                throw GradleException(
+                    """
+                    "AspectK '${BuildConfig.VERSION} requires Kotlin ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.first()} or later, but this build uses $compilerVersion"
+                    "Supported Kotlin versions: ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.first()} - ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.last()}"
+                    """.trimIndent(),
+                )
+            } else {
+                throw GradleException(
+                    """
+                    This build uses unrecognized Kotlin version '$compilerVersion"
+                    "Supported Kotlin versions: ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.first()} - ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.last()}"
+                    """.trimIndent(),
+                )
+            }
+        }
+
         val aspectKRuntimeDependency =
             target.provider {
-                target.dependencyFactory.create(BuildConfig.GROUP, "aspectk-runtime", BuildConfig.VERSION)
+                target.dependencyFactory.create(
+                    BuildConfig.GROUP,
+                    "aspectk-runtime",
+                    BuildConfig.VERSION,
+                )
             }
 
         target.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             val kotlin = target.extensions.getByName("kotlin") as KotlinSourceSetContainer
             val commonMainSourceSet = kotlin.sourceSets.getByName(COMMON_MAIN_SOURCE_SET_NAME)
 
-            target.configurations.named(commonMainSourceSet.implementationConfigurationName).configure {
-                it.dependencies.addLater(aspectKRuntimeDependency)
-            }
+            target.configurations
+                .named(commonMainSourceSet.implementationConfigurationName)
+                .configure {
+                    it.dependencies.addLater(aspectKRuntimeDependency)
+                }
         }
 
         target.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
