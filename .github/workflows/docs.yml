@@ -41,7 +41,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build MkDocs site
-        run: mkdocs gh-deploy
+        run: mkdocs gh-deploy --force
 
       - name: Upload Pages artifact
         if: github.ref == 'refs/heads/main'
