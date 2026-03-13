@@ -15,9 +15,11 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
+import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -38,6 +40,7 @@ internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
     private val methodSignatureGenerator: MethodSignatureGenerator,
     private val adviceCallGenerator: AdviceCallGenerator,
+    private val proceedingJoinPointGenerator: ProceedingJoinPointGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targets = aspectKContext.aspectLookUp.targets
@@ -96,8 +99,25 @@ internal class AspectTransformer(
         checkInherits: Boolean,
         signatureProperty: IrProperty,
     ) {
-        val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
-        adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
+        val contexts = aspectKContext.aspectLookUp[target]
+        val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
+        val hasAfter = contexts.any { it.kind == Kind.AFTER && (!checkInherits || it.inherits) }
+        val hasAround = contexts.any { it.kind == Kind.AROUND && (!checkInherits || it.inherits) }
+
+        if (hasBefore || hasAfter) {
+            val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
+            if (hasBefore) {
+                adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
+            }
+            if (hasAfter) {
+                adviceCallGenerator.generateAfterAdviceCalls(declaration, target, joinPoint, checkInherits)
+            }
+        }
+        if (hasAround) {
+            val localFunc = proceedingJoinPointGenerator.generateLocalFunction(declaration)
+            val proceedingJoinPoint = proceedingJoinPointGenerator.generateProceedingJoinPoint(declaration, localFunc, signatureProperty)
+            adviceCallGenerator.generateAroundAdviceCalls(declaration, target, localFunc, proceedingJoinPoint, checkInherits)
+        }
     }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {

@@ -47,9 +47,9 @@ public class DefaultProceedingJoinPoint(
     override val target: Any?,
     override val signature: MethodSignature,
     override val args: List<Any?>,
-    private val proceedFn: (List<Any?>) -> Any?,
+    private val onProceedListener: ProceedingJoinPoint.OnProceedListener,
 ) : ProceedingJoinPoint {
-    override fun proceed(): Any? = proceedFn(args)
+    override fun proceed(): Any? = onProceedListener.onProceed(args)
 
-    override fun proceed(vararg args: Any?): Any? = proceedFn(args.toList())
+    override fun proceed(vararg args: Any?): Any? = onProceedListener.onProceed(args.toList())
 }

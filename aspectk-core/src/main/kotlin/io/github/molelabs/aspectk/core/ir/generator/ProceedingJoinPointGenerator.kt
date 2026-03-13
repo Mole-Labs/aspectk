@@ -17,13 +17,16 @@ package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.createIrListOf
+import io.github.molelabs.aspectk.core.ir.function1Type
+import io.github.molelabs.aspectk.core.ir.listAnyNType
+import io.github.molelabs.aspectk.core.ir.listGetFun
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
-import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.declarations.IrValueParameterBuilder
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildValueParameter
+import org.jetbrains.kotlin.ir.builders.irAs
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
@@ -38,28 +41,18 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
-import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
-import org.jetbrains.kotlin.ir.expressions.impl.IrReturnImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
-import org.jetbrains.kotlin.ir.symbols.IrValueSymbol
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.transformStatement
-import org.jetbrains.kotlin.ir.types.makeNullable
-import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
-import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
-import org.jetbrains.kotlin.name.CallableId
-import org.jetbrains.kotlin.name.ClassId
-import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
@@ -69,71 +62,67 @@ internal class ProceedingJoinPointGenerator(
     private val proceedingJoinPointConstructor =
         aspectKContext.proceedingJoinPointSymbol.constructors.first()
 
-    private val listClass =
-        aspectKContext.pluginContext.referenceClass(
-            ClassId.topLevel(FqName("kotlin.collections.List")),
-        )!!
-    private val listAnyNType = listClass.typeWith(aspectKContext.pluginContext.irBuiltIns.anyNType)
-
-    // (List<Any?>) -> Any? = kotlin.Function1<List<Any?>, Any?>
-    private val function1Type =
-        aspectKContext.pluginContext
-            .referenceClass(ClassId(FqName("kotlin"), Name.identifier("Function1")))!!
-            .typeWith(listAnyNType, aspectKContext.pluginContext.irBuiltIns.anyNType)
-
-    private val listGetFun =
-        aspectKContext.pluginContext.referenceFunctions(
-            CallableId(
-                ClassId.topLevel(FqName("kotlin.collections.List")),
-                Name.identifier("get"),
-            ),
-        ).first()
-
     /**
-     * Generates:
-     * 1. A local function `$<name>(p0: T0, p1: T1, ...)` whose body is the original function body
-     *    with outer parameters substituted by the local function's own parameters.
-     * 2. A [DefaultProceedingJoinPoint] constructor call whose `proceedFn` is
-     *    `{ args -> $<name>(args[0] as T0, args[1] as T1, ...) }`.
+     * Builds `fun $<name>(p0: T0, p1: T1, ...)` whose body is the original [declaration] body
+     * with outer parameters substituted by the local function's own parameters.
      *
-     * The caller is responsible for inserting the local function into the target function's body
-     * and replacing that body with the [Around] advice call.
+     * Call [generateProceedingJoinPoint] afterwards to obtain the [DefaultProceedingJoinPoint]
+     * constructor expression that references this local function.
      */
-    fun generate(
-        declaration: IrFunction,
-        signatureProperty: IrProperty,
-    ): Pair<IrSimpleFunction, IrExpression> {
+    fun generateLocalFunction(declaration: IrFunction): IrSimpleFunction {
         val originalStatements =
             (declaration.body as? IrBlockBody)?.statements?.toList().orEmpty()
+        val valueParams =
+            declaration.parameters.filter { it.kind == IrParameterKind.Regular }
+        return buildLocalFunction(declaration, originalStatements, valueParams)
+    }
 
+    /**
+     * Builds a [DefaultProceedingJoinPoint] constructor call whose `onProceedListener` is
+     * `{ args -> localFunc(args[0] as T0, args[1] as T1, ...) }` wrapped as a SAM conversion.
+     *
+     * [localFunc] must be the value returned by [generateLocalFunction] for the same [declaration].
+     */
+    fun generateProceedingJoinPoint(
+        declaration: IrFunction,
+        localFunc: IrSimpleFunction,
+        signatureProperty: IrProperty,
+    ): IrExpression {
         val valueParams: List<IrValueDeclaration> =
             declaration.parameters.filter { it.kind == IrParameterKind.Regular }
-
-        val localFunc = buildLocalFunction(declaration, originalStatements, valueParams)
         val wrapperLambda = buildWrapperLambda(declaration, localFunc, valueParams)
 
-        val argsExpression = aspectKContext.createIrListOf(
-            scope = declaration.symbol,
-            elements = declaration.parameters.map { param ->
-                aspectKContext.withIrBuilder(declaration.symbol) { irGet(param) }
-            },
-        )
+        val argsExpression =
+            aspectKContext.createIrListOf(
+                scope = declaration.symbol,
+                elements =
+                declaration.parameters.map { param ->
+                    aspectKContext.withIrBuilder(declaration.symbol) { irGet(param) }
+                },
+            )
 
-        val pjpExpression = aspectKContext.withIrBuilder(declaration.symbol) {
+        return aspectKContext.withIrBuilder(declaration.symbol) {
             irCall(proceedingJoinPointConstructor).apply {
                 arguments[0] = declaration.dispatchReceiverParameter?.let { irGet(it) }
                     ?: irNull(aspectKContext.pluginContext.irBuiltIns.anyNType)
-                arguments[1] = irCall(signatureProperty.getter!!).apply {
-                    insertDispatchReceiver(
-                        irGetObject((signatureProperty.parent as IrClass).symbol),
-                    )
-                }
+                arguments[1] =
+                    irCall(signatureProperty.getter!!).apply {
+                        insertDispatchReceiver(
+                            irGetObject((signatureProperty.parent as IrClass).symbol),
+                        )
+                    }
                 arguments[2] = argsExpression
-                arguments[3] = wrapperLambda
+                arguments[3] =
+                    IrTypeOperatorCallImpl(
+                        startOffset = -1,
+                        endOffset = -1,
+                        type = aspectKContext.onProceedListenerType,
+                        operator = IrTypeOperator.SAM_CONVERSION,
+                        typeOperand = aspectKContext.onProceedListenerType,
+                        argument = wrapperLambda,
+                    )
             }
         }
-
-        return localFunc to pjpExpression
     }
 
     /**
@@ -143,42 +132,45 @@ internal class ProceedingJoinPointGenerator(
     private fun buildLocalFunction(
         declaration: IrFunction,
         originalStatements: List<IrStatement>,
-        valueParams: List<IrValueDeclaration>,
+        valueParams: List<IrValueParameter>,
     ): IrSimpleFunction {
-        val irFactory = aspectKContext.pluginContext.irFactory
-
-        val localFunc: IrSimpleFunction = irFactory.buildFun {
-            name = Name.identifier("\$${declaration.name.asString()}")
-            visibility = DescriptorVisibilities.LOCAL
-            returnType = declaration.returnType
-            origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
-        }
-        localFunc.parent = declaration
+        val localFuncName = $$"$$${declaration.name.asString()}"
+        val localFunc =
+            aspectKContext.pluginContext.irFactory
+                .buildFun {
+                    name = Name.identifier(localFuncName)
+                    visibility = DescriptorVisibilities.LOCAL
+                    returnType = declaration.returnType
+                    origin = IrDeclarationOrigin.LOCAL_FUNCTION
+                }.apply {
+                    parent = declaration
+                }
 
         // Mirror the outer value parameters (same name, same type, no defaults)
-        val localParams = valueParams.map { outerParam ->
-            irFactory.buildValueParameter(
-                parent = localFunc,
-                builder = IrValueParameterBuilder().apply {
-                    name = outerParam.name
-                    type = outerParam.type
-                    kind = IrParameterKind.Regular
-                    origin = IrDeclarationOrigin.DEFINED
-                },
-            )
-        }
+        val localParams =
+            valueParams.map {
+                it.deepCopyWithSymbols(localFunc)
+            }
+
         localFunc.parameters = localParams
 
         // Substitute outerParam.symbol → localParam.symbol in the deep-copied body
-        val substitutionMap: Map<IrValueSymbol, IrValueDeclaration> =
-            valueParams.mapIndexed { i, p -> p.symbol to localParams[i] }.toMap()
-        val substituter = ParamAndReturnSubstituter(substitutionMap, localFunc)
-        val copiedStatements = originalStatements.map { stmt ->
-            stmt.deepCopyWithSymbols(declaration).transformStatement(substituter)
-        }
+        val copiedStatements =
+            originalStatements.map {
+                it.deepCopyWithSymbols(localFunc)
+            }
 
-        localFunc.body = DeclarationIrBuilder(aspectKContext.pluginContext, localFunc.symbol)
-            .irBlockBody { copiedStatements.forEach { +it } }
+        localFunc.body =
+            aspectKContext.withIrBuilder(localFunc.symbol) {
+                irBlockBody {
+                    copiedStatements.forEach { statement ->
+                        if (statement is IrReturn) {
+                            statement.returnTargetSymbol = localFunc.symbol
+                        }
+                        +statement
+                    }
+                }
+            }
 
         return localFunc
     }
@@ -192,87 +184,57 @@ internal class ProceedingJoinPointGenerator(
         localFunc: IrSimpleFunction,
         valueParams: List<IrValueDeclaration>,
     ): IrFunctionExpression {
-        val irFactory = aspectKContext.pluginContext.irFactory
-        val irBuiltIns = aspectKContext.pluginContext.irBuiltIns
+        val lambdaFun =
+            aspectKContext.pluginContext.irFactory
+                .buildFun {
+                    name = Name.special("<anonymous>")
+                    visibility = DescriptorVisibilities.LOCAL
+                    returnType = aspectKContext.pluginContext.irBuiltIns.anyNType
+                    origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+                }.apply {
+                    parent = declaration
+                }
 
-        val lambdaFun: IrSimpleFunction = irFactory.buildFun {
-            name = Name.special("<anonymous>")
-            visibility = DescriptorVisibilities.LOCAL
-            returnType = irBuiltIns.anyNType
-            origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
-        }
-        lambdaFun.parent = declaration
-
-        val argsParam = irFactory.buildValueParameter(
-            parent = lambdaFun,
-            builder = IrValueParameterBuilder().apply {
-                name = Name.identifier("__args")
-                type = listAnyNType
-                kind = IrParameterKind.Regular
-                origin = IrDeclarationOrigin.DEFINED
-            },
-        )
+        val argsParam =
+            aspectKContext.pluginContext.irFactory.buildValueParameter(
+                parent = lambdaFun,
+                builder =
+                IrValueParameterBuilder().apply {
+                    name = Name.identifier("__args")
+                    type = aspectKContext.listAnyNType
+                    kind = IrParameterKind.Regular
+                    origin = IrDeclarationOrigin.DEFINED
+                },
+            )
         lambdaFun.parameters = listOf(argsParam)
 
-        lambdaFun.body = DeclarationIrBuilder(aspectKContext.pluginContext, lambdaFun.symbol)
-            .irBlockBody {
-                +irReturn(
-                    irCall(localFunc.symbol).apply {
-                        // $doSomething(args[0] as T0, args[1] as T1, ...)
-                        valueParams.forEachIndexed { index, param ->
-                            arguments[index] = IrTypeOperatorCallImpl(
-                                startOffset = -1,
-                                endOffset = -1,
-                                type = param.type,
-                                operator = IrTypeOperator.CAST,
-                                typeOperand = param.type,
-                                argument = irCall(listGetFun).apply {
-                                    dispatchReceiver = irGet(argsParam)
-                                    arguments[0] = irInt(index)
-                                },
-                            )
-                        }
-                    },
-                )
+        lambdaFun.body =
+            aspectKContext.withIrBuilder(lambdaFun.symbol) {
+                irBlockBody {
+                    +irReturn(
+                        irCall(localFunc.symbol).apply {
+                            // $doSomething(args[0] as T0, args[1] as T1, ...)
+                            valueParams.forEachIndexed { index, param ->
+                                arguments[index] =
+                                    irAs(
+                                        irCall(aspectKContext.listGetFun).apply {
+                                            dispatchReceiver = irGet(argsParam)
+                                            arguments[0] = irInt(index)
+                                        },
+                                        param.type,
+                                    )
+                            }
+                        },
+                    )
+                }
             }
 
         return IrFunctionExpressionImpl(
             startOffset = -1,
             endOffset = -1,
-            type = function1Type,
+            type = aspectKContext.function1Type,
             function = lambdaFun,
             origin = IrStatementOrigin.LAMBDA,
-        )
-    }
-}
-
-/**
- * Replaces [IrGetValue] references to the outer function's value parameters with the
- * corresponding local-function parameters, and redirects [IrReturn] to the local function.
- */
-private class ParamAndReturnSubstituter(
-    private val substitutions: Map<IrValueSymbol, IrValueDeclaration>,
-    private val returnTargetFunc: IrFunction,
-) : IrElementTransformerVoid() {
-    override fun visitGetValue(expression: IrGetValue): IrExpression {
-        val substitute = substitutions[expression.symbol]
-            ?: return super.visitGetValue(expression)
-        return IrGetValueImpl(
-            startOffset = expression.startOffset,
-            endOffset = expression.endOffset,
-            type = expression.type,
-            symbol = substitute.symbol,
-        )
-    }
-
-    override fun visitReturn(expression: IrReturn): IrExpression {
-        val transformedValue = expression.value.transform(this, null) as IrExpression
-        return IrReturnImpl(
-            startOffset = expression.startOffset,
-            endOffset = expression.endOffset,
-            type = expression.type.makeNullable(),
-            returnTargetSymbol = returnTargetFunc.symbol,
-            value = transformedValue,
         )
     }
 }

@@ -1,3 +1,8 @@
+public abstract interface annotation class io/github/molelabs/aspectk/runtime/After : java/lang/annotation/Annotation {
+	public abstract fun inherits ()Z
+	public abstract fun target ()[Ljava/lang/Class;
+}
+
 public final class io/github/molelabs/aspectk/runtime/AnnotationInfo {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
 	public final fun component1 ()Lkotlin/reflect/KClass;
@@ -13,6 +18,11 @@ public final class io/github/molelabs/aspectk/runtime/AnnotationInfo {
 	public final fun getTypeName ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/github/molelabs/aspectk/runtime/Around : java/lang/annotation/Annotation {
+	public abstract fun inherits ()Z
+	public abstract fun target ()[Ljava/lang/Class;
 }
 
 public abstract interface annotation class io/github/molelabs/aspectk/runtime/Aspect : java/lang/annotation/Annotation {
@@ -67,6 +77,15 @@ public final class io/github/molelabs/aspectk/runtime/MethodSignature {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class io/github/molelabs/aspectk/runtime/ProceedingJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
+	public abstract fun proceed ()Ljava/lang/Object;
+	public abstract fun proceed ([Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class io/github/molelabs/aspectk/runtime/ProceedingJoinPoint$OnProceedListener {
+	public abstract fun onProceed (Ljava/util/List;)Ljava/lang/Object;
+}
+
 public final class io/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
 	public fun <init> (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;)V
 	public final fun component1 ()Ljava/lang/Object;
@@ -80,5 +99,14 @@ public final class io/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint 
 	public fun getTarget ()Ljava/lang/Object;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/github/molelabs/aspectk/runtime/internal/DefaultProceedingJoinPoint : io/github/molelabs/aspectk/runtime/ProceedingJoinPoint {
+	public fun <init> (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;Lio/github/molelabs/aspectk/runtime/ProceedingJoinPoint$OnProceedListener;)V
+	public fun getArgs ()Ljava/util/List;
+	public fun getSignature ()Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public fun getTarget ()Ljava/lang/Object;
+	public fun proceed ()Ljava/lang/Object;
+	public fun proceed ([Ljava/lang/Object;)Ljava/lang/Object;
 }
 

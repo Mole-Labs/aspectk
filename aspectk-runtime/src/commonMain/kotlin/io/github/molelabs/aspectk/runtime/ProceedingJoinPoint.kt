@@ -53,4 +53,21 @@ public interface ProceedingJoinPoint : JoinPoint {
      * @return the return value of the original function, or `null` for `Unit`-returning functions.
      */
     public fun proceed(vararg args: Any?): Any?
+
+    /**
+     * SAM interface used by the AspectK compiler plugin to bridge the wrapper lambda
+     * generated at each intercepted call site with [proceed].
+     *
+     * User code should not implement or reference this interface directly.
+     * Implement [ProceedingJoinPoint] and call [proceed] instead.
+     */
+    public fun interface OnProceedListener {
+        /**
+         * Invokes the original function body with the supplied [args].
+         *
+         * @param args the argument list to forward to the intercepted function, in declaration order.
+         * @return the return value of the original function, or `null` for `Unit`-returning functions.
+         */
+        public fun onProceed(args: List<Any?>): Any?
+    }
 }

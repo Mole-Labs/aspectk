@@ -27,8 +27,10 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.ir.symbols.IrTypeParameterSymbol
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -107,8 +109,42 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     block()
 }
 
+internal val AspectKIrCompilerContext.listAnyNType: IrType
+    get() =
+        pluginContext
+            .referenceClass(ClassId.topLevel(FqName("kotlin.collections.List")))!!
+            .typeWith(pluginContext.irBuiltIns.anyNType)
+
+internal val AspectKIrCompilerContext.function1Type: IrType
+    get() =
+        pluginContext
+            .referenceClass(ClassId(FqName("kotlin"), Name.identifier("Function1")))!!
+            .typeWith(listAnyNType, pluginContext.irBuiltIns.anyNType)
+
+@OptIn(UnsafeDuringIrConstructionAPI::class)
+internal val AspectKIrCompilerContext.listGetFun: IrSimpleFunctionSymbol
+    get() =
+        pluginContext
+            .referenceFunctions(
+                CallableId(
+                    ClassId.topLevel(FqName("kotlin.collections.List")),
+                    Name.identifier("get"),
+                ),
+            ).first()
+
 internal fun IrBody.add(element: IrStatement) {
     (this as? IrBlockBody)?.statements?.add(0, element)
+}
+
+// Inserts element before the last IrReturn; if none, appends at end.
+internal fun IrBody.addLast(element: IrStatement) {
+    val statements = (this as? IrBlockBody)?.statements ?: return
+    val lastReturnIndex = statements.indexOfLast { it is IrReturn }
+    if (lastReturnIndex >= 0) {
+        statements.add(lastReturnIndex, element)
+    } else {
+        statements.add(element)
+    }
 }
 
 internal fun IrFunction.hasBody(): Boolean = body != null && body is IrBlockBody
