@@ -51,8 +51,10 @@ import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.transformStatement
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
@@ -96,9 +98,9 @@ internal class ProceedingJoinPointGenerator(
             aspectKContext.createIrListOf(
                 scope = declaration.symbol,
                 elements =
-                declaration.parameters.map { param ->
-                    aspectKContext.withIrBuilder(declaration.symbol) { irGet(param) }
-                },
+                    declaration.parameters.map { param ->
+                        aspectKContext.withIrBuilder(declaration.symbol) { irGet(param) }
+                    },
             )
 
         return aspectKContext.withIrBuilder(declaration.symbol) {
@@ -157,18 +159,15 @@ internal class ProceedingJoinPointGenerator(
         // Substitute outerParam.symbol → localParam.symbol in the deep-copied body
         val copiedStatements =
             originalStatements.map {
-                it.deepCopyWithSymbols(localFunc)
+                it.deepCopyWithSymbols(localFunc).transformStatement(
+                    ReturnTransformer(localFunc),
+                )
             }
 
         localFunc.body =
             aspectKContext.withIrBuilder(localFunc.symbol) {
                 irBlockBody {
-                    copiedStatements.forEach { statement ->
-                        if (statement is IrReturn) {
-                            statement.returnTargetSymbol = localFunc.symbol
-                        }
-                        +statement
-                    }
+                    copiedStatements.forEach { +it }
                 }
             }
 
@@ -199,12 +198,12 @@ internal class ProceedingJoinPointGenerator(
             aspectKContext.pluginContext.irFactory.buildValueParameter(
                 parent = lambdaFun,
                 builder =
-                IrValueParameterBuilder().apply {
-                    name = Name.identifier("__args")
-                    type = aspectKContext.listAnyNType
-                    kind = IrParameterKind.Regular
-                    origin = IrDeclarationOrigin.DEFINED
-                },
+                    IrValueParameterBuilder().apply {
+                        name = Name.identifier("__args")
+                        type = aspectKContext.listAnyNType
+                        kind = IrParameterKind.Regular
+                        origin = IrDeclarationOrigin.DEFINED
+                    },
             )
         lambdaFun.parameters = listOf(argsParam)
 
@@ -215,14 +214,15 @@ internal class ProceedingJoinPointGenerator(
                         irCall(localFunc.symbol).apply {
                             // $doSomething(args[0] as T0, args[1] as T1, ...)
                             valueParams.forEachIndexed { index, param ->
-                                arguments[index] =
+                                val castedArg =
                                     irAs(
                                         irCall(aspectKContext.listGetFun).apply {
                                             dispatchReceiver = irGet(argsParam)
-                                            arguments[0] = irInt(index)
+                                            arguments[1] = irInt(index + 1)
                                         },
                                         param.type,
                                     )
+                                arguments[index] = castedArg
                             }
                         },
                     )
@@ -236,5 +236,16 @@ internal class ProceedingJoinPointGenerator(
             function = lambdaFun,
             origin = IrStatementOrigin.LAMBDA,
         )
+    }
+
+    // transform returnTargetSymbol from origin to generated local fun
+    // if you don't use this, local function will be always 'non local return'
+    private class ReturnTransformer(
+        private val localFunc: IrSimpleFunction,
+    ) : IrElementTransformerVoid() {
+        override fun visitReturn(expression: IrReturn): IrExpression {
+            expression.returnTargetSymbol = localFunc.symbol
+            return super.visitReturn(expression)
+        }
     }
 }
