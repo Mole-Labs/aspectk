@@ -25,16 +25,16 @@ import org.junit.jupiter.api.assertAll
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class MethodSignatureGenerationTest {
+class AroundMethodSignatureGenerationTest {
     @Test
-    fun `MethodSignature should be created in with nested object`() {
+    fun `MethodSignature should be created with @Around advice`() {
         // given
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.Before
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
@@ -43,10 +43,8 @@ class MethodSignatureGenerationTest {
 
                 @Aspect
                 object ExampleAspect {
-                    @Before(TargetExample::class)
-                    fun doBefore(joinPoint: JoinPoint) {
-                        System.out.println(joinPoint.args)
-                    }
+                    @Around(TargetExample::class)
+                    fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
@@ -72,15 +70,15 @@ class MethodSignatureGenerationTest {
     }
 
     @Test
-    fun `MethodSignature contains annotations of method parameters`() {
+    fun `MethodSignature contains annotations of method parameters with @Around advice`() {
         // given
         val result =
             compile(
                 """
                 import org.jetbrains.annotations.NotNull
                 import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.Before
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
@@ -89,10 +87,8 @@ class MethodSignatureGenerationTest {
 
                 @Aspect
                 object ExampleAspect {
-                    @Before(TargetExample::class)
-                    fun doBefore(joinPoint: JoinPoint) {
-                        System.out.println(joinPoint.args)
-                    }
+                    @Around(TargetExample::class)
+                    fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
@@ -120,13 +116,13 @@ class MethodSignatureGenerationTest {
     }
 
     @Test
-    fun `multiple MethodSignature can be created`() {
+    fun `multiple MethodSignature can be created with @Around advice`() {
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.Before
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
@@ -135,10 +131,8 @@ class MethodSignatureGenerationTest {
 
                 @Aspect
                 object ExampleAspect {
-                    @Before(TargetExample::class)
-                    fun doBefore(joinPoint: JoinPoint) {
-
-                    }
+                    @Around(TargetExample::class)
+                    fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
@@ -173,13 +167,13 @@ class MethodSignatureGenerationTest {
     }
 
     @Test
-    fun `multiple MethodSignature can be created in multiple classes`() {
+    fun `multiple MethodSignature can be created in multiple classes with @Around advice`() {
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.Before
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class TargetExample(
@@ -188,10 +182,8 @@ class MethodSignatureGenerationTest {
 
                 @Aspect
                 object ExampleAspect {
-                    @Before(TargetExample::class)
-                    fun doBefore(joinPoint: JoinPoint) {
-
-                    }
+                    @Around(TargetExample::class)
+                    fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test1 {

@@ -26,7 +26,7 @@ import org.junit.jupiter.api.assertThrows
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class MethodSignatureTargetingTest {
+class BeforeMethodSignatureTargetingTest {
     @Test
     fun `MethodSignature should be created only for target annotations`() {
         // given

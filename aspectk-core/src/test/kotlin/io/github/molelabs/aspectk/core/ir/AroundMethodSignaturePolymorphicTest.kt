@@ -27,24 +27,24 @@ import org.junit.jupiter.api.assertThrows
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class MethodSignaturePolymorphicTest {
+class AroundMethodSignaturePolymorphicTest {
     @Test
-    fun `MethodSignature should not be created for implementations of annotated interface methods`() {
+    fun `MethodSignature should not be created for implementations of annotated interface methods with @Around advice`() {
         // given
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             interface MyInterface {
@@ -76,22 +76,22 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should not be created for overriding methods with annotation on superclass`() {
+    fun `MethodSignature should not be created for overriding methods with annotation on superclass with @Around advice`() {
         // given
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             open class Base {
@@ -125,22 +125,22 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should be created only for overriding methods when annotated on child `() {
+    fun `MethodSignature should be created only for overriding methods when annotated on child with @Around advice`() {
         // given
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             open class Base {
@@ -174,22 +174,22 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should not be created for overriding methods with annotation on abstract class`() {
+    fun `MethodSignature should not be created for overriding methods with annotation on abstract class with @Around advice`() {
         // given
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             abstract class Base {
@@ -221,21 +221,21 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should be created for default methods with annotation on interface`() {
+    fun `MethodSignature should be created for default methods with annotation on interface with @Around advice`() {
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             interface Base {
@@ -269,21 +269,21 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should be created for default methods with annotation on abstract class`() {
+    fun `MethodSignature should be created for default methods with annotation on abstract class with @Around advice`() {
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample::class)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample::class)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             abstract class Base {
@@ -317,86 +317,13 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should be created for both overridden methods and parent methods when inherits is true`() {
+    fun `MethodSignature should be created for both overridden methods and parent methods only when @Around has inherits=true`() {
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
-
-            @Target(AnnotationTarget.FUNCTION)
-            annotation class TargetExample1
-
-            @Target(AnnotationTarget.FUNCTION)
-            annotation class TargetExample2
-
-            @Aspect
-            object ExampleAspect {
-                @Before(TargetExample1::class, TargetExample2::class, inherits = true)
-                fun doBefore(joinPoint: JoinPoint) {}
-            }
-
-            interface Base {
-                @TargetExample1
-                fun work1() {
-                    println("Hello AspectK")
-                }
-
-                @TargetExample2
-                fun work2()
-            }
-
-            class Derived : Base {
-                override fun work1() {}
-
-                override fun work2() {}
-            }
-            """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-        val loader = result.classLoader
-
-        // when
-        val baseActual = loader.assertAndGetField(className = $$$"Base$$MethodSignatures", fieldName = $$"ajc$tjp_0")
-        val baseExpected =
-            baseClassWorkMethodSignature(loader, "TargetExample1").copy(
-                methodName = "work1",
-            )
-
-        val derivedActual1 =
-            loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_1")
-        val derivedActual2 =
-            loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_2")
-        val derivedExpected1 =
-            baseClassWorkMethodSignature(loader, "TargetExample1").copy(
-                parameter = listOf(loader.thisParameterInfo("Derived")),
-                methodName = "work1",
-                annotations = listOf(),
-            )
-        val derivedExpected2 =
-            baseClassWorkMethodSignature(loader, "TargetExample2").copy(
-                parameter = listOf(loader.thisParameterInfo("Derived")),
-                methodName = "work2",
-                annotations = listOf(),
-            )
-
-        // then
-        assertAll(
-            { assertEquals(baseExpected, baseActual) },
-            { assertEquals(derivedExpected1, derivedActual1) },
-            { assertEquals(derivedExpected2, derivedActual2) },
-        )
-    }
-
-    @Test
-    fun `MethodSignature should be created for both overridden methods and parent methods only when inherits is true`() {
-        val result =
-            compile(
-                """
-            import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample1
@@ -409,14 +336,14 @@ class MethodSignaturePolymorphicTest {
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample1::class, TargetExample2::class, inherits = true)
-                fun doBefore1(joinPoint: JoinPoint) {}
+                @Around(TargetExample1::class, TargetExample2::class, inherits = true)
+                fun doAround1(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
 
-                @Before(TargetExample1::class, inherits = true)
-                fun doBefore2(joinPoint: JoinPoint) {}
+                @Around(TargetExample1::class, inherits = true)
+                fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
 
-                @Before(TargetExample2::class, TargetExample3::class)
-                fun doBefore3(joinPoint: JoinPoint) {}
+                @Around(TargetExample2::class, TargetExample3::class)
+                fun doAround3(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             interface Base1 {
@@ -488,14 +415,14 @@ class MethodSignaturePolymorphicTest {
     }
 
     @Test
-    fun `MethodSignature should be created for methods from multiple interfaces when inherits is true`() {
+    fun `MethodSignature should be created for methods from multiple interfaces when @Around has inherits=true`() {
         // given
         val result =
             compile(
                 """
             import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
             @Target(AnnotationTarget.FUNCTION)
             annotation class TargetExample1
@@ -505,8 +432,8 @@ class MethodSignaturePolymorphicTest {
 
             @Aspect
             object ExampleAspect {
-                @Before(TargetExample1::class, TargetExample2::class, inherits = true)
-                fun doBefore(joinPoint: JoinPoint) {}
+                @Around(TargetExample1::class, TargetExample2::class, inherits = true)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
             }
 
             interface Base1 {
@@ -557,6 +484,58 @@ class MethodSignaturePolymorphicTest {
             },
             { assertEquals(derivedExpected1, derivedActual1) },
             { assertEquals(derivedExpected2, derivedActual2) },
+        )
+    }
+
+    @Test
+    fun `MethodSignature should be created for overriding methods when @Around has inherits=true`() {
+        val result =
+            compile(
+                """
+            import io.github.molelabs.aspectk.runtime.Aspect
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Around(TargetExample::class, inherits = true)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+            }
+
+            interface Base {
+                @TargetExample
+                fun work() {
+                    println("Hello AspectK")
+                }
+            }
+
+            class Derived : Base {
+                override fun work() {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val baseActual = loader.assertAndGetField(className = $$$"Base$$MethodSignatures", fieldName = $$"ajc$tjp_0")
+        val baseExpected = baseClassWorkMethodSignature(loader)
+
+        val derivedActual =
+            loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_1")
+        val derivedExpected =
+            baseClassWorkMethodSignature(loader).copy(
+                parameter = listOf(loader.thisParameterInfo("Derived")),
+                annotations = listOf(),
+            )
+
+        // then
+        assertAll(
+            { assertEquals(baseExpected, baseActual) },
+            { assertEquals(derivedExpected, derivedActual) },
         )
     }
 }
