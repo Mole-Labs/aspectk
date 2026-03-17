@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class BeforeMethodSignatureFunctionTypeTest {
+class MethodSignatureFunctionTypeTest {
     @Test
     fun `MethodSignatures should be created for inline functions`() {
         // given

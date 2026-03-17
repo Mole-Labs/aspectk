@@ -26,7 +26,7 @@ import org.junit.jupiter.api.assertThrows
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
-class BeforeMethodSignatureGenericTest {
+class MethodSignatureGenericTest {
     @Test
     fun `generic type arguments of MethodSignature should be erased to Any`() {
         // given
