@@ -19,6 +19,7 @@ import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
 import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
 import io.github.molelabs.aspectk.core.trace
 import io.github.molelabs.aspectk.core.tracer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -37,14 +38,15 @@ internal class AdviceGenerationExtension : IrGenerationExtension {
         val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
         val adviceCallGenerator = AdviceCallGenerator(aspectkContext)
         val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext)
+        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext)
 
         aspectkContext
             .tracer(
                 tag =
-                moduleFragment.name
-                    .asString()
-                    .removePrefix("<")
-                    .removeSuffix(">"),
+                    moduleFragment.name
+                        .asString()
+                        .removePrefix("<")
+                        .removeSuffix(">"),
                 description = "Advice Generation",
             ).trace {
                 moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)
@@ -55,6 +57,7 @@ internal class AdviceGenerationExtension : IrGenerationExtension {
                         methodSignatureGenerator,
                         adviceCallGenerator,
                         proceedingJoinPointGenerator,
+                        tryCatchWrapperGenerator,
                         aspectkContext,
                     ),
                     null,

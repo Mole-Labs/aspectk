@@ -18,7 +18,6 @@ package io.github.molelabs.aspectk.core.ir.generator
 import io.github.molelabs.aspectk.core.ir.AspectContext
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.add
-import io.github.molelabs.aspectk.core.ir.addLast
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.ir.builders.irAs
 import org.jetbrains.kotlin.ir.builders.irBlock
@@ -29,6 +28,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrTry
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.name.FqName
@@ -51,9 +51,26 @@ internal class AdviceCallGenerator(
         declaration: IrFunction,
         target: FqName,
         joinPoint: IrExpression,
+        tryCatchWrapper: IrTry,
+        localFunction: IrSimpleFunction,
         checkInherits: Boolean = false,
-    ) = buildCallBlock(declaration, target, joinPoint, checkInherits, AspectContext.Kind.AFTER)
-        .also { declaration.body?.addLast(it) }
+    ) {
+        val finalExpression =
+            buildCallBlock(declaration, target, joinPoint, checkInherits, AspectContext.Kind.AFTER)
+        tryCatchWrapper.finallyExpression = finalExpression
+        val returnStatement =
+            aspectKContext.withIrBuilder(declaration.symbol) {
+                irBlock {
+                    +irReturn(tryCatchWrapper)
+                }
+            }
+
+        (declaration.body as? IrBlockBody)?.statements?.let { statement ->
+            statement.clear()
+            statement.add(localFunction)
+            statement.add(returnStatement)
+        }
+    }
 
     /**
      * Replaces the function body with:

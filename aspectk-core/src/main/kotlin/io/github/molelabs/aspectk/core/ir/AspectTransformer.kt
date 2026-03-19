@@ -20,6 +20,7 @@ import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
 import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -41,6 +42,7 @@ internal class AspectTransformer(
     private val methodSignatureGenerator: MethodSignatureGenerator,
     private val adviceCallGenerator: AdviceCallGenerator,
     private val proceedingJoinPointGenerator: ProceedingJoinPointGenerator,
+    private val tryCatchWrapperGenerator: TryCatchWrapperGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targets = aspectKContext.aspectLookUp.targets
@@ -110,7 +112,9 @@ internal class AspectTransformer(
                 adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
             }
             if (hasAfter) {
-                adviceCallGenerator.generateAfterAdviceCalls(declaration, target, joinPoint, checkInherits)
+                val localFunc = tryCatchWrapperGenerator.generateLocalFunction(declaration)
+                val tryCatchWrapper = tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
+                adviceCallGenerator.generateAfterAdviceCalls(declaration, target, joinPoint, tryCatchWrapper, localFunc, checkInherits)
             }
         }
         if (hasAround) {
@@ -133,12 +137,14 @@ internal class AspectTransformer(
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
         factory: (IrDeclarationContainer) -> IrClass,
-    ): IrClass = declarations
-        .filterIsInstance<IrClass>()
-        .firstOrNull { it.name.asString() == name }
-        ?: factory(this).also { declarations.add(it) }
+    ): IrClass =
+        declarations
+            .filterIsInstance<IrClass>()
+            .firstOrNull { it.name.asString() == name }
+            ?: factory(this).also { declarations.add(it) }
 
-    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${(this as? IrFile)?.name.orEmpty().let{
-        if (it.isNotEmpty()) "$$it" else ""
-    }.replace(".", "")}"
+    private fun IrDeclarationContainer.toNormalizedName(basename: String) =
+        "$basename${(this as? IrFile)?.name.orEmpty().let{
+            if (it.isNotEmpty()) "$$it" else ""
+        }.replace(".", "")}"
 }
