@@ -21,9 +21,9 @@ import org.jetbrains.kotlin.ir.util.statements
 import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
 
-internal interface LocalFunctionGenerator {
-    val aspectKCompilerContext: AspectKIrCompilerContext
-
+internal class LocalFunctionGenerator(
+    private val aspectKCompilerContext: AspectKIrCompilerContext,
+) {
     /**
      * Builds `fun $<name>(p0: T0, p1: T1, ...)` whose body is the original [declaration] body
      * with outer parameters substituted by the local function's own parameters.

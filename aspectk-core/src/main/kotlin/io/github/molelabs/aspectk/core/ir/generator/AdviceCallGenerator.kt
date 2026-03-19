@@ -60,9 +60,7 @@ internal class AdviceCallGenerator(
         tryCatchWrapper.finallyExpression = finalExpression
         val returnStatement =
             aspectKContext.withIrBuilder(declaration.symbol) {
-                irBlock {
-                    +irReturn(tryCatchWrapper)
-                }
+                irReturn(tryCatchWrapper)
             }
 
         (declaration.body as? IrBlockBody)?.statements?.let { statement ->

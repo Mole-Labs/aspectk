@@ -18,6 +18,7 @@ package io.github.molelabs.aspectk.core.ir
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
 import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
@@ -43,6 +44,7 @@ internal class AspectTransformer(
     private val adviceCallGenerator: AdviceCallGenerator,
     private val proceedingJoinPointGenerator: ProceedingJoinPointGenerator,
     private val tryCatchWrapperGenerator: TryCatchWrapperGenerator,
+    private val localFunctionGenerator: LocalFunctionGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targets = aspectKContext.aspectLookUp.targets
@@ -106,21 +108,40 @@ internal class AspectTransformer(
         val hasAfter = contexts.any { it.kind == Kind.AFTER && (!checkInherits || it.inherits) }
         val hasAround = contexts.any { it.kind == Kind.AROUND && (!checkInherits || it.inherits) }
 
-        if (hasBefore || hasAfter) {
-            val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
-            if (hasBefore) {
-                adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
-            }
-            if (hasAfter) {
-                val localFunc = tryCatchWrapperGenerator.generateLocalFunction(declaration)
-                val tryCatchWrapper = tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
-                adviceCallGenerator.generateAfterAdviceCalls(declaration, target, joinPoint, tryCatchWrapper, localFunc, checkInherits)
-            }
+        val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
+        val localFunc = localFunctionGenerator.generateLocalFunction(declaration)
+
+        if (hasBefore) {
+            adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
         }
+        if (hasAfter) {
+            val tryCatchWrapper =
+                tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
+            adviceCallGenerator.generateAfterAdviceCalls(
+                declaration,
+                target,
+                joinPoint,
+                tryCatchWrapper,
+                localFunc,
+                checkInherits,
+            )
+            1 + 1
+        }
+
         if (hasAround) {
-            val localFunc = proceedingJoinPointGenerator.generateLocalFunction(declaration)
-            val proceedingJoinPoint = proceedingJoinPointGenerator.generateProceedingJoinPoint(declaration, localFunc, signatureProperty)
-            adviceCallGenerator.generateAroundAdviceCalls(declaration, target, localFunc, proceedingJoinPoint, checkInherits)
+            val proceedingJoinPoint =
+                proceedingJoinPointGenerator.generateProceedingJoinPoint(
+                    declaration,
+                    localFunc,
+                    signatureProperty,
+                )
+            adviceCallGenerator.generateAroundAdviceCalls(
+                declaration,
+                target,
+                localFunc,
+                proceedingJoinPoint,
+                checkInherits,
+            )
         }
     }
 
@@ -144,7 +165,9 @@ internal class AspectTransformer(
             ?: factory(this).also { declarations.add(it) }
 
     private fun IrDeclarationContainer.toNormalizedName(basename: String) =
-        "$basename${(this as? IrFile)?.name.orEmpty().let{
-            if (it.isNotEmpty()) "$$it" else ""
-        }.replace(".", "")}"
+        "$basename${
+            (this as? IrFile)?.name.orEmpty().let {
+                if (it.isNotEmpty()) "$$it" else ""
+            }.replace(".", "")
+        }"
 }

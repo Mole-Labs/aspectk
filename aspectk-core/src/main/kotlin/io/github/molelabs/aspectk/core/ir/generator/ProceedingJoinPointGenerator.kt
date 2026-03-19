@@ -52,8 +52,8 @@ import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class ProceedingJoinPointGenerator(
-    override val aspectKCompilerContext: AspectKIrCompilerContext,
-) : LocalFunctionGenerator {
+    private val aspectKCompilerContext: AspectKIrCompilerContext,
+) {
     private val proceedingJoinPointConstructor =
         aspectKCompilerContext.proceedingJoinPointSymbol.constructors.first()
 
@@ -68,8 +68,7 @@ internal class ProceedingJoinPointGenerator(
         localFunc: IrSimpleFunction,
         signatureProperty: IrProperty,
     ): IrExpression {
-        val valueParams: List<IrValueDeclaration> =
-            declaration.parameters.filter { it.kind == IrParameterKind.Regular }
+        val valueParams = declaration.parameters.filter { it.kind == IrParameterKind.Regular }
         val wrapperLambda = buildWrapperLambda(declaration, localFunc, valueParams)
 
         val argsExpression =
