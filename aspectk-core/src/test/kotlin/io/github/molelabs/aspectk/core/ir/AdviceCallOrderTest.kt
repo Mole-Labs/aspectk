@@ -20,7 +20,10 @@ import com.tschuchort.compiletesting.SourceFile
 import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.lang.reflect.InvocationTargetException
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
@@ -185,5 +188,95 @@ class AdviceCallOrderTest {
 
         // then — around-advice wraps the function body: before → body → after
         assertEquals(listOf("before", "body", "after"), log)
+    }
+
+    @Test
+    fun `@After advice is invoked even when the original function throws`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.After
+                import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted
+
+                @Aspect
+                object TrackingAspect {
+                    var called = false
+
+                    @After(Intercepted::class)
+                    fun doAfter(jp: JoinPoint) { called = true }
+                }
+
+                class Test {
+                    @Intercepted
+                    fun riskyWork(): Unit = throw RuntimeException("boom")
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when — invoke the throwing function, expecting the exception to propagate
+        val testClass = result.classLoader.loadClass("Test")
+        val instance = testClass.getDeclaredConstructor().newInstance()
+        assertThrows<InvocationTargetException> {
+            testClass.getMethod("riskyWork").invoke(instance)
+        }
+
+        // then — despite the exception, @After advice must have been called (finally block)
+        val aspectInstance =
+            result.classLoader
+                .loadClass("TrackingAspect")
+                .getField("INSTANCE")
+                .get(null)
+        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
+        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called even when the function throws")
+    }
+
+    @Test
+    fun `@After advice is invoked after a normally returning function`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.After
+                import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted
+
+                @Aspect
+                object TrackingAspect {
+                    var called = false
+
+                    @After(Intercepted::class)
+                    fun doAfter(jp: JoinPoint) { called = true }
+                }
+
+                class Test {
+                    @Intercepted
+                    fun normalWork(): String = "done"
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val testClass = result.classLoader.loadClass("Test")
+        val instance = testClass.getDeclaredConstructor().newInstance()
+        testClass.getMethod("normalWork").invoke(instance)
+
+        // then
+        val aspectInstance =
+            result.classLoader
+                .loadClass("TrackingAspect")
+                .getField("INSTANCE")
+                .get(null)
+        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
+        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called after normal return")
     }
 }

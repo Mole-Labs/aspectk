@@ -20,7 +20,6 @@ import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 
@@ -137,72 +136,89 @@ class AroundLocalFunctionGenerationTest {
     }
 
     @Test
-    fun `@Before does not generate a local function`() {
-        // given — only @Before advice; no @Around
+    fun `local function is created only once when multiple @Around annotations are present`() {
+        // given
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.Before
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
+                annotation class Intercepted1
+
+                 @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted2
 
                 @Aspect
-                object LogAspect {
-                    @Before(Intercepted::class)
-                    fun doBefore(jp: JoinPoint) { }
+                object PassThroughAspect {
+                    @Around(Intercepted1::class)
+                    fun doAround1(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+
+                    @Around(Intercepted2::class)
+                    fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
-                    @Intercepted
-                    fun work() { }
+                    @Intercepted1
+                    @Intercepted2
+                    fun greet(): String = "hello"
                 }
-                """,
+                """.trimIndent(),
             )
+
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
         val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.firstOrNull { it.name == "\$work" }
+        val localFn = testClass.declaredMethods.filter { it.name == "greet\$_greet" }
 
-        // then — @Before must NOT generate a local function; that is @Around-exclusive
-        assertNull(localFn, "Expected no local function '\$work' for @Before advice")
+        // then — $greet() is created only once
+        assertEquals(1, localFn.size)
     }
 
     @Test
-    fun `@After does not generate a local function`() {
-        // given — only @After advice; no @Around
+    fun `local function is created only once when multiple @Around and @After annotations are present`() {
+        // given
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.Around
                 import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
+                annotation class Intercepted1
+
+                 @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted2
 
                 @Aspect
-                object LogAspect {
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { }
+                object PassThroughAspect {
+                    @Around(Intercepted1::class)
+                    fun doAround1(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+
+                    @After(Intercepted2::class)
+                    fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
-                    @Intercepted
-                    fun work() { }
+                    @Intercepted1
+                    @Intercepted2
+                    fun greet(): String = "hello"
                 }
-                """,
+                """.trimIndent(),
             )
+
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
         val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.firstOrNull { it.name == "\$work" }
+        val localFn = testClass.declaredMethods.filter { it.name == "greet\$_greet" }
 
-        // then — @After must NOT generate a local function; that is @Around-exclusive
-        assertNull(localFn, "Expected no local function '\$work' for @After advice")
+        // then — $greet() is created only once
+        assertEquals(1, localFn.size)
     }
 }

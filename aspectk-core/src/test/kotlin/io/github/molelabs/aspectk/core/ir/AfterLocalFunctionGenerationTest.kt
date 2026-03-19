@@ -20,11 +20,8 @@ import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
-import org.junit.jupiter.api.assertThrows
-import java.lang.reflect.InvocationTargetException
 
 @OptIn(ExperimentalCompilerApi::class)
 class AfterLocalFunctionGenerationTest {
@@ -138,84 +135,45 @@ class AfterLocalFunctionGenerationTest {
     }
 
     @Test
-    fun `@After advice is invoked even when the original function throws`() {
+    fun `local function is created only once when multiple @After annotations are present`() {
         // given
         val result =
             compile(
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
                 import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
+                annotation class Intercepted1
+
+                 @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted2
 
                 @Aspect
-                object TrackingAspect {
-                    var called = false
+                object PassThroughAspect {
+                    @After(Intercepted1::class)
+                    fun doAround1(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
 
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { called = true }
+                    @After(Intercepted2::class)
+                    fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
-                    @Intercepted
-                    fun riskyWork(): Unit = throw RuntimeException("boom")
+                    @Intercepted1
+                    @Intercepted2
+                    fun greet(): String = "hello"
                 }
-                """,
+                """.trimIndent(),
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
-        // when — invoke the throwing function, expecting the exception to propagate
-        val testClass = result.classLoader.loadClass("Test")
-        val instance = testClass.getDeclaredConstructor().newInstance()
-        assertThrows<InvocationTargetException> {
-            testClass.getMethod("riskyWork").invoke(instance)
-        }
-
-        // then — despite the exception, @After advice must have been called (finally block)
-        val aspectInstance = result.classLoader.loadClass("TrackingAspect").getField("INSTANCE").get(null)
-        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
-        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called even when the function throws")
-    }
-
-    @Test
-    fun `@After advice is invoked after a normally returning function`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object TrackingAspect {
-                    var called = false
-
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { called = true }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun normalWork(): String = "done"
-                }
-                """,
-            )
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
         val testClass = result.classLoader.loadClass("Test")
-        val instance = testClass.getDeclaredConstructor().newInstance()
-        testClass.getMethod("normalWork").invoke(instance)
+        val localFn = testClass.declaredMethods.filter { it.name == "greet\$_greet" }
 
-        // then
-        val aspectInstance = result.classLoader.loadClass("TrackingAspect").getField("INSTANCE").get(null)
-        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
-        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called after normal return")
+        // then — $greet() is created only once
+        assertEquals(1, localFn.size)
     }
 }
