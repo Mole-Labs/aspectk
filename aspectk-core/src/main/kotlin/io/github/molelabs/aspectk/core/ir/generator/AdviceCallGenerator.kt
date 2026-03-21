@@ -115,15 +115,85 @@ internal class AdviceCallGenerator(
         }
     }
 
+    /**
+     * Returns an [IrExpression] that calls the first applicable @Around advice for [target],
+     * suitable for use as the try-body in a try-finally wrapper.
+     *
+     * Only one @Around advice is invoked per target annotation.
+     * Supporting multiple chained @Around advices requires an ordering engine (TODO).
+     */
+    fun buildAroundCallExpression(
+        declaration: IrFunction,
+        target: FqName,
+        proceedingJoinPoint: IrExpression,
+        checkInherits: Boolean = false,
+    ): IrExpression = buildAroundCallBlock(declaration, target, proceedingJoinPoint, checkInherits)
+
     private fun buildAroundCallBlock(
         declaration: IrFunction,
         target: FqName,
         joinPointExpr: IrExpression,
         checkInherits: Boolean,
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
+        /*
+        TODO support multiple @Around advices,
+        ProceedingJoinPointGenerator.generateProceedingJoinPoint may be called
+        in each iteration of aspectKContext.aspectLookUp[target],
+
+        generateProceedingJoinPoint method parameter should be added 'innerProceed'
+        which contains advice body of around, after annotation.
+
+        if innerProceed parameter exists, the result of generateProceedingJoinPoint
+        may be added to input innerProceed such as.
+
+        @Target
+        fun doSomething(arg1:String):String {
+            fun $doSomething(arg1:String = arg1):String {
+                   println("hello aspectk")
+                   return ""
+            }
+            return SomeAspect.doAround1(
+                ProceedingJoinPoint(...) { args:List<Any?> ->
+                    SomeAspect.doAround2(
+                        ProceedingJoinPoint(...) { args:List<Any?> ->
+                            try {
+                                $doSomething(args[0] as String)
+                            } catch (e:Exception) {
+                                throw e
+                            } finally {
+                                SomeAspect.doAfter1(JoinPoint(...))
+                            }
+                       }
+                   )
+                }
+            )
+        }
+
+        this is only raw draft. so it may not be correct.
+
+        Design rationale — @After placement (innermost):
+        @After is placed in the finally block that wraps only $doSomething (the original function
+        body), not the entire @Around chain. This is intentional:
+
+        1. @After's contract is "execute after the target function", not "execute after all aspects".
+           If an @Around advice throws before calling pjp.proceed(), the original function never
+           ran, so @After should not fire in that case.
+
+        2. @Around advice is responsible for handling its own exceptions internally.
+           Wrapping the outer @Around call with the finally block would mean @After fires even
+           when @Around itself fails — which conflates two unrelated concerns.
+
+        3. This design gives predictable execution order control after the original code runs:
+           @After fires first (innermost finally), then @Around's post-proceed logic runs
+           outward. The order is deterministic and mirrors the lexical nesting of the generated IR.
+         */
+        val targetContext =
+            aspectKContext.aspectLookUp[target]
+                .filter { it.kind == AspectContext.Kind.AROUND }
+                .firstOrNull { !checkInherits || it.inherits }
+
         irBlock {
-            aspectKContext.aspectLookUp[target].forEach { targetContext ->
-                if (checkInherits && !targetContext.inherits) return@forEach
+            if (targetContext != null) {
                 +irReturn(
                     irAs(
                         irCall(targetContext.advice.symbol).apply {

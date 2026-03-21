@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrCatch
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrTry
 import org.jetbrains.kotlin.ir.expressions.impl.IrCatchImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTryImpl
@@ -40,10 +41,11 @@ internal class TryCatchWrapperGenerator(
     fun generateTryCatchWrapper(
         declaration: IrFunction,
         localFunc: IrSimpleFunction,
+        customTryBody: IrExpression? = null,
     ): IrTry {
         val valueParams = declaration.parameters.filter { it.kind == IrParameterKind.Regular }
         val tryResult =
-            aspectKCompilerContext.withIrBuilder(declaration.symbol) {
+            customTryBody ?: aspectKCompilerContext.withIrBuilder(declaration.symbol) {
                 irReturn(
                     irCall(localFunc.symbol).apply {
                         // $doSomething(arg1, arg2, ...)
