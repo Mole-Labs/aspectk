@@ -45,10 +45,10 @@ internal class AdviceGenerationExtension : IrGenerationExtension {
         aspectkContext
             .tracer(
                 tag =
-                    moduleFragment.name
-                        .asString()
-                        .removePrefix("<")
-                        .removeSuffix(">"),
+                moduleFragment.name
+                    .asString()
+                    .removePrefix("<")
+                    .removeSuffix(">"),
                 description = "Advice Generation",
             ).trace {
                 moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)

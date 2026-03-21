@@ -75,9 +75,9 @@ internal class ProceedingJoinPointGenerator(
             aspectKCompilerContext.createIrListOf(
                 scope = declaration.symbol,
                 elements =
-                    declaration.parameters.map { param ->
-                        aspectKCompilerContext.withIrBuilder(declaration.symbol) { irGet(param) }
-                    },
+                declaration.parameters.map { param ->
+                    aspectKCompilerContext.withIrBuilder(declaration.symbol) { irGet(param) }
+                },
             )
 
         return aspectKCompilerContext.withIrBuilder(declaration.symbol) {
@@ -128,12 +128,12 @@ internal class ProceedingJoinPointGenerator(
             aspectKCompilerContext.pluginContext.irFactory.buildValueParameter(
                 parent = lambdaFun,
                 builder =
-                    IrValueParameterBuilder().apply {
-                        name = Name.identifier("__args")
-                        type = aspectKCompilerContext.listAnyNType
-                        kind = IrParameterKind.Regular
-                        origin = IrDeclarationOrigin.DEFINED
-                    },
+                IrValueParameterBuilder().apply {
+                    name = Name.identifier("__args")
+                    type = aspectKCompilerContext.listAnyNType
+                    kind = IrParameterKind.Regular
+                    origin = IrDeclarationOrigin.DEFINED
+                },
             )
         lambdaFun.parameters = listOf(argsParam)
 

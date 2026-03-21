@@ -96,9 +96,8 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
-    pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-        ?: reportCompilerBug("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
+    ?: reportCompilerBug("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -106,10 +105,9 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T =
-    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-        block()
-    }
+): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+    block()
+}
 
 internal val AspectKIrCompilerContext.listAnyNType: IrType
     get() =
@@ -163,7 +161,7 @@ internal fun IrType.getUpperBound(): Pair<IrType, IrClassSymbol> {
     return currentType to (
         currentType.classOrNull
             ?: reportCompilerBug("$currentType class should not be null")
-    )
+        )
 }
 
 internal fun IrType.getUpperBoundClassName(): String? = getUpperBound().first.classFqName?.asString()
