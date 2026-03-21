@@ -137,18 +137,22 @@ internal class ProceedingJoinPointGenerator(
             )
         lambdaFun.parameters = listOf(argsParam)
 
+        // Number of non-regular (receiver) parameters that sit before the regular params
+        // in the args list: 1 for member/extension functions, 0 for top-level functions.
+        val receiverOffset = declaration.parameters.count { it.kind != IrParameterKind.Regular }
+
         lambdaFun.body =
             aspectKCompilerContext.withIrBuilder(lambdaFun.symbol) {
                 irBlockBody {
                     +irReturn(
                         irCall(localFunc.symbol).apply {
-                            // $doSomething(args[0] as T0, args[1] as T1, ...)
+                            // $doSomething(args[receiverOffset] as T0, args[receiverOffset+1] as T1, ...)
                             valueParams.forEachIndexed { index, param ->
                                 val castedArg =
                                     irAs(
                                         irCall(aspectKCompilerContext.listGetFun).apply {
                                             dispatchReceiver = irGet(argsParam)
-                                            arguments[1] = irInt(index + 1)
+                                            arguments[1] = irInt(index + receiverOffset)
                                         },
                                         param.type,
                                     )

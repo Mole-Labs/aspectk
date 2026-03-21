@@ -51,5 +51,17 @@ public class DefaultProceedingJoinPoint(
 ) : ProceedingJoinPoint {
     override fun proceed(): Any? = onProceedListener.onProceed(args)
 
-    override fun proceed(vararg args: Any?): Any? = onProceedListener.onProceed(args.toList())
+    override fun proceed(vararg args: Any?): Any? {
+        // `args` contains only the regular (non-receiver) parameters supplied by the caller.
+        // The wrapper lambda expects the full list in the same order as `this.args`:
+        // [receiver?, param0, param1, ...]. So we copy the original list and overwrite
+        // only the trailing regular-parameter slots.
+        val fullArgs = this.args.toMutableList()
+        val offset = fullArgs.size - args.size
+        require(offset >= 0) {
+            "proceed(vararg) received ${args.size} args but the function has ${fullArgs.size} total"
+        }
+        args.forEachIndexed { i, arg -> fullArgs[offset + i] = arg }
+        return onProceedListener.onProceed(fullArgs)
+    }
 }

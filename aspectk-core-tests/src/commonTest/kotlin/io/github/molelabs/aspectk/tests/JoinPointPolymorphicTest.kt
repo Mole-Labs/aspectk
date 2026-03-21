@@ -15,9 +15,12 @@
  */
 package io.github.molelabs.aspectk.tests
 
+import io.github.molelabs.aspectk.runtime.After
+import io.github.molelabs.aspectk.runtime.Around
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -289,5 +292,129 @@ class JoinPointPolymorphicTest {
         assertEquals(3, ExampleAspect7.executionCount1)
         assertEquals(1, ExampleAspect7.executionCount2)
         assertEquals(1, ExampleAspect7.executionCount3)
+    }
+
+    // ── @After inheritance ───────────────────────────────────────────────────
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample8
+
+    @Aspect
+    private object ExampleAspect8 {
+        var executionCount = 0
+
+        @After(TargetExample8::class)
+        fun doAfter(joinPoint: JoinPoint) {
+            executionCount++
+        }
+    }
+
+    private open class Base8 {
+        @TargetExample8
+        open fun run() {}
+    }
+
+    private class Derived8 : Base8() {
+        override fun run() {}
+    }
+
+    @Test
+    fun `@After advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
+        Derived8().run()
+        assertEquals(0, ExampleAspect8.executionCount)
+
+        Base8().run()
+        assertEquals(1, ExampleAspect8.executionCount)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample9
+
+    @Aspect
+    private object ExampleAspect9 {
+        var executionCount = 0
+
+        @After(TargetExample9::class, inherits = true)
+        fun doAfter(joinPoint: JoinPoint) {
+            executionCount++
+        }
+    }
+
+    private interface Base9 {
+        @TargetExample9
+        fun run()
+    }
+
+    private class Derived9 : Base9 {
+        override fun run() {}
+    }
+
+    @Test
+    fun `@After advice should execute on overriding method when inherits is true`() {
+        Derived9().run()
+        assertEquals(1, ExampleAspect9.executionCount)
+    }
+
+    // ── @Around inheritance ──────────────────────────────────────────────────
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample10
+
+    @Aspect
+    private object ExampleAspect10 {
+        var executionCount = 0
+
+        @Around(TargetExample10::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? {
+            executionCount++
+            return pjp.proceed()
+        }
+    }
+
+    private open class Base10 {
+        @TargetExample10
+        open fun run() {}
+    }
+
+    private class Derived10 : Base10() {
+        override fun run() {}
+    }
+
+    @Test
+    fun `@Around advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
+        Derived10().run()
+        assertEquals(0, ExampleAspect10.executionCount)
+
+        Base10().run()
+        assertEquals(1, ExampleAspect10.executionCount)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample11
+
+    @Aspect
+    private object ExampleAspect11 {
+        var executionCount = 0
+
+        @Around(TargetExample11::class, inherits = true)
+        fun doAround(pjp: ProceedingJoinPoint): Any? {
+            executionCount++
+            return pjp.proceed()
+        }
+    }
+
+    private interface Base11 {
+        @TargetExample11
+        fun run()
+    }
+
+    private class Derived11 : Base11 {
+        override fun run() {}
+    }
+
+    @Test
+    fun `@Around advice should execute on overriding method when inherits is true`() {
+        Derived11().run()
+        assertEquals(1, ExampleAspect11.executionCount)
     }
 }

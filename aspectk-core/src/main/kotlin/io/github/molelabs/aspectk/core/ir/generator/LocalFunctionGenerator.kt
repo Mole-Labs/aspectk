@@ -29,7 +29,9 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrReturn
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.transformStatement
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.statements
@@ -97,11 +99,18 @@ internal class LocalFunctionGenerator(
 
         localFunc.parameters = localParams
 
-        // Substitute outerParam.symbol → localParam.symbol in the deep-copied body
+        // deepCopyWithSymbols only remaps symbols *declared within* the copied tree.
+        // Outer parameter symbols (declared in declaration.parameters) are not remapped,
+        // so IrGetValue nodes that reference them still point to the outer function's params.
+        // We must explicitly substitute them to the local function's own params so that
+        // proceed(vararg args) overrides work correctly.
+        val paramSubstitutions: Map<IrValueParameter, IrValueParameter> =
+            valueParams.zip(localParams).associate { (outer, local) -> outer to local }
+
         val copiedStatements =
             originalStatements.map {
                 it.deepCopyWithSymbols(localFunc).transformStatement(
-                    ReturnTransformer(localFunc),
+                    BodyTransformer(localFunc, paramSubstitutions),
                 )
             }
 
@@ -115,14 +124,32 @@ internal class LocalFunctionGenerator(
         return localFunc
     }
 
-    // transform returnTargetSymbol from origin to generated local fun
-    // if you don't use this, local function will be always 'non local return'
-    private class ReturnTransformer(
+    /**
+     * Transforms the deep-copied body of a local function by:
+     * 1. Fixing return targets to point to [localFunc] instead of the outer function.
+     * 2. Substituting `IrGetValue` references to outer parameters with references to the
+     *    local function's own parameters, so that `proceed(vararg args)` argument
+     *    substitution takes effect correctly.
+     */
+    private class BodyTransformer(
         private val localFunc: IrSimpleFunction,
+        private val paramSubstitutions: Map<IrValueParameter, IrValueParameter>,
     ) : IrElementTransformerVoid() {
         override fun visitReturn(expression: IrReturn): IrExpression {
             expression.returnTargetSymbol = localFunc.symbol
             return super.visitReturn(expression)
+        }
+
+        override fun visitGetValue(expression: IrGetValue): IrExpression {
+            val replacement = paramSubstitutions[expression.symbol.owner]
+                ?: return super.visitGetValue(expression)
+            return IrGetValueImpl(
+                startOffset = expression.startOffset,
+                endOffset = expression.endOffset,
+                type = replacement.type,
+                symbol = replacement.symbol,
+                origin = expression.origin,
+            )
         }
     }
 }
