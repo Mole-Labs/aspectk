@@ -105,56 +105,58 @@ internal class AspectTransformer(
     ) {
         val contexts = aspectKContext.aspectLookUp[target]
         val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
-
-        // When both @After and @Around target the same annotation, the last-registered advice wins.
-        // Only one body-replacing advice executes per annotation per function.
-        val lastBodyAdviceKind =
-            contexts
-                .lastOrNull { (it.kind == Kind.AFTER || it.kind == Kind.AROUND) && (!checkInherits || it.inherits) }
-                ?.kind
-        val hasAfter = lastBodyAdviceKind == Kind.AFTER
-        val hasAround = lastBodyAdviceKind == Kind.AROUND
-
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
         val localFunc = localFunctionGenerator.generateLocalFunction(declaration)
 
         // This ordering ensures statement.clear() inside @After/@Around generators never
         // wipes out @Before calls that were already inserted.
-        when {
-            hasAfter -> {
-                val tryCatchWrapper =
-                    tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
-                adviceCallGenerator.generateAfterAdviceCalls(
-                    declaration,
-                    target,
-                    joinPoint,
-                    tryCatchWrapper,
-                    localFunc,
-                    checkInherits,
-                )
-            }
 
-            hasAround -> {
-                val proceedingJoinPoint =
-                    proceedingJoinPointGenerator.generateProceedingJoinPoint(
+        contexts.forEach { context ->
+            when (context.kind) {
+                Kind.AROUND -> {
+                    val proceedingJoinPoint =
+                        proceedingJoinPointGenerator.generateProceedingJoinPoint(
+                            declaration,
+                            localFunc,
+                            signatureProperty,
+                        )
+                    adviceCallGenerator.generateAroundAdviceCalls(
                         declaration,
+                        context,
                         localFunc,
-                        signatureProperty,
+                        proceedingJoinPoint,
+                        checkInherits,
                     )
-                adviceCallGenerator.generateAroundAdviceCalls(
-                    declaration,
-                    target,
-                    localFunc,
-                    proceedingJoinPoint,
-                    checkInherits,
-                )
+                }
+
+                Kind.AFTER -> {
+                    val tryCatchWrapper =
+                        tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
+                    adviceCallGenerator.generateAfterAdviceCalls(
+                        declaration,
+                        context,
+                        joinPoint,
+                        tryCatchWrapper,
+                        localFunc,
+                        checkInherits,
+                    )
+                }
+
+                else -> {
+                    Unit
+                }
             }
         }
 
         // @Before is always prepended after the body structure is finalized,
         // so it appears first in the executed statement list.
         if (hasBefore) {
-            adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
+            adviceCallGenerator.generateAdviceCalls(
+                declaration,
+                target,
+                joinPoint,
+                checkInherits,
+            )
         }
     }
 
@@ -171,16 +173,14 @@ internal class AspectTransformer(
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
         factory: (IrDeclarationContainer) -> IrClass,
-    ): IrClass =
-        declarations
-            .filterIsInstance<IrClass>()
-            .firstOrNull { it.name.asString() == name }
-            ?: factory(this).also { declarations.add(it) }
+    ): IrClass = declarations
+        .filterIsInstance<IrClass>()
+        .firstOrNull { it.name.asString() == name }
+        ?: factory(this).also { declarations.add(it) }
 
-    private fun IrDeclarationContainer.toNormalizedName(basename: String) =
-        "$basename${
-            (this as? IrFile)?.name.orEmpty().let {
-                if (it.isNotEmpty()) "$$it" else ""
-            }.replace(".", "")
-        }"
+    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${
+        (this as? IrFile)?.name.orEmpty().let {
+            if (it.isNotEmpty()) "$$it" else ""
+        }.replace(".", "")
+    }"
 }

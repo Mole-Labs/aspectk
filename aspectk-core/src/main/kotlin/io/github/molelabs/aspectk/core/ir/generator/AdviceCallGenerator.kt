@@ -16,6 +16,7 @@
 package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectContext
+import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.add
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
@@ -43,20 +44,38 @@ internal class AdviceCallGenerator(
         target: FqName,
         joinPoint: IrExpression,
         checkInherits: Boolean = false,
-    ) = buildCallBlock(declaration, target, joinPoint, checkInherits, AspectContext.Kind.BEFORE)
+    ) = buildCallBlock(declaration, target, joinPoint, checkInherits)
         .also { declaration.body?.add(it) }
+
+    private fun buildCallBlock(
+        declaration: IrFunction,
+        target: FqName,
+        joinPointExpr: IrExpression,
+        checkInherits: Boolean,
+    ) = aspectKContext.withIrBuilder(declaration.symbol) {
+        irBlock {
+            aspectKContext.aspectLookUp[target].forEach { context ->
+                if (context.canInsertAdvice(checkInherits, Kind.BEFORE)) {
+                    +irCall(context.advice.symbol).apply {
+                        dispatchReceiver = irGetObject(context.aspect)
+                        arguments[1] = joinPointExpr.deepCopyWithSymbols()
+                    }
+                }
+            }
+        }
+    }
 
     /** Appends @After advice calls to the function body (before any trailing return). */
     fun generateAfterAdviceCalls(
         declaration: IrFunction,
-        target: FqName,
+        context: AspectContext,
         joinPoint: IrExpression,
         tryCatchWrapper: IrTry,
         localFunction: IrSimpleFunction,
         checkInherits: Boolean = false,
     ) {
         val finalExpression =
-            buildCallBlock(declaration, target, joinPoint, checkInherits, AspectContext.Kind.AFTER)
+            buildAfterCallBlock(declaration, context, joinPoint, checkInherits)
         tryCatchWrapper.finallyExpression = finalExpression
         val returnStatement =
             aspectKContext.withIrBuilder(declaration.symbol) {
@@ -77,7 +96,7 @@ internal class AdviceCallGenerator(
      */
     fun generateAroundAdviceCalls(
         declaration: IrFunction,
-        target: FqName,
+        context: AspectContext,
         localFunction: IrSimpleFunction,
         proceedingJoinPoint: IrExpression,
         checkInherits: Boolean = false,
@@ -85,7 +104,7 @@ internal class AdviceCallGenerator(
         val aroundCallback =
             buildAroundCallBlock(
                 declaration,
-                target,
+                context,
                 proceedingJoinPoint,
                 checkInherits,
             )
@@ -96,19 +115,16 @@ internal class AdviceCallGenerator(
         }
     }
 
-    private fun buildCallBlock(
+    private fun buildAfterCallBlock(
         declaration: IrFunction,
-        target: FqName,
+        context: AspectContext,
         joinPointExpr: IrExpression,
         checkInherits: Boolean,
-        kind: AspectContext.Kind,
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
         irBlock {
-            aspectKContext.aspectLookUp[target].forEach { targetContext ->
-                if (targetContext.kind != kind) return@forEach
-                if (checkInherits && !targetContext.inherits) return@forEach
-                +irCall(targetContext.advice.symbol).apply {
-                    dispatchReceiver = irGetObject(targetContext.aspect)
+            if (context.canInsertAdvice(checkInherits, Kind.AFTER)) {
+                +irCall(context.advice.symbol).apply {
+                    dispatchReceiver = irGetObject(context.aspect)
                     arguments[1] = joinPointExpr.deepCopyWithSymbols()
                 }
             }
@@ -124,16 +140,16 @@ internal class AdviceCallGenerator(
      */
     fun buildAroundCallExpression(
         declaration: IrFunction,
-        target: FqName,
+        context: AspectContext,
         proceedingJoinPoint: IrExpression,
         checkInherits: Boolean = false,
-    ): IrExpression = buildAroundCallBlock(declaration, target, proceedingJoinPoint, checkInherits)
+    ): IrExpression = buildAroundCallBlock(declaration, context, proceedingJoinPoint, checkInherits)
 
     private fun buildAroundCallBlock(
         declaration: IrFunction,
-        target: FqName,
+        context: AspectContext,
         joinPointExpr: IrExpression,
-        checkInherits: Boolean,
+        checkInherits: Boolean = false,
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
         /*
         TODO support multiple @Around advices,
@@ -187,17 +203,13 @@ internal class AdviceCallGenerator(
            @After fires first (innermost finally), then @Around's post-proceed logic runs
            outward. The order is deterministic and mirrors the lexical nesting of the generated IR.
          */
-        val targetContext =
-            aspectKContext.aspectLookUp[target]
-                .filter { it.kind == AspectContext.Kind.AROUND }
-                .firstOrNull { !checkInherits || it.inherits }
 
         irBlock {
-            if (targetContext != null) {
+            if (context.canInsertAdvice(checkInherits, Kind.AROUND)) {
                 +irReturn(
                     irAs(
-                        irCall(targetContext.advice.symbol).apply {
-                            dispatchReceiver = irGetObject(targetContext.aspect)
+                        irCall(context.advice.symbol).apply {
+                            dispatchReceiver = irGetObject(context.aspect)
                             arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
                         },
                         declaration.returnType,
@@ -206,4 +218,19 @@ internal class AdviceCallGenerator(
             }
         }
     }
+
+    // Returns true when this context's advice should be injected into the target function.
+    //
+    // Condition 1 — kind matches: only inject advice of the requested kind (@Before / @After / @Around).
+    //
+    // Condition 2 — inheritance gate:
+    //   checkInherits = false  → the function is directly annotated, so all matching advice applies.
+    //   checkInherits = true   → the function is an *override* of an annotated function, so only
+    //                            advice declared with `inherits = true` should fire.
+    //   In short: (!checkInherits || inherits) passes when we are NOT in an inherited context,
+    //   or when the advice explicitly opted in to inherited targets.
+    private fun AspectContext.canInsertAdvice(
+        checkInherits: Boolean,
+        kind: Kind,
+    ) = this.kind == kind && (!checkInherits || inherits)
 }
