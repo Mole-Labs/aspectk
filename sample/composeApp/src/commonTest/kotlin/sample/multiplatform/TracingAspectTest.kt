@@ -81,4 +81,5 @@ class TracingAspectTest {
 
         assertEquals(2, TracingAspect.callStack.size, "두 번의 @Trace 함수 호출이 누적되어야 합니다")
     }
+
 }

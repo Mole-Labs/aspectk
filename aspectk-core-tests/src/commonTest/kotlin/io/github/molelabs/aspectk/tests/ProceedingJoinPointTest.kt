@@ -153,12 +153,11 @@ class ProceedingJoinPointTest {
     @Aspect
     private object ExampleAspect6 {
         @Around(TargetExample6::class)
-        fun doAround(pjp: ProceedingJoinPoint): Any? =
-            try {
-                pjp.proceed()
-            } catch (e: RuntimeException) {
-                "suppressed"
-            }
+        fun doAround(pjp: ProceedingJoinPoint): Any? = try {
+            pjp.proceed()
+        } catch (e: RuntimeException) {
+            "suppressed"
+        }
     }
 
     private class Example6 {
