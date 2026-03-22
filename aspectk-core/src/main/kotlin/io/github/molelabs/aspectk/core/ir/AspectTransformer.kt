@@ -15,9 +15,13 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
+import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -38,6 +42,9 @@ internal class AspectTransformer(
     private val joinPointGenerator: JoinPointGenerator,
     private val methodSignatureGenerator: MethodSignatureGenerator,
     private val adviceCallGenerator: AdviceCallGenerator,
+    private val proceedingJoinPointGenerator: ProceedingJoinPointGenerator,
+    private val tryCatchWrapperGenerator: TryCatchWrapperGenerator,
+    private val localFunctionGenerator: LocalFunctionGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targets = aspectKContext.aspectLookUp.targets
@@ -96,8 +103,61 @@ internal class AspectTransformer(
         checkInherits: Boolean,
         signatureProperty: IrProperty,
     ) {
+        val contexts = aspectKContext.aspectLookUp[target]
+        val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
-        adviceCallGenerator.generateAdviceCalls(declaration, target, joinPoint, checkInherits)
+        val localFunc = localFunctionGenerator.generateLocalFunction(declaration)
+
+        // This ordering ensures statement.clear() inside @After/@Around generators never
+        // wipes out @Before calls that were already inserted.
+
+        contexts.forEach { context ->
+            when (context.kind) {
+                Kind.AROUND -> {
+                    val proceedingJoinPoint =
+                        proceedingJoinPointGenerator.generateProceedingJoinPoint(
+                            declaration,
+                            localFunc,
+                            signatureProperty,
+                        )
+                    adviceCallGenerator.generateAroundAdviceCalls(
+                        declaration,
+                        context,
+                        localFunc,
+                        proceedingJoinPoint,
+                        checkInherits,
+                    )
+                }
+
+                Kind.AFTER -> {
+                    val tryCatchWrapper =
+                        tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
+                    adviceCallGenerator.generateAfterAdviceCalls(
+                        declaration,
+                        context,
+                        joinPoint,
+                        tryCatchWrapper,
+                        localFunc,
+                        checkInherits,
+                    )
+                }
+
+                else -> {
+                    Unit
+                }
+            }
+        }
+
+        // @Before is always prepended after the body structure is finalized,
+        // so it appears first in the executed statement list.
+        if (hasBefore) {
+            adviceCallGenerator.generateAdviceCalls(
+                declaration,
+                target,
+                joinPoint,
+                checkInherits,
+            )
+        }
     }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
@@ -118,7 +178,9 @@ internal class AspectTransformer(
         .firstOrNull { it.name.asString() == name }
         ?: factory(this).also { declarations.add(it) }
 
-    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${(this as? IrFile)?.name.orEmpty().let{
-        if (it.isNotEmpty()) "$$it" else ""
-    }.replace(".", "")}"
+    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${
+        (this as? IrFile)?.name.orEmpty().let {
+            if (it.isNotEmpty()) "$$it" else ""
+        }.replace(".", "")
+    }"
 }

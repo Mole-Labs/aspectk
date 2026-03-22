@@ -228,4 +228,96 @@ class MethodSignatureGenerationTest {
             { assertEquals(expected2, actual2) },
         )
     }
+
+    // --- @After ---
+
+    @Test
+    fun `MethodSignature should be created with @After advice`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.After
+                import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample(
+                    val name:String
+                )
+
+                @Aspect
+                object ExampleAspect {
+                    @After(TargetExample::class)
+                    fun doAfter(joinPoint: JoinPoint) {
+                        System.out.println(joinPoint.args)
+                    }
+                }
+
+                class Test {
+                    @TargetExample("example1")
+                    fun test1() {
+                    }
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val loader = result.classLoader
+        val actual =
+            loader.assertAndGetField(
+                className = $$$"Test$$MethodSignatures",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected = singleField(loader)
+        assertEquals(expected, actual)
+    }
+
+    // --- @Around ---
+
+    @Test
+    fun `MethodSignature should be created with @Around advice`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.Around
+                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample(
+                    val name:String
+                )
+
+                @Aspect
+                object ExampleAspect {
+                    @Around(TargetExample::class)
+                    fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+                }
+
+                class Test {
+                    @TargetExample("example1")
+                    fun test1() {
+                    }
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val loader = result.classLoader
+        val actual =
+            loader.assertAndGetField(
+                className = $$$"Test$$MethodSignatures",
+                fieldName = $$"ajc$tjp_0",
+            )
+
+        // then
+        val expected = singleField(loader)
+        assertEquals(expected, actual)
+    }
 }

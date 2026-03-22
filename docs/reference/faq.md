@@ -8,11 +8,6 @@ AspectK is annotation-driven and works exclusively through the Kotlin K2 compile
 It supports Kotlin Multiplatform (JVM, JS, WASM, Native), while AspectJ only targets JVM.
 AspectJ offers richer pointcut expressions; AspectK uses simpler annotation-based targeting.
 
-### Does AspectK support `@After` or `@Around` advice?
-
-Currently, only `@Before` is supported. `@After` and `@Around` advice are planned for
-future releases.
-
 ### Can I use AspectK with Kotlin versions other than 2.2.x?
 
 No. AspectK targets the K2 IR transformation API and is tested against the **2.2.x** series only.
@@ -25,8 +20,7 @@ Using a different Kotlin version may cause compilation errors due to K2 IR API c
 Check the following:
 
 1. **Plugin is applied**: Ensure `id("io.github.mole-labs.aspectk.compiler")` is in your `plugins {}` block.
-2. **Runtime dependency**: `aspectk-runtime` must be on your compile classpath.
-3. **Aspect in same compilation unit**: AspectK only discovers aspects compiled in the same unit. Aspects from external JARs are not currently supported.
+2. **Aspect in same compilation unit**: AspectK only discovers aspects compiled in the same unit. Aspects from external JARs are not currently supported.
 4. **Advice signature**: The advice method must accept exactly one `JoinPoint` parameter and return `Unit`.
 
 ### Does the order of advice execution matter?
@@ -46,6 +40,12 @@ inside the extension function body.
 Generic type parameters are erased at compile time. For a function `fun <T> box(value: T): T`,
 the `returnType` is `Any::class` (the upper bound of the unconstrained type parameter `T`).
 Use `returnTypeName` if you need the source-level type name.
+
+### Does AspectK support Kotlin Reflection?
+
+No. For performance reasons, AspectK does not depend on `kotlin-reflect`. Type information
+such as `MethodSignature.returnType` is exposed as `KClass<*>` only — full `KType` or
+`KCallable` reflection is not available.
 
 ### Are annotation default values available in `AnnotationInfo.args`?
 

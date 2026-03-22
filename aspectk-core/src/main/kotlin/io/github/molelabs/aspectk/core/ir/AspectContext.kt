@@ -15,6 +15,8 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AFTER
+import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AROUND
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.BEFORE
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFunction
@@ -66,12 +68,16 @@ internal data class AspectContext(
     val methodSignature: IrExpression? = null, // TODO mapping context to methodSignature when compiling. currently, it is always null
 ) {
     enum class Kind {
-        BEFORE, // 추후 After, Around 추가 예정
+        BEFORE,
+        AFTER,
+        AROUND,
     }
 
     companion object {
         fun find(fqName: FqName) = when (fqName.asString()) {
             AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
+            AspectKIrCompilerContext.AFTER_ANNOTATION_FQ_NAME -> AFTER
+            AspectKIrCompilerContext.AROUND_ANNOTATION_FQ_NAME -> AROUND
             else -> null
         }
     }

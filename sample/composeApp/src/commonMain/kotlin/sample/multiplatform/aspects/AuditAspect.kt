@@ -1,17 +1,29 @@
 package sample.multiplatform.aspects
 
+import io.github.molelabs.aspectk.runtime.After
 import io.github.molelabs.aspectk.runtime.Aspect
-import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
 import sample.multiplatform.annotations.AuditAction
 
 /**
  * [AuditAction] 어노테이션이 붙은 함수(및 그 오버라이딩 메서드)의 호출을 감사(Audit) 로그로 기록합니다.
  *
+ * `@After` 어드바이스를 사용하므로 대상 함수가 정상적으로 반환된 **이후**에 로그를 기록합니다.
+ * 이를 통해 실제로 동작이 완료된 시점을 감사 기록으로 남길 수 있습니다.
+ *
  * `inherits = true`를 사용하므로 부모 클래스에만 [AuditAction]이 붙어 있어도
  * 자식 클래스의 오버라이딩 메서드에 대한 Advice가 자동 적용됩니다.
  *
  * 출력 형식: `[AUDIT] action=<action> | method=<methodName>`
+ *
+ * 사용 예:
+ * ```kotlin
+ * @Aspect
+ * object AuditAspect {
+ *     @After(AuditAction::class, inherits = true)
+ *     fun audit(joinPoint: JoinPoint) { ... }
+ * }
+ * ```
  */
 @Aspect
 object AuditAspect {
@@ -21,7 +33,7 @@ object AuditAspect {
     /** 수집된 감사 로그 목록. 테스트에서 사용합니다. */
     val auditLogs = mutableListOf<String>()
 
-    @Before(AuditAction::class, inherits = true)
+    @After(AuditAction::class, inherits = true)
     fun audit(joinPoint: JoinPoint) {
         val annotationInfo =
             joinPoint.signature.annotations

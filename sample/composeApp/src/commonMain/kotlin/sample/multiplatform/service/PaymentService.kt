@@ -3,6 +3,7 @@ package sample.multiplatform.service
 import sample.multiplatform.annotations.LogExecution
 import sample.multiplatform.annotations.PreventDoubleClick
 import sample.multiplatform.annotations.RequirePermission
+import sample.multiplatform.annotations.Timed
 import sample.multiplatform.annotations.Trace
 
 /**
@@ -20,7 +21,9 @@ class PaymentService {
      * 결제를 요청합니다.
      *
      * - [PreventDoubleClick]: 기본 1000ms 쿨다운으로 중복 결제 요청을 방지합니다.
+     * - [Timed]: 결제 처리 소요 시간을 측정합니다.
      */
+    @Timed
     @PreventDoubleClick(cooldownMs = 1000L)
     fun requestPayment(orderId: String, amount: Double): String {
         transactionCount++

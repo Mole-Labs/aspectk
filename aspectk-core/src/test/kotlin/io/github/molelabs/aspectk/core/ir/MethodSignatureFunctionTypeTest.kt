@@ -13,21 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.molelabs.aspectk.core
+package io.github.molelabs.aspectk.core.ir
 
 import com.tschuchort.compiletesting.KotlinCompilation
-import io.github.molelabs.aspectk.core.ir.companionObjectWorkMethodSignature
-import io.github.molelabs.aspectk.core.ir.defaultParamFunMethodSignature
-import io.github.molelabs.aspectk.core.ir.operatorPlusMethodSignature
-import io.github.molelabs.aspectk.core.ir.returnsSuspendFunMethodSignature
-import io.github.molelabs.aspectk.core.ir.singleFieldWithNoAnnotationArgs
-import io.github.molelabs.aspectk.core.ir.singleFieldWithNoThisParameter
-import io.github.molelabs.aspectk.core.ir.varargFunMethodSignature
+import io.github.molelabs.aspectk.core.assertAndGetField
+import io.github.molelabs.aspectk.core.compile
+import io.github.molelabs.aspectk.core.thisParameterInfo
 import io.github.molelabs.aspectk.runtime.MethodParameter
 import io.github.molelabs.aspectk.runtime.MethodSignature
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -59,7 +54,7 @@ class MethodSignatureFunctionTypeTest {
                 }
                 """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -71,7 +66,7 @@ class MethodSignatureFunctionTypeTest {
 
         // then
         val expected = singleFieldWithNoAnnotationArgs(loader, "inlineFun", "TargetExample")
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -100,7 +95,7 @@ class MethodSignatureFunctionTypeTest {
                 }
                 """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -112,7 +107,7 @@ class MethodSignatureFunctionTypeTest {
 
         // then
         val expected = singleFieldWithNoAnnotationArgs(loader, "suspendFun", "TargetExample")
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -157,7 +152,7 @@ class MethodSignatureFunctionTypeTest {
                 fun test1() {}
                 """.trimIndent(),
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -171,7 +166,7 @@ class MethodSignatureFunctionTypeTest {
         val expected =
             singleFieldWithNoThisParameter(loader, "test", "TargetExample")
 
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -202,7 +197,7 @@ class MethodSignatureFunctionTypeTest {
                 }
                 """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -219,7 +214,7 @@ class MethodSignatureFunctionTypeTest {
                     returnType = String::class,
                     returnTypeName = "kotlin.String",
                 )
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -250,7 +245,7 @@ class MethodSignatureFunctionTypeTest {
                 }
                 """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -276,7 +271,7 @@ class MethodSignatureFunctionTypeTest {
                         ),
                     ),
                 )
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -306,7 +301,7 @@ class MethodSignatureFunctionTypeTest {
                 """,
                 name = "Test.kt",
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -318,7 +313,7 @@ class MethodSignatureFunctionTypeTest {
 
         // then
         val expected = singleFieldWithNoAnnotationArgs(loader, "extensionFun", "TargetExample")
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -346,7 +341,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -354,7 +349,7 @@ class MethodSignatureFunctionTypeTest {
         val expected = varargFunMethodSignature(loader)
 
         // then
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -382,7 +377,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -390,7 +385,7 @@ class MethodSignatureFunctionTypeTest {
         val expected = defaultParamFunMethodSignature(loader)
 
         // then
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -428,7 +423,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -436,7 +431,7 @@ class MethodSignatureFunctionTypeTest {
         val expected = returnsSuspendFunMethodSignature(loader)
 
         // then
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -467,7 +462,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -478,8 +473,8 @@ class MethodSignatureFunctionTypeTest {
             ) as MethodSignature
 
         // then
-        assertEquals("localFun", actual.methodName)
-        assertNotNull(actual)
+        Assertions.assertEquals("localFun", actual.methodName)
+        Assertions.assertNotNull(actual)
     }
 
     @Test
@@ -509,7 +504,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -517,7 +512,7 @@ class MethodSignatureFunctionTypeTest {
         val expected = operatorPlusMethodSignature(loader)
 
         // then
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 
     @Test
@@ -547,7 +542,7 @@ class MethodSignatureFunctionTypeTest {
             }
             """,
             )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        Assertions.assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
         val loader = result.classLoader
 
         // when
@@ -559,6 +554,6 @@ class MethodSignatureFunctionTypeTest {
         val expected = companionObjectWorkMethodSignature(loader)
 
         // then
-        assertEquals(expected, actual)
+        Assertions.assertEquals(expected, actual)
     }
 }

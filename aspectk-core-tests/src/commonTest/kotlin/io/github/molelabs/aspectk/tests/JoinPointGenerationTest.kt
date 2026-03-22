@@ -15,9 +15,12 @@
  */
 package io.github.molelabs.aspectk.tests
 
+import io.github.molelabs.aspectk.runtime.After
+import io.github.molelabs.aspectk.runtime.Around
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -341,4 +344,153 @@ class JoinPointGenerationTest {
 
     @Test
     fun `JoinPoint should capture enum argument`() = Example9().run(TestEnum.VALUE_B)
+
+    // ── @After ───────────────────────────────────────────────────────────────
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample10
+
+    @Aspect
+    private object ExampleAspect10 {
+        var executed = false
+
+        @After(TargetExample10::class)
+        fun doAfter(joinPoint: JoinPoint) {
+            executed = true
+            assertEquals(1, joinPoint.args.size)
+            assertIs<Example10>(joinPoint.target)
+        }
+    }
+
+    private class Example10 {
+        @TargetExample10
+        fun run() {}
+    }
+
+    @Test
+    fun `@After JoinPoint should be injected into aspect`() {
+        Example10().run()
+        assertEquals(true, ExampleAspect10.executed)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample11
+
+    @Aspect
+    private object ExampleAspect11 {
+        var executed = false
+
+        @After(TargetExample11::class)
+        fun doAfter(joinPoint: JoinPoint) {
+            executed = true
+            assertEquals(3, joinPoint.args.size)
+            assertIs<Example11>(joinPoint.target)
+            assertEquals("hello", joinPoint.args[1])
+            assertEquals("aspectk", joinPoint.args[2])
+        }
+    }
+
+    private class Example11 {
+        @TargetExample11
+        fun run(
+            arg1: String,
+            arg2: String,
+        ) {}
+    }
+
+    @Test
+    fun `@After JoinPoint should be injected with arguments into aspect`() {
+        Example11().run("hello", "aspectk")
+        assertEquals(true, ExampleAspect11.executed)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample12
+
+    @Aspect
+    private object ExampleAspect12 {
+        var executed = false
+
+        @After(TargetExample12::class)
+        fun doAfter(joinPoint: JoinPoint) {
+            executed = true
+            assertEquals(3, joinPoint.args.size)
+            assertEquals("notNullArg", joinPoint.args[1])
+            assertEquals(null, joinPoint.args[2])
+        }
+    }
+
+    private class Example12 {
+        @TargetExample12
+        fun run(
+            arg1: String,
+            arg2: String?,
+        ) {}
+    }
+
+    @Test
+    fun `@After JoinPoint should be injected with nullable arguments`() {
+        Example12().run("notNullArg", null)
+        assertEquals(true, ExampleAspect12.executed)
+    }
+
+    // ── @Around ──────────────────────────────────────────────────────────────
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample13
+
+    @Aspect
+    private object ExampleAspect13 {
+        var executed = false
+
+        @Around(TargetExample13::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? {
+            executed = true
+            assertEquals(3, pjp.args.size)
+            assertIs<Example13>(pjp.target)
+            assertEquals("hello", pjp.args[1])
+            assertEquals("aspectk", pjp.args[2])
+            return pjp.proceed()
+        }
+    }
+
+    private class Example13 {
+        var bodyExecuted = false
+
+        @TargetExample13
+        fun run(
+            arg1: String,
+            arg2: String,
+        ) {
+            bodyExecuted = true
+        }
+    }
+
+    @Test
+    fun `ProceedingJoinPoint should be injected with arguments and proceed invokes the body`() {
+        val example = Example13()
+        example.run("hello", "aspectk")
+        assertEquals(true, ExampleAspect13.executed)
+        assertEquals(true, example.bodyExecuted)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetExample14
+
+    @Aspect
+    private object ExampleAspect14 {
+        @Around(TargetExample14::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed("replaced")
+    }
+
+    private class Example14 {
+        @TargetExample14
+        fun run(arg: String): String = arg
+    }
+
+    @Test
+    fun `ProceedingJoinPoint proceed with substituted args should override original args`() {
+        val result = Example14().run("original")
+        assertEquals("replaced", result)
+    }
 }

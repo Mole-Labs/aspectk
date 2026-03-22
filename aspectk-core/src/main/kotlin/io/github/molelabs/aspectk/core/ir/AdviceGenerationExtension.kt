@@ -17,7 +17,10 @@ package io.github.molelabs.aspectk.core.ir
 
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
+import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
+import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
 import io.github.molelabs.aspectk.core.trace
 import io.github.molelabs.aspectk.core.tracer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -35,6 +38,9 @@ internal class AdviceGenerationExtension : IrGenerationExtension {
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
         val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
         val adviceCallGenerator = AdviceCallGenerator(aspectkContext)
+        val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext)
+        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext)
+        val localFunctionGenerator = LocalFunctionGenerator(aspectkContext)
 
         aspectkContext
             .tracer(
@@ -52,6 +58,9 @@ internal class AdviceGenerationExtension : IrGenerationExtension {
                         joinPointGenerator,
                         methodSignatureGenerator,
                         adviceCallGenerator,
+                        proceedingJoinPointGenerator,
+                        tryCatchWrapperGenerator,
+                        localFunctionGenerator,
                         aspectkContext,
                     ),
                     null,

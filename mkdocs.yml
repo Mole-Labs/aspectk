@@ -36,7 +36,9 @@ nav:
     - AOP Overview: core-concepts/aop-overview.md
   - Features:
     - Aspects: features/aspects.md
-    - Advice: features/advice.md
+    - '@Before Advice': features/advice.md
+    - '@After Advice': features/after-advice.md
+    - '@Around Advice': features/around-advice.md
     - Join Points: features/join-points.md
     - Multiple Targets: features/multiple-targets.md
     - Inheritance: features/inheritance.md

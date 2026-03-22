@@ -559,4 +559,112 @@ class MethodSignaturePolymorphicTest {
             { assertEquals(derivedExpected2, derivedActual2) },
         )
     }
+
+    // --- @After ---
+
+    @Test
+    fun `MethodSignature should be created for overriding methods when @After has inherits=true`() {
+        val result =
+            compile(
+                """
+            import io.github.molelabs.aspectk.runtime.Aspect
+            import io.github.molelabs.aspectk.runtime.After
+            import io.github.molelabs.aspectk.runtime.JoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @After(TargetExample::class, inherits = true)
+                fun doAfter(joinPoint: JoinPoint) {}
+            }
+
+            interface Base {
+                @TargetExample
+                fun work() {
+                    println("Hello AspectK")
+                }
+            }
+
+            class Derived : Base {
+                override fun work() {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val baseActual = loader.assertAndGetField(className = $$$"Base$$MethodSignatures", fieldName = $$"ajc$tjp_0")
+        val baseExpected = baseClassWorkMethodSignature(loader)
+
+        val derivedActual =
+            loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_1")
+        val derivedExpected =
+            baseClassWorkMethodSignature(loader).copy(
+                parameter = listOf(loader.thisParameterInfo("Derived")),
+                annotations = listOf(),
+            )
+
+        // then
+        assertAll(
+            { assertEquals(baseExpected, baseActual) },
+            { assertEquals(derivedExpected, derivedActual) },
+        )
+    }
+
+    // --- @Around ---
+
+    @Test
+    fun `MethodSignature should be created for overriding methods when @Around has inherits=true`() {
+        val result =
+            compile(
+                """
+            import io.github.molelabs.aspectk.runtime.Aspect
+            import io.github.molelabs.aspectk.runtime.Around
+            import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
+
+            @Target(AnnotationTarget.FUNCTION)
+            annotation class TargetExample
+
+            @Aspect
+            object ExampleAspect {
+                @Around(TargetExample::class, inherits = true)
+                fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+            }
+
+            interface Base {
+                @TargetExample
+                fun work() {
+                    println("Hello AspectK")
+                }
+            }
+
+            class Derived : Base {
+                override fun work() {}
+            }
+            """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+        val loader = result.classLoader
+
+        // when
+        val baseActual = loader.assertAndGetField(className = $$$"Base$$MethodSignatures", fieldName = $$"ajc$tjp_0")
+        val baseExpected = baseClassWorkMethodSignature(loader)
+
+        val derivedActual =
+            loader.assertAndGetField(className = $$$"Derived$$MethodSignatures", fieldName = $$"ajc$tjp_1")
+        val derivedExpected =
+            baseClassWorkMethodSignature(loader).copy(
+                parameter = listOf(loader.thisParameterInfo("Derived")),
+                annotations = listOf(),
+            )
+
+        // then
+        assertAll(
+            { assertEquals(baseExpected, baseActual) },
+            { assertEquals(derivedExpected, derivedActual) },
+        )
+    }
 }
