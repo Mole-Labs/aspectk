@@ -171,7 +171,8 @@ class MultipleAdviceCallOrderTest {
         )
     }
 
-    // TODO support multiple @Around, @After annotations
+    // When both @After and @Around target the same annotation, the last-registered one wins.
+    // Only one body-replacing advice executes per annotation per function.
     @Test
     fun `@After and @Around advice is only invoked once per function`() {
         // given
@@ -180,6 +181,7 @@ class MultipleAdviceCallOrderTest {
                 """
                 import io.github.molelabs.aspectk.runtime.Aspect
                 import io.github.molelabs.aspectk.runtime.After
+                import io.github.molelabs.aspectk.runtime.Around
                 import io.github.molelabs.aspectk.runtime.JoinPoint
 
                 @Target(AnnotationTarget.FUNCTION)
@@ -196,7 +198,7 @@ class MultipleAdviceCallOrderTest {
                 object PassThroughAspect {
                     var count = 0
 
-                    @After(Intercepted1::class)
+                    @Around(Intercepted1::class)
                     fun doAround1(pjp: JoinPoint) {
                         count++
                     }

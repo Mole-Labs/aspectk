@@ -30,16 +30,23 @@ import kotlin.test.assertTrue
  * Verifies execution order and correctness when multiple advice types
  * (@Before, @After, @Around) target the same annotation on the same function.
  *
- * Each acceptance criterion (AC) asserts that all applied advice types execute,
- * that they fire in the correct sequence, and that @After is guaranteed to run
- * even when the target function throws.
+ * **Last-wins policy**: When both @After and @Around target the same annotation,
+ * only the **last-registered** advice executes (the one declared later in source).
+ * @Before always executes regardless.
  *
- * Expected execution order:
- *   @Before → (@Around start) → body → (@Around end) → @After
+ * Expected execution orders:
+ *   @Before only:           @Before → body
+ *   @After only:            body → @After  (via try-finally)
+ *   @Around only:           @Around wraps body
+ *   @Before + @After:       @Before → body → @After
+ *   @Before + @Around:      @Before → (@Around start) → body → (@Around end)
+ *   @After then @Around:    @Before? → (@Around start) → body → (@Around end)  [@After skipped]
+ *   @Around then @After:    @Before? → body → @After  [@Around skipped]
  *
  * Test groups:
  *   - Same Aspect  (AC-1a ~ AC-4b): multiple advice types within a single @Aspect targeting the same annotation
  *   - Cross-Aspect (AC-5  ~ AC-8 ): multiple advice types across different @Aspect objects targeting the same annotation
+ *   - Parameter Substitution (AC-9, AC-10a, AC-10b): proceed(newArgs) when combined with @Before/@After
  */
 @Suppress("UNUSED")
 class AdviceTypeCombinationTest {
@@ -146,7 +153,7 @@ class AdviceTypeCombinationTest {
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc2.log)
     }
 
-    // AC-3a: @After + @Around — 정상 흐름
+    // AC-3a: @After (먼저) + @Around (나중) — last-wins: @Around 실행, @After 스킵
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc3A
@@ -177,12 +184,13 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @After executes after @Around wraps the body`() {
+    fun `same aspect - @Around wins when declared after @After (last-wins)`() {
         ExampleAc3A().work()
-        assertEquals(listOf("around-before", "body", "around-after", "after"), AspectAc3A.log)
+        // @Around is last-registered → only @Around runs; @After is skipped
+        assertEquals(listOf("around-before", "body", "around-after"), AspectAc3A.log)
     }
 
-    // AC-3b: @After + @Around — 예외 발생
+    // AC-3b: @After (먼저) + @Around (나중) — 예외 발생 시 last-wins: @Around 실행, @After 스킵
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc3B
@@ -211,13 +219,14 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @After executes even when @Around proceed throws`() {
+    fun `same aspect - @Around wins when declared after @After, even when function throws (last-wins)`() {
+        // @Around is last-registered → @Around runs; @After is skipped
         assertFailsWith<RuntimeException> { ExampleAc3B().work() }
         assertTrue(AspectAc3B.log.contains("around-before"))
-        assertTrue(AspectAc3B.log.contains("after"))
+        assertTrue(!AspectAc3B.log.contains("after"))
     }
 
-    // AC-4a: @Before + @After + @Around — 정상 흐름
+    // AC-4a: @Before + @After (중간) + @Around (나중) — last-wins: @Before + @Around 실행, @After 스킵
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc4A
@@ -253,12 +262,13 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before, @After, and @Around all execute in correct order`() {
+    fun `same aspect - @Before and @Around execute when @Around is last, @After is skipped (last-wins)`() {
         ExampleAc4A().work()
-        assertEquals(listOf("before", "around-before", "body", "around-after", "after"), AspectAc4A.log)
+        // @Around is last-registered → @Around wins; @After is skipped; @Before always runs
+        assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc4A.log)
     }
 
-    // AC-4b: @Before + @After + @Around — 예외 발생
+    // AC-4b: @Before + @After (중간) + @Around (나중) — 예외 발생 시 last-wins: @Before + @Around 실행, @After 스킵
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc4B
@@ -292,11 +302,12 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before and @After both execute with @Around even when function throws`() {
+    fun `same aspect - @Before and @Around execute on throw when @Around is last, @After is skipped (last-wins)`() {
+        // @Around is last-registered → @Around wins; @After is skipped; @Before always runs
         assertFailsWith<RuntimeException> { ExampleAc4B().work() }
         assertTrue(AspectAc4B.log.contains("before"))
         assertTrue(AspectAc4B.log.contains("around-before"))
-        assertTrue(AspectAc4B.log.contains("after"))
+        assertTrue(!AspectAc4B.log.contains("after"))
     }
 
     // ── Cross-Aspect ───────────────────────────────────────────────────────────
@@ -376,8 +387,6 @@ class AdviceTypeCombinationTest {
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc6Before.log)
     }
 
-    // AC-7: @After (AspectA) + @Around (AspectB) — 정상 흐름
-
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc7
 
@@ -410,12 +419,98 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @After and @Around in different aspects execute in correct order`() {
+    fun `cross-aspect - @Around wins when its aspect is declared after @After aspect (last-wins)`() {
+        // AspectAc7Around is declared after AspectAc7After → @Around is last-registered → @Around wins
         ExampleAc7().work()
-        assertEquals(listOf("around-before", "body", "around-after", "after"), AspectAc7After.log)
+        assertEquals(listOf("around-before", "body", "around-after"), AspectAc7After.log)
     }
 
-    // AC-8: @Before (AspectA) + @After (AspectB) + @Around (AspectC) — 정상 흐름
+    // ── Parameter Substitution via proceed() ──────────────────────────────────
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetAc9
+
+    @Aspect
+    private object AspectAc9 {
+        @Before(TargetAc9::class)
+        fun doBefore(jp: JoinPoint) {}
+
+        @Around(TargetAc9::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed("modified", 99)
+    }
+
+    private class ExampleAc9 {
+        @TargetAc9
+        fun greet(
+            name: String,
+            count: Int,
+        ): String = "$name-$count"
+    }
+
+    @Test
+    fun `same aspect - @Around can substitute parameters via proceed when combined with @Before`() {
+        val result = ExampleAc9().greet("alice", 3)
+        assertEquals("modified-99", result)
+    }
+
+    // AC-10a: @After (먼저 선언) + @Around (나중 선언) — last-wins = @Around 실행
+    //
+    // @Around가 나중에 등록되어 실행권을 가지므로 proceed(newArgs)로 파라미터를 치환할 수 있다.
+    // @After는 실행되지 않으므로 파라미터 치환 결과를 관측하지 못한다.
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetAc10A
+
+    @Aspect
+    private object AspectAc10A {
+        @After(TargetAc10A::class)
+        fun doAfter(jp: JoinPoint) {}
+
+        @Around(TargetAc10A::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed("modified", 99)
+    }
+
+    private class ExampleAc10A {
+        @TargetAc10A
+        fun greet(
+            name: String,
+            count: Int,
+        ): String = "$name-$count"
+    }
+
+    @Test
+    fun `same aspect - @Around can substitute parameters via proceed when declared after @After`() {
+        val result = ExampleAc10A().greet("alice", 3)
+        assertEquals("modified-99", result)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetAc10B
+
+    @Aspect
+    private object AspectAc10B {
+        @Around(TargetAc10B::class)
+        fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed("modified", 99)
+
+        @After(TargetAc10B::class)
+        fun doAfter(jp: JoinPoint) {}
+    }
+
+    private class ExampleAc10B {
+        @TargetAc10B
+        fun greet(
+            name: String,
+            count: Int,
+        ): String = "$name-$count"
+    }
+
+    @Test
+    fun `same aspect - @Around cannot substitute parameters when @After is declared after it`() {
+        // Since @Around is not executed, proceed(newArgs) is never called.
+        // The original function runs with the caller's initial parameters ("alice", 3).
+        val result = ExampleAc10B().greet("alice", 3)
+        assertEquals("alice-3", result)
+    }
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc8
@@ -457,8 +552,9 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @Before, @After, and @Around in different aspects all execute in correct order`() {
+    fun `cross-aspect - @Before and @Around execute when @Around aspect is last, @After aspect is skipped (last-wins)`() {
+        // AspectAc8Around is declared last → @Around wins; @After is skipped; @Before always runs
         ExampleAc8().work()
-        assertEquals(listOf("before", "around-before", "body", "around-after", "after"), AspectAc8Before.log)
+        assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc8Before.log)
     }
 }

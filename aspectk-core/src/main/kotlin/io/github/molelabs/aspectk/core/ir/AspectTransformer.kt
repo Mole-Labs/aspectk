@@ -105,48 +105,22 @@ internal class AspectTransformer(
     ) {
         val contexts = aspectKContext.aspectLookUp[target]
         val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
-        val hasAfter = contexts.any { it.kind == Kind.AFTER && (!checkInherits || it.inherits) }
-        val hasAround = contexts.any { it.kind == Kind.AROUND && (!checkInherits || it.inherits) }
+
+        // When both @After and @Around target the same annotation, the last-registered advice wins.
+        // Only one body-replacing advice executes per annotation per function.
+        val lastBodyAdviceKind =
+            contexts
+                .lastOrNull { (it.kind == Kind.AFTER || it.kind == Kind.AROUND) && (!checkInherits || it.inherits) }
+                ?.kind
+        val hasAfter = lastBodyAdviceKind == Kind.AFTER
+        val hasAround = lastBodyAdviceKind == Kind.AROUND
 
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
         val localFunc = localFunctionGenerator.generateLocalFunction(declaration)
 
-        // Build the core body first (@After and/or @Around), then prepend @Before last.
         // This ordering ensures statement.clear() inside @After/@Around generators never
         // wipes out @Before calls that were already inserted.
         when {
-            hasAfter && hasAround -> {
-                // @Around wraps the original body via pjp.proceed();
-                // @After runs in the finally block surrounding the @Around call.
-                val proceedingJoinPoint =
-                    proceedingJoinPointGenerator.generateProceedingJoinPoint(
-                        declaration,
-                        localFunc,
-                        signatureProperty,
-                    )
-                val aroundCallExpr =
-                    adviceCallGenerator.buildAroundCallExpression(
-                        declaration,
-                        target,
-                        proceedingJoinPoint,
-                        checkInherits,
-                    )
-                val tryCatchWrapper =
-                    tryCatchWrapperGenerator.generateTryCatchWrapper(
-                        declaration,
-                        localFunc,
-                        customTryBody = aroundCallExpr,
-                    )
-                adviceCallGenerator.generateAfterAdviceCalls(
-                    declaration,
-                    target,
-                    joinPoint,
-                    tryCatchWrapper,
-                    localFunc,
-                    checkInherits,
-                )
-            }
-
             hasAfter -> {
                 val tryCatchWrapper =
                     tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
@@ -197,14 +171,16 @@ internal class AspectTransformer(
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
         factory: (IrDeclarationContainer) -> IrClass,
-    ): IrClass = declarations
-        .filterIsInstance<IrClass>()
-        .firstOrNull { it.name.asString() == name }
-        ?: factory(this).also { declarations.add(it) }
+    ): IrClass =
+        declarations
+            .filterIsInstance<IrClass>()
+            .firstOrNull { it.name.asString() == name }
+            ?: factory(this).also { declarations.add(it) }
 
-    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${
-        (this as? IrFile)?.name.orEmpty().let {
-            if (it.isNotEmpty()) "$$it" else ""
-        }.replace(".", "")
-    }"
+    private fun IrDeclarationContainer.toNormalizedName(basename: String) =
+        "$basename${
+            (this as? IrFile)?.name.orEmpty().let {
+                if (it.isNotEmpty()) "$$it" else ""
+            }.replace(".", "")
+        }"
 }
