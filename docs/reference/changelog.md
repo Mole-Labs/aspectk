@@ -5,19 +5,20 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0]
 
 ### Added
-- Dokka API documentation site
-- MkDocs-based documentation portal
+- `@After` advice annotation: runs after the target function body in a `finally` block, regardless of whether an exception was thrown
+- `@Around` advice annotation: replaces the target function call; the original body is invoked via `ProceedingJoinPoint.proceed()`
+- `ProceedingJoinPoint` interface with `proceed()` and `proceed(vararg args)` for argument substitution
+- `DefaultProceedingJoinPoint` runtime implementation generated at each `@Around` call site
+### Changed
+- Advice generation pipeline restructured: each `AspectContext` is now dispatched directly to its generator, eliminating redundant internal lookups
 
 ## [0.1.1]
 
 ### Added
 - Kotlin version validation: AspectK now throws a `GradleException` at configuration time if the project's Kotlin compiler version is not in the supported range
-- `supported-versions.txt` as the single source of truth for supported Kotlin versions (2.2.20 ~ 2.3.10)
-- `SUPPORTED_KOTLIN_VERSIONS` constant generated into `BuildConfig` from `supported-versions.txt`
-
 ### Changed
 - Kotlin version updated to 2.3.10
 - `pluginId` in `AspectKCompilerPluginRegistrar` now references `BuildConfig.COMPILER_PLUGIN_ID` instead of a hardcoded string

@@ -91,3 +91,11 @@ object AuthAspect {
 ```
 
 See [Inheritance](../features/inheritance.md) for a full guide.
+
+## Other Advice Types
+
+| Annotation | Runs | Controls return value | Can skip body |
+|---|---|---|---|
+| `@Before` | Before the function body | No | No |
+| [`@After`](after-advice.md) | After the function body (always, like `finally`) | No | No |
+| [`@Around`](around-advice.md) | Wraps the entire call | Yes | Yes |
