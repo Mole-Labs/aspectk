@@ -21,7 +21,7 @@ Check the following:
 
 1. **Plugin is applied**: Ensure `id("io.github.mole-labs.aspectk.compiler")` is in your `plugins {}` block.
 2. **Aspect in same compilation unit**: AspectK only discovers aspects compiled in the same unit. Aspects from external JARs are not currently supported.
-4. **Advice signature**: The advice method must accept exactly one `JoinPoint` parameter and return `Unit`.
+3. **Advice signature**: The advice method must accept exactly one `JoinPoint` parameter and return `Unit`.
 
 ### Does the order of advice execution matter?
 
