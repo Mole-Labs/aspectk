@@ -34,8 +34,8 @@ nav:
     - Quick Start: getting-started/quick-start.md
   - Core Concepts:
     - AOP Overview: core-concepts/aop-overview.md
+    - Aspects: core-concepts/aspects.md
   - Features:
-    - Aspects: features/aspects.md
     - '@Before Advice': features/advice.md
     - '@After Advice': features/after-advice.md
     - '@Around Advice': features/around-advice.md
