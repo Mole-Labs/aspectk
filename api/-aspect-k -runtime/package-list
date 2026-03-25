@@ -1,0 +1,43 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+$dokka.location:io.github.molelabs.aspectk.runtime////PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/After///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-after/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/After/inherits/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-after/inherits.html
+$dokka.location:io.github.molelabs.aspectk.runtime/After/target/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-after/target.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo/AnnotationInfo/#kotlin.reflect.KClass[kotlin.Annotation]#kotlin.String#kotlin.collections.List[kotlin.Any?]#kotlin.collections.List[kotlin.String]/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/-annotation-info.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo/args/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/args.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo/parameterNames/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/parameter-names.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo/type/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/type.html
+$dokka.location:io.github.molelabs.aspectk.runtime/AnnotationInfo/typeName/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-annotation-info/type-name.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Around///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-around/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Around/inherits/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-around/inherits.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Around/target/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-around/target.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Aspect///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-aspect/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Before///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-before/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Before/inherits/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-before/inherits.html
+$dokka.location:io.github.molelabs.aspectk.runtime/Before/target/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-before/target.html
+$dokka.location:io.github.molelabs.aspectk.runtime/JoinPoint///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-join-point/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/JoinPoint/args/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-join-point/args.html
+$dokka.location:io.github.molelabs.aspectk.runtime/JoinPoint/signature/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-join-point/signature.html
+$dokka.location:io.github.molelabs.aspectk.runtime/JoinPoint/target/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-join-point/target.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/MethodParameter/#kotlin.String#kotlin.reflect.KClass[*]#kotlin.String#kotlin.collections.List[io.github.molelabs.aspectk.runtime.AnnotationInfo]#kotlin.Boolean/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/-method-parameter.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/annotations/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/annotations.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/isNullable/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/is-nullable.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/name/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/name.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/type/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/type.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodParameter/typeName/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-parameter/type-name.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/MethodSignature/#kotlin.String#kotlin.collections.List[io.github.molelabs.aspectk.runtime.AnnotationInfo]#kotlin.collections.List[io.github.molelabs.aspectk.runtime.MethodParameter]#kotlin.reflect.KClass[*]#kotlin.String/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/-method-signature.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/annotations/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/annotations.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/methodName/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/method-name.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/parameter/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/parameter.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/returnType/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/return-type.html
+$dokka.location:io.github.molelabs.aspectk.runtime/MethodSignature/returnTypeName/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-method-signature/return-type-name.html
+$dokka.location:io.github.molelabs.aspectk.runtime/ProceedingJoinPoint.OnProceedListener///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-proceeding-join-point/-on-proceed-listener/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/ProceedingJoinPoint.OnProceedListener/onProceed/#kotlin.collections.List[kotlin.Any?]/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-proceeding-join-point/-on-proceed-listener/on-proceed.html
+$dokka.location:io.github.molelabs.aspectk.runtime/ProceedingJoinPoint///PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-proceeding-join-point/index.html
+$dokka.location:io.github.molelabs.aspectk.runtime/ProceedingJoinPoint/proceed/#/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-proceeding-join-point/proceed.html
+$dokka.location:io.github.molelabs.aspectk.runtime/ProceedingJoinPoint/proceed/#kotlin.Any?/PointingToDeclaration/-aspect-k -runtime/io.github.molelabs.aspectk.runtime/-proceeding-join-point/proceed.html
+io.github.molelabs.aspectk.runtime
