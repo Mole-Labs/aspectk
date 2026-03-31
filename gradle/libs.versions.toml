@@ -1,13 +1,13 @@
 [versions]
 dokka = "2.1.0"
-kotlin = "2.3.10"
+kotlin = "2.3.20"
 junitJupiter = "5.8.1"
 autoService = "1.1.1"
 binaryCompatibilityValidator = "0.18.1"
 spotless = "8.1.0"
 kotlinx-coroutines = "1.10.2"
 mockk = "1.13.8"
-jetbrainsKotlinJvm = "2.3.10"
+jetbrainsKotlinJvm = "2.3.20"
 mavenPublish = "0.34.0"
 
 [libraries]
