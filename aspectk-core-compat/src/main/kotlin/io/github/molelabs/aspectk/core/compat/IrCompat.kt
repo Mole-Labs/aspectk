@@ -15,7 +15,12 @@
  */
 package io.github.molelabs.aspectk.core.compat
 
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
 import java.util.ServiceLoader
 
 interface IrCompat {
@@ -32,6 +37,10 @@ interface IrCompat {
     fun catchParameterOrigin(): IrDeclarationOrigin
 
     fun valueParameterOrigin(): IrDeclarationOrigin
+
+    fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol>
+
+    fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol?
 
     companion object {
         fun create(version: KotlinVersion): IrCompat =

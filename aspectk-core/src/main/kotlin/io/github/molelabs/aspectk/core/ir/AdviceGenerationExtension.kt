@@ -35,13 +35,13 @@ internal class AdviceGenerationExtension(private val irCompat: IrCompat) : IrGen
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext,
     ) {
-        val aspectkContext = AspectKIrCompilerContext(pluginContext)
+        val aspectkContext = AspectKIrCompilerContext(pluginContext, irCompat)
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
-        val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext, irCompat)
+        val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
         val adviceCallGenerator = AdviceCallGenerator(aspectkContext)
-        val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext, irCompat)
-        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext, irCompat)
-        val localFunctionGenerator = LocalFunctionGenerator(aspectkContext, irCompat)
+        val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext)
+        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext)
+        val localFunctionGenerator = LocalFunctionGenerator(aspectkContext)
 
         aspectkContext
             .tracer(

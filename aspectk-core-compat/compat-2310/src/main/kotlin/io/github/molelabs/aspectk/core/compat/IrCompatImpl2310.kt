@@ -15,12 +15,17 @@
  */
 package io.github.molelabs.aspectk.core.compat
 
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
+import org.jetbrains.kotlin.name.CallableId
+import org.jetbrains.kotlin.name.ClassId
 
 class IrCompatImpl2310 : IrCompat {
     override val kotlinVersion: KotlinVersion = KotlinVersion(2, 3, 10)
 
-    override fun instanceReceiverOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
+    override fun instanceReceiverOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.INSTANCE_RECEIVER
 
     override fun propertyBackingFieldOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.PROPERTY_BACKING_FIELD
 
@@ -31,4 +36,10 @@ class IrCompatImpl2310 : IrCompat {
     override fun catchParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.CATCH_PARAMETER
 
     override fun valueParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
+
+    override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> =
+        pluginContext.referenceFunctions(callableId)
+
+    override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? =
+        pluginContext.referenceClass(classId)
 }

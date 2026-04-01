@@ -15,7 +15,6 @@
  */
 package io.github.molelabs.aspectk.core.ir.generator
 
-import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.createIrListOf
 import io.github.molelabs.aspectk.core.ir.createKClassExpression
@@ -55,7 +54,6 @@ import org.jetbrains.kotlin.name.Name
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class MethodSignatureGenerator(
     private val aspectKContext: AspectKIrCompilerContext,
-    private val irCompat: IrCompat,
 ) {
     private var fieldCounter: Int = 0
 
@@ -84,7 +82,7 @@ internal class MethodSignatureGenerator(
                             IrValueParameterBuilder().apply {
                                 this.name = Name.identifier("<this>")
                                 type = symbol.typeWith()
-                                origin = irCompat.instanceReceiverOrigin()
+                                origin = aspectKContext.irCompat.instanceReceiverOrigin()
                             },
                     )
                 addSimpleDelegatingConstructor(
@@ -111,7 +109,7 @@ internal class MethodSignatureGenerator(
                     isStatic = false
                     isFinal = true
                     visibility = DescriptorVisibilities.PRIVATE
-                    origin = irCompat.propertyBackingFieldOrigin()
+                    origin = aspectKContext.irCompat.propertyBackingFieldOrigin()
                 }.apply {
                     parent = innerObject
                     initializer =

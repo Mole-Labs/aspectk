@@ -15,7 +15,6 @@
  */
 package io.github.molelabs.aspectk.core.ir.generator
 
-import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.createIrListOf
 import io.github.molelabs.aspectk.core.ir.function1Type
@@ -54,7 +53,6 @@ import org.jetbrains.kotlin.name.Name
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class ProceedingJoinPointGenerator(
     private val aspectKCompilerContext: AspectKIrCompilerContext,
-    private val irCompat: IrCompat,
 ) {
     private val proceedingJoinPointConstructor =
         aspectKCompilerContext.proceedingJoinPointSymbol.constructors.first()
@@ -121,7 +119,7 @@ internal class ProceedingJoinPointGenerator(
                     name = Name.special("<anonymous>")
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = aspectKCompilerContext.pluginContext.irBuiltIns.anyNType
-                    origin = irCompat.localFunctionForLambdaOrigin()
+                    origin = aspectKCompilerContext.irCompat.localFunctionForLambdaOrigin()
                 }.apply {
                     parent = declaration
                 }
@@ -134,7 +132,7 @@ internal class ProceedingJoinPointGenerator(
                     name = Name.identifier("__args")
                     type = aspectKCompilerContext.listAnyNType
                     kind = IrParameterKind.Regular
-                    origin = irCompat.valueParameterOrigin()
+                    origin = aspectKCompilerContext.irCompat.valueParameterOrigin()
                 },
             )
         lambdaFun.parameters = listOf(argsParam)

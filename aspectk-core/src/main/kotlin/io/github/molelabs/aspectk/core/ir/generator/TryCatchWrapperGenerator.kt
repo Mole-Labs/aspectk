@@ -15,7 +15,6 @@
  */
 package io.github.molelabs.aspectk.core.ir.generator
 
-import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.backend.common.lower.irThrow
@@ -37,7 +36,6 @@ import org.jetbrains.kotlin.name.Name
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class TryCatchWrapperGenerator(
     private val aspectKCompilerContext: AspectKIrCompilerContext,
-    private val irCompat: IrCompat,
 ) {
     fun generateTryCatchWrapper(
         declaration: IrFunction,
@@ -61,7 +59,7 @@ internal class TryCatchWrapperGenerator(
                 parent = declaration,
                 startOffset = -1,
                 endOffset = -1,
-                origin = irCompat.catchParameterOrigin(),
+                origin = aspectKCompilerContext.irCompat.catchParameterOrigin(),
                 name = Name.identifier("e"),
                 type = aspectKCompilerContext.pluginContext.irBuiltIns.throwableType,
             )

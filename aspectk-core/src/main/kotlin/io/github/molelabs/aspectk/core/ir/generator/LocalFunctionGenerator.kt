@@ -15,7 +15,6 @@
  */
 package io.github.molelabs.aspectk.core.ir.generator
 
-import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import io.github.molelabs.aspectk.core.reportCompilerBug
@@ -41,7 +40,6 @@ import org.jetbrains.kotlin.name.Name
 
 internal class LocalFunctionGenerator(
     private val aspectKCompilerContext: AspectKIrCompilerContext,
-    private val irCompat: IrCompat,
 ) {
     /**
      * Builds `fun $<name>(p0: T0, p1: T1, ...)` whose body is the original [declaration] body
@@ -88,7 +86,7 @@ internal class LocalFunctionGenerator(
                     name = Name.identifier(localFuncName)
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = declaration.returnType
-                    origin = irCompat.localFunctionOrigin()
+                    origin = aspectKCompilerContext.irCompat.localFunctionOrigin()
                 }.apply {
                     parent = declaration
                 }

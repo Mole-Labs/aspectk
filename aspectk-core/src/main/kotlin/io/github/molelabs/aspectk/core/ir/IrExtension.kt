@@ -53,8 +53,9 @@ internal fun AspectKIrCompilerContext.createIrListOf(
     elementType: IrType = pluginContext.irBuiltIns.anyNType,
 ): IrExpression {
     val listOfFunc =
-        pluginContext
+        irCompat
             .referenceFunctions(
+                pluginContext,
                 CallableId(FqName("kotlin.collections"), Name.identifier("listOf")),
             ).first {
                 it.owner.parameters
@@ -96,8 +97,9 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = pluginContext.referenceClass(ClassId.topLevel(FqName(fqName)))
-    ?: reportCompilerBug("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol =
+    irCompat.referenceClass(pluginContext, ClassId.topLevel(FqName(fqName)))
+        ?: reportCompilerBug("Cannot find symbol for $fqName")
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
@@ -105,27 +107,29 @@ internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     startOffset: Int = -1,
     endOffset: Int = -1,
     block: IrBuilderWithScope.() -> T,
-): T = DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
-    block()
-}
+): T =
+    DeclarationIrBuilder(generatorContext, symbol, startOffset, endOffset).run {
+        block()
+    }
 
 internal val AspectKIrCompilerContext.listAnyNType: IrType
     get() =
-        pluginContext
-            .referenceClass(ClassId.topLevel(FqName("kotlin.collections.List")))!!
+        irCompat
+            .referenceClass(pluginContext, ClassId.topLevel(FqName("kotlin.collections.List")))!!
             .typeWith(pluginContext.irBuiltIns.anyNType)
 
 internal val AspectKIrCompilerContext.function1Type: IrType
     get() =
-        pluginContext
-            .referenceClass(ClassId(FqName("kotlin"), Name.identifier("Function1")))!!
+        irCompat
+            .referenceClass(pluginContext, ClassId(FqName("kotlin"), Name.identifier("Function1")))!!
             .typeWith(listAnyNType, pluginContext.irBuiltIns.anyNType)
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal val AspectKIrCompilerContext.listGetFun: IrSimpleFunctionSymbol
     get() =
-        pluginContext
+        irCompat
             .referenceFunctions(
+                pluginContext,
                 CallableId(
                     ClassId.topLevel(FqName("kotlin.collections.List")),
                     Name.identifier("get"),
@@ -161,7 +165,7 @@ internal fun IrType.getUpperBound(): Pair<IrType, IrClassSymbol> {
     return currentType to (
         currentType.classOrNull
             ?: reportCompilerBug("$currentType class should not be null")
-        )
+    )
 }
 
 internal fun IrType.getUpperBoundClassName(): String? = getUpperBound().first.classFqName?.asString()
