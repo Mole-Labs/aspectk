@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir.generator
 
+import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.createIrListOf
 import io.github.molelabs.aspectk.core.ir.createKClassExpression
@@ -35,7 +36,6 @@ import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrProperty
@@ -55,6 +55,7 @@ import org.jetbrains.kotlin.name.Name
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class MethodSignatureGenerator(
     private val aspectKContext: AspectKIrCompilerContext,
+    private val irCompat: IrCompat,
 ) {
     private var fieldCounter: Int = 0
 
@@ -80,16 +81,16 @@ internal class MethodSignatureGenerator(
                     factory.buildValueParameter(
                         parent = this,
                         builder =
-                        IrValueParameterBuilder().apply {
-                            this.name = Name.identifier("<this>")
-                            type = symbol.typeWith()
-                            origin = IrDeclarationOrigin.INSTANCE_RECEIVER
-                        },
+                            IrValueParameterBuilder().apply {
+                                this.name = Name.identifier("<this>")
+                                type = symbol.typeWith()
+                                origin = irCompat.instanceReceiverOrigin()
+                            },
                     )
                 addSimpleDelegatingConstructor(
                     superConstructor =
-                    aspectKContext.pluginContext.irBuiltIns.anyClass.owner.constructors
-                        .first(),
+                        aspectKContext.pluginContext.irBuiltIns.anyClass.owner.constructors
+                            .first(),
                     irBuiltIns = aspectKContext.pluginContext.irBuiltIns,
                     isPrimary = true,
                 ).apply {
@@ -110,7 +111,7 @@ internal class MethodSignatureGenerator(
                     isStatic = false
                     isFinal = true
                     visibility = DescriptorVisibilities.PRIVATE
-                    origin = IrDeclarationOrigin.PROPERTY_BACKING_FIELD
+                    origin = irCompat.propertyBackingFieldOrigin()
                 }.apply {
                     parent = innerObject
                     initializer =
@@ -128,7 +129,6 @@ internal class MethodSignatureGenerator(
                 backingField = field
                 field.correspondingPropertySymbol = this.symbol
                 parent = innerObject
-//                getter = simpleGetter(field, innerObject)
                 innerObject.declarations.add(this)
                 addDefaultGetter(innerObject, aspectKContext.pluginContext.irBuiltIns)
             }
@@ -144,139 +144,120 @@ internal class MethodSignatureGenerator(
         }
     }
 
-//    private fun IrProperty.simpleGetter(
-//        field: IrField,
-//        innerObject: IrClass,
-//    ): IrSimpleFunction =
-//        addGetter {
-//            returnType = field.type
-//            visibility = DescriptorVisibilities.PUBLIC
-//            origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
-//        }.apply {
-//            body =
-//                aspectKContext.withIrBuilder(symbol) {
-//                    irBlockBody {
-//                        +irReturn(
-//                            irGetField(
-//                                null,
-//                                field,
-//                            ),
-//                        )
-//                    }
-//                }
-//        }
-
-    private fun IrBuilderWithScope.createMethodSignatureInitializer(declaration: IrFunction): IrExpression = irCall(methodSignatureConstructor).apply {
-        arguments[0] = irString(declaration.name.asString())
-        arguments[1] =
-            aspectKContext.createIrListOf(
-                scope = aspectKContext.methodSignatureSymbol,
-                elementType = aspectKContext.annotationInfoSymbol.defaultType,
-                elements =
-                declaration.annotations.map { annotation ->
-                    createAnnotationInfoInitializer(annotation)
-                },
-            )
-        arguments[2] =
-            aspectKContext.createIrListOf(
-                scope = symbol,
-                elementType = aspectKContext.methodParameterSymbol.defaultType,
-                elements =
-                declaration.parameters.map { param ->
-                    createMethodParameterInitializer(
-                        declaration = declaration,
-                        param = param,
-                    )
-                },
-            )
-        arguments[3] =
-            aspectKContext.createKClassExpression(
-                startOffset = declaration.startOffset,
-                endOffset = declaration.endOffset,
-                classType = declaration.returnType,
-            )
-        arguments[4] =
-            irString(
-                declaration.returnType.classFqName?.asString()
-                    ?: reportCompilerBug("function return type should not be null"),
-            )
-    }
+    private fun IrBuilderWithScope.createMethodSignatureInitializer(declaration: IrFunction): IrExpression =
+        irCall(methodSignatureConstructor).apply {
+            arguments[0] = irString(declaration.name.asString())
+            arguments[1] =
+                aspectKContext.createIrListOf(
+                    scope = aspectKContext.methodSignatureSymbol,
+                    elementType = aspectKContext.annotationInfoSymbol.defaultType,
+                    elements =
+                        declaration.annotations.map { annotation ->
+                            createAnnotationInfoInitializer(annotation)
+                        },
+                )
+            arguments[2] =
+                aspectKContext.createIrListOf(
+                    scope = symbol,
+                    elementType = aspectKContext.methodParameterSymbol.defaultType,
+                    elements =
+                        declaration.parameters.map { param ->
+                            createMethodParameterInitializer(
+                                declaration = declaration,
+                                param = param,
+                            )
+                        },
+                )
+            arguments[3] =
+                aspectKContext.createKClassExpression(
+                    startOffset = declaration.startOffset,
+                    endOffset = declaration.endOffset,
+                    classType = declaration.returnType,
+                )
+            arguments[4] =
+                irString(
+                    declaration.returnType.classFqName?.asString()
+                        ?: reportCompilerBug("function return type should not be null"),
+                )
+        }
 
     private fun createMethodParameterInitializer(
         declaration: IrFunction,
         param: IrValueParameter,
-    ): IrExpression = aspectKContext.withIrBuilder(aspectKContext.methodParameterSymbol) {
-        irCall(aspectKContext.methodParameterSymbol.constructors.first()).apply {
-            arguments[0] = irString(param.name.asString())
-            arguments[1] =
-                aspectKContext.createKClassExpression(
-                    startOffset = declaration.startOffset,
-                    endOffset = declaration.endOffset,
-                    classType = param.type,
-                )
-            arguments[2] =
-                irString(
-                    if (param.type.isGeneric()) {
-                        param.type.getUpperBoundClassName()
-                    } else {
-                        param.type.classFqName?.asString()
-                    }
-                        ?: reportCompilerBug("value parameter type should not be null"),
-                )
+    ): IrExpression =
+        aspectKContext.withIrBuilder(aspectKContext.methodParameterSymbol) {
+            irCall(aspectKContext.methodParameterSymbol.constructors.first()).apply {
+                arguments[0] = irString(param.name.asString())
+                arguments[1] =
+                    aspectKContext.createKClassExpression(
+                        startOffset = declaration.startOffset,
+                        endOffset = declaration.endOffset,
+                        classType = param.type,
+                    )
+                arguments[2] =
+                    irString(
+                        if (param.type.isGeneric()) {
+                            param.type.getUpperBoundClassName()
+                        } else {
+                            param.type.classFqName?.asString()
+                        }
+                            ?: reportCompilerBug("value parameter type should not be null"),
+                    )
 
-            arguments[3] =
-                aspectKContext.createIrListOf(
-                    scope = aspectKContext.methodParameterSymbol,
-                    elementType = aspectKContext.annotationInfoSymbol.defaultType,
-                    elements =
-                    param.annotations.map { annotation ->
-                        createAnnotationInfoInitializer(annotation)
-                    },
-                )
+                arguments[3] =
+                    aspectKContext.createIrListOf(
+                        scope = aspectKContext.methodParameterSymbol,
+                        elementType = aspectKContext.annotationInfoSymbol.defaultType,
+                        elements =
+                            param.annotations.map { annotation ->
+                                createAnnotationInfoInitializer(annotation)
+                            },
+                    )
 
-            arguments[4] = irBoolean(param.type.isNullable())
+                arguments[4] = irBoolean(param.type.isNullable())
+            }
         }
-    }
 
-    private fun createAnnotationInfoInitializer(annotation: IrConstructorCall): IrExpression = aspectKContext.withIrBuilder(aspectKContext.annotationInfoSymbol) {
-        irCall(aspectKContext.annotationInfoSymbol.constructors.first()).apply {
-            arguments[0] =
-                aspectKContext.createKClassExpression(
-                    startOffset = annotation.startOffset,
-                    endOffset = annotation.endOffset,
-                    classType = annotation.type,
-                )
-            arguments[1] =
-                irString(
-                    annotation.type.classFqName?.asString()
-                        ?: reportCompilerBug("annotation name type should not be null"),
-                )
+    private fun createAnnotationInfoInitializer(annotation: IrConstructorCall): IrExpression =
+        aspectKContext.withIrBuilder(aspectKContext.annotationInfoSymbol) {
+            irCall(aspectKContext.annotationInfoSymbol.constructors.first()).apply {
+                arguments[0] =
+                    aspectKContext.createKClassExpression(
+                        startOffset = annotation.startOffset,
+                        endOffset = annotation.endOffset,
+                        classType = annotation.type,
+                    )
+                arguments[1] =
+                    irString(
+                        annotation.type.classFqName?.asString()
+                            ?: reportCompilerBug("annotation name type should not be null"),
+                    )
 
-            val args = annotation.arguments.filterNotNull()
-            val parameterNames =
-                annotation.arguments.mapIndexedNotNull { idx, arg ->
-                    if (arg != null) {
-                        irString(
-                            annotation.symbol.owner.parameters[idx]
-                                .name
-                                .asString(),
-                        )
-                    } else {
-                        null
+                val args = annotation.arguments.filterNotNull()
+                val parameterNames =
+                    annotation.arguments.mapIndexedNotNull { idx, arg ->
+                        if (arg != null) {
+                            irString(
+                                annotation.symbol.owner.parameters[idx]
+                                    .name
+                                    .asString(),
+                            )
+                        } else {
+                            null
+                        }
                     }
-                }
-            arguments[2] =
-                aspectKContext.createIrListOf(
-                    scope = aspectKContext.annotationInfoSymbol,
-                    elements = args,
-                )
+                arguments[2] =
+                    aspectKContext.createIrListOf(
+                        scope = aspectKContext.annotationInfoSymbol,
+                        elements = args,
+                    )
 
-            arguments[3] =
-                aspectKContext.createIrListOf(
-                    scope = aspectKContext.annotationInfoSymbol,
-                    elements = parameterNames,
-                    elementType = aspectKContext.pluginContext.irBuiltIns.stringType,
-                )
+                arguments[3] =
+                    aspectKContext.createIrListOf(
+                        scope = aspectKContext.annotationInfoSymbol,
+                        elements = parameterNames,
+                        elementType = aspectKContext.pluginContext.irBuiltIns.stringType,
+                    )
+            }
         }
-    }
 }

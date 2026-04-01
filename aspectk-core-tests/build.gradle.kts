@@ -15,6 +15,7 @@
  */
 
 import org.gradle.internal.extensions.core.serviceOf
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.plugin.NATIVE_COMPILER_PLUGIN_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.plugin.PLUGIN_CLASSPATH_CONFIGURATION_NAME
 
@@ -39,6 +40,15 @@ dependencies {
     )
 }
 
+providers.gradleProperty("testKotlinLang").orNull?.let { version ->
+    val lang = version.substringBeforeLast(".")
+    kotlin {
+        compilerOptions {
+            languageVersion = KotlinVersion.fromVersion(lang)
+        }
+    }
+}
+
 tasks.register("testAllSupportedVersions") {
     notCompatibleWithConfigurationCache("Runs separate Gradle invocations per Kotlin version")
     doLast {
@@ -54,7 +64,7 @@ tasks.register("testAllSupportedVersions") {
                 commandLine(
                     rootDir.resolve("gradlew").path,
                     ":aspectk-core-tests:jvmTest",
-                    "-PkotlinVersion=$version",
+                    "-PtestKotlinLang=$version",
                     "--no-configuration-cache",
                 )
                 workingDir = rootDir

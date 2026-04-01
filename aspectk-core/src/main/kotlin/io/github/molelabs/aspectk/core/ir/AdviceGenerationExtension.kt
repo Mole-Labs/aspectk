@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
@@ -29,18 +30,18 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal class AdviceGenerationExtension : IrGenerationExtension {
+internal class AdviceGenerationExtension(private val irCompat: IrCompat) : IrGenerationExtension {
     override fun generate(
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext,
     ) {
         val aspectkContext = AspectKIrCompilerContext(pluginContext)
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
-        val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
+        val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext, irCompat)
         val adviceCallGenerator = AdviceCallGenerator(aspectkContext)
-        val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext)
-        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext)
-        val localFunctionGenerator = LocalFunctionGenerator(aspectkContext)
+        val proceedingJoinPointGenerator = ProceedingJoinPointGenerator(aspectkContext, irCompat)
+        val tryCatchWrapperGenerator = TryCatchWrapperGenerator(aspectkContext, irCompat)
+        val localFunctionGenerator = LocalFunctionGenerator(aspectkContext, irCompat)
 
         aspectkContext
             .tracer(
