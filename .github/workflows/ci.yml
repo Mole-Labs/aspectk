@@ -34,6 +34,12 @@ jobs:
       - name: Run aspectk-core-tests (JVM)
         run: ./gradlew :aspectk-core-tests:jvmTest
 
+      - name: Run aspectk-core-tests (all supported Kotlin versions)
+        run: ./gradlew :aspectk-core-tests:testAllSupportedVersions
+
+      - name: Run aspectk-core-tests (WasmJs)
+        run: ./gradlew :aspectk-core-tests:wasmJsTest
+
       - name: Publish to Maven Local (required by sample)
         run: ./gradlew publishToMavenLocal
         env:
@@ -45,3 +51,23 @@ jobs:
 
       - name: Run sample tests (JVM)
         run: ./gradlew -p sample :composeApp:jvmTest
+
+  test-ios:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run aspectk-core-tests (iOS Simulator)
+        run: ./gradlew :aspectk-core-tests:iosSimulatorArm64Test

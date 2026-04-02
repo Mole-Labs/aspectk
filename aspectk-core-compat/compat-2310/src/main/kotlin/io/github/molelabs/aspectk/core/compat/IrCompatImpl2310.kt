@@ -37,9 +37,7 @@ class IrCompatImpl2310 : IrCompat {
 
     override fun valueParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
 
-    override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> =
-        pluginContext.referenceFunctions(callableId)
+    override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> = pluginContext.referenceFunctions(callableId)
 
-    override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? =
-        pluginContext.referenceClass(classId)
+    override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? = pluginContext.referenceClass(classId)
 }

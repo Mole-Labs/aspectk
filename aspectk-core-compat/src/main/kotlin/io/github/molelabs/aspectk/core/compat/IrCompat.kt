@@ -43,11 +43,10 @@ interface IrCompat {
     fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol?
 
     companion object {
-        fun create(version: KotlinVersion): IrCompat =
-            ServiceLoader
-                .load(IrCompat::class.java, IrCompat::class.java.classLoader)
-                .filter { it.kotlinVersion <= version }
-                .maxByOrNull { it.kotlinVersion }
-                ?: error("No IrCompat found for Kotlin $version")
+        fun create(version: KotlinVersion): IrCompat = ServiceLoader
+            .load(IrCompat::class.java, IrCompat::class.java.classLoader)
+            .filter { it.kotlinVersion <= version }
+            .maxByOrNull { it.kotlinVersion }
+            ?: error("No IrCompat found for Kotlin $version")
     }
 }
