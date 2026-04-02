@@ -56,11 +56,8 @@ val shadowBundle: Configuration by configurations.creating {
 dependencies {
     compileOnly(libs.kotlin.compiler)
     compileOnly(libs.google.autoservice.annotations)
+    compileOnly(project(":aspectk-core-compat"))
     implementation(project(":aspectk-runtime"))
-    implementation(project(":aspectk-core-compat"))
-    runtimeOnly(project(":aspectk-core-compat:compat-2220"))
-    runtimeOnly(project(":aspectk-core-compat:compat-2310"))
-    runtimeOnly(project(":aspectk-core-compat:compat-2320"))
 
     shadowBundle(project(":aspectk-core-compat"))
     shadowBundle(project(":aspectk-core-compat:compat-2220"))
