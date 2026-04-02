@@ -59,7 +59,7 @@ internal class TryCatchWrapperGenerator(
                 parent = declaration,
                 startOffset = -1,
                 endOffset = -1,
-                origin = IrDeclarationOrigin.CATCH_PARAMETER,
+                origin = aspectKCompilerContext.irCompat.catchParameterOrigin(),
                 name = Name.identifier("e"),
                 type = aspectKCompilerContext.pluginContext.irBuiltIns.throwableType,
             )

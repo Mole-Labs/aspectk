@@ -368,7 +368,7 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected into aspect`() {
+    fun `After JoinPoint should be injected into aspect`() {
         Example10().run()
         assertEquals(true, ExampleAspect10.executed)
     }
@@ -399,7 +399,7 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected with arguments into aspect`() {
+    fun `After JoinPoint should be injected with arguments into aspect`() {
         Example11().run("hello", "aspectk")
         assertEquals(true, ExampleAspect11.executed)
     }
@@ -429,7 +429,7 @@ class JoinPointGenerationTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected with nullable arguments`() {
+    fun `After JoinPoint should be injected with nullable arguments`() {
         Example12().run("notNullArg", null)
         assertEquals(true, ExampleAspect12.executed)
     }

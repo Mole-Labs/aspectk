@@ -13,8 +13,11 @@ kotlin {
     }
 }
 
+val testKotlinLang =
+    providers.gradleProperty("testKotlinLang").getOrElse(libs.versions.kotlin.get())
+
 dependencies {
-    implementation(libs.kotlin.gradlePlugin)
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$testKotlinLang")
     implementation(libs.vanniktech.publish.gradle)
     implementation(libs.gmazzo.buildconfig)
 }

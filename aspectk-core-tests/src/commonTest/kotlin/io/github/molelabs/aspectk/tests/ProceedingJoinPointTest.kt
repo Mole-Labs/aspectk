@@ -190,7 +190,7 @@ class ProceedingJoinPointTest {
     }
 
     @Test
-    fun `@Around on Unit-returning function does not throw ClassCastException`() {
+    fun `Around on Unit-returning function does not throw ClassCastException`() {
         val example = Example7()
         example.work()
         assertEquals(true, example.executed)

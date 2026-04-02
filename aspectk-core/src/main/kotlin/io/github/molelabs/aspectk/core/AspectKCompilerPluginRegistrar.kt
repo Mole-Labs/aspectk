@@ -16,6 +16,7 @@
 package io.github.molelabs.aspectk.core
 
 import com.google.auto.service.AutoService
+import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.AdviceGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
@@ -38,8 +39,10 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
     // Registers AdviceGenerationExtension to participate in the IR generation phase,
     // which is where the compile-time AOP transformations are applied.
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
+        val currentVersion = KotlinVersion.CURRENT
+        val irCompat = IrCompat.create(currentVersion)
         IrGenerationExtension.registerExtension(
-            AdviceGenerationExtension(),
+            AdviceGenerationExtension(irCompat),
         )
     }
 }

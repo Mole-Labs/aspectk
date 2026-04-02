@@ -29,6 +29,10 @@ plugins {
 
 rootProject.name = "aspectk"
 include(":aspectk-core")
+include(":aspectk-core-compat")
+include(":aspectk-core-compat:compat-2220")
+include(":aspectk-core-compat:compat-2310")
+include(":aspectk-core-compat:compat-2320")
 include(":aspectk-plugin")
 include(":aspectk-runtime")
 include(":aspectk-core-tests")

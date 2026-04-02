@@ -119,7 +119,7 @@ internal class ProceedingJoinPointGenerator(
                     name = Name.special("<anonymous>")
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = aspectKCompilerContext.pluginContext.irBuiltIns.anyNType
-                    origin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
+                    origin = aspectKCompilerContext.irCompat.localFunctionForLambdaOrigin()
                 }.apply {
                     parent = declaration
                 }
@@ -132,7 +132,7 @@ internal class ProceedingJoinPointGenerator(
                     name = Name.identifier("__args")
                     type = aspectKCompilerContext.listAnyNType
                     kind = IrParameterKind.Regular
-                    origin = IrDeclarationOrigin.DEFINED
+                    origin = aspectKCompilerContext.irCompat.valueParameterOrigin()
                 },
             )
         lambdaFun.parameters = listOf(argsParam)

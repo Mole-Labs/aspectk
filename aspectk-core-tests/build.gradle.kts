@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import org.gradle.internal.extensions.core.serviceOf
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 import org.jetbrains.kotlin.gradle.plugin.NATIVE_COMPILER_PLUGIN_CLASSPATH_CONFIGURATION_NAME
 import org.jetbrains.kotlin.gradle.plugin.PLUGIN_CLASSPATH_CONFIGURATION_NAME
 
@@ -36,4 +38,37 @@ dependencies {
         NATIVE_COMPILER_PLUGIN_CLASSPATH_CONFIGURATION_NAME,
         project(":aspectk-core"),
     )
+}
+
+providers.gradleProperty("testKotlinLang").orNull?.let { version ->
+    val lang = version.substringBeforeLast(".")
+    kotlin {
+        compilerOptions {
+            languageVersion = KotlinVersion.fromVersion(lang)
+        }
+    }
+}
+
+tasks.register("testAllSupportedVersions") {
+    notCompatibleWithConfigurationCache("Runs separate Gradle invocations per Kotlin version")
+    doLast {
+        val execOps = serviceOf<ExecOperations>()
+        val versions =
+            rootDir
+                .resolve("supported-versions.txt")
+                .readLines()
+                .filter { it.isNotBlank() }
+        versions.forEach { version ->
+            println("Testing Kotlin version: $version")
+            execOps.exec {
+                commandLine(
+                    rootDir.resolve("gradlew").path,
+                    ":aspectk-core-tests:jvmTest",
+                    "-PtestKotlinLang=$version",
+                    "--no-configuration-cache",
+                )
+                workingDir = rootDir
+            }
+        }
+    }
 }

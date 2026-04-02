@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
@@ -29,12 +30,12 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal class AdviceGenerationExtension : IrGenerationExtension {
+internal class AdviceGenerationExtension(private val irCompat: IrCompat) : IrGenerationExtension {
     override fun generate(
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext,
     ) {
-        val aspectkContext = AspectKIrCompilerContext(pluginContext)
+        val aspectkContext = AspectKIrCompilerContext(pluginContext, irCompat)
         val joinPointGenerator = JoinPointGenerator(aspectkContext)
         val methodSignatureGenerator = MethodSignatureGenerator(aspectkContext)
         val adviceCallGenerator = AdviceCallGenerator(aspectkContext)

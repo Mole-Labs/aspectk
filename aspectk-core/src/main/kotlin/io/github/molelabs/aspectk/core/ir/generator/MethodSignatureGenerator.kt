@@ -35,7 +35,6 @@ import org.jetbrains.kotlin.ir.builders.irBoolean
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irString
 import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationParent
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrProperty
@@ -83,7 +82,7 @@ internal class MethodSignatureGenerator(
                         IrValueParameterBuilder().apply {
                             this.name = Name.identifier("<this>")
                             type = symbol.typeWith()
-                            origin = IrDeclarationOrigin.INSTANCE_RECEIVER
+                            origin = aspectKContext.irCompat.instanceReceiverOrigin()
                         },
                     )
                 addSimpleDelegatingConstructor(
@@ -110,7 +109,7 @@ internal class MethodSignatureGenerator(
                     isStatic = false
                     isFinal = true
                     visibility = DescriptorVisibilities.PRIVATE
-                    origin = IrDeclarationOrigin.PROPERTY_BACKING_FIELD
+                    origin = aspectKContext.irCompat.propertyBackingFieldOrigin()
                 }.apply {
                     parent = innerObject
                     initializer =
@@ -128,7 +127,6 @@ internal class MethodSignatureGenerator(
                 backingField = field
                 field.correspondingPropertySymbol = this.symbol
                 parent = innerObject
-//                getter = simpleGetter(field, innerObject)
                 innerObject.declarations.add(this)
                 addDefaultGetter(innerObject, aspectKContext.pluginContext.irBuiltIns)
             }
@@ -143,28 +141,6 @@ internal class MethodSignatureGenerator(
             createMethodSignatureInitializer(declaration)
         }
     }
-
-//    private fun IrProperty.simpleGetter(
-//        field: IrField,
-//        innerObject: IrClass,
-//    ): IrSimpleFunction =
-//        addGetter {
-//            returnType = field.type
-//            visibility = DescriptorVisibilities.PUBLIC
-//            origin = IrDeclarationOrigin.DEFAULT_PROPERTY_ACCESSOR
-//        }.apply {
-//            body =
-//                aspectKContext.withIrBuilder(symbol) {
-//                    irBlockBody {
-//                        +irReturn(
-//                            irGetField(
-//                                null,
-//                                field,
-//                            ),
-//                        )
-//                    }
-//                }
-//        }
 
     private fun IrBuilderWithScope.createMethodSignatureInitializer(declaration: IrFunction): IrExpression = irCall(methodSignatureConstructor).apply {
         arguments[0] = irString(declaration.name.asString())

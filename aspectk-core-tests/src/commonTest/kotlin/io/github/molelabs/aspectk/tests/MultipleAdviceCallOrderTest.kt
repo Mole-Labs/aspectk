@@ -69,7 +69,7 @@ class MultipleAdviceCallOrderTest {
 
     // TODO support multiple @Around, @After annotations
     @Test
-    fun `@Around advice is only invoked once per function`() {
+    fun `Around advice is only invoked once per function`() {
         Example1().greet()
         assertEquals(1, ExampleAspect1.count, "Expected @Around advice to be called only once")
     }
@@ -112,7 +112,7 @@ class MultipleAdviceCallOrderTest {
 
     // TODO support multiple @Around, @After annotations
     @Test
-    fun `@After advice is only invoked once per function`() {
+    fun `After advice is only invoked once per function`() {
         Example2().greet()
         assertEquals(1, ExampleAspect2.count, "Expected @After advice to be called only once")
     }
@@ -155,7 +155,7 @@ class MultipleAdviceCallOrderTest {
 
     // TODO support multiple @Around, @After annotations
     @Test
-    fun `@After and @Around advice is only invoked once per function`() {
+    fun `After and Around advice is only invoked once per function`() {
         Example3().greet()
         assertEquals(1, ExampleAspect3.count, "Expected @Around advice to be called only once")
     }
@@ -193,7 +193,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `multiple @Before advice is ordinally invoked`() {
+    fun `multiple Before advice is ordinally invoked`() {
         Example4().greet()
         assertEquals(1, ExampleAspect4.count, "Expected @Around advice to be called only once")
     }
@@ -236,7 +236,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `multiple @Before and @Around advice is ordinally invoked`() {
+    fun `multiple Before and Around advice is ordinally invoked`() {
         /*
         Current architectural limitations and the absence of an advice ordering engine
         restrict how multiple advices are applied. Specifically, All @Before advice is called,
@@ -286,7 +286,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `multiple @Before and @After advice is ordinally invoked`() {
+    fun `multiple Before and After advice is ordinally invoked`() {
         /*
         Current architectural limitations and the absence of an advice ordering engine
         restrict how multiple advices are applied. Specifically, @Before advice only
@@ -331,7 +331,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `multiple @Before advices all execute before function body`() {
+    fun `multiple Before advices all execute before function body`() {
         Example7().work()
         val log = ExampleAspect7.executionLog
         val bodyIndex = log.indexOf("body")
@@ -372,7 +372,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `@Before executes before body and @After executes after body when both target the same function`() {
+    fun `Before executes before body and After executes after body when both target the same function`() {
         Example8().work()
         assertEquals(listOf("before", "body", "after"), ExampleAspect8.executionLog)
     }
@@ -407,7 +407,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `@Before and @After both execute even when function throws`() {
+    fun `Before and After both execute even when function throws`() {
         assertFailsWith<RuntimeException> {
             Example9().work()
         }
@@ -440,7 +440,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `@Before advice is invoked once per matching annotation on the same function`() {
+    fun `Before advice is invoked once per matching annotation on the same function`() {
         Example10().work()
         assertEquals(2, ExampleAspect10.count)
     }
@@ -470,7 +470,7 @@ class MultipleAdviceCallOrderTest {
     }
 
     @Test
-    fun `@After advice is invoked only once even when multiple target annotations match the same function`() {
+    fun `After advice is invoked only once even when multiple target annotations match the same function`() {
         Example11().work()
         assertEquals(1, ExampleAspect11.count)
     }

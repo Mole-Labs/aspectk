@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -25,12 +26,14 @@ import org.jetbrains.kotlin.name.FqName
 
 internal data class AspectKIrCompilerContext(
     val pluginContext: IrPluginContext,
+    val irCompat: IrCompat,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
 ) {
     val joinPointSymbol: IrClassSymbol = getSymbol(JOIN_POINT_FQ_NAME)
     val proceedingJoinPointSymbol: IrClassSymbol = getSymbol(PROCEEDING_JOIN_POINT_FQ_NAME)
     val onProceedListenerSymbol: IrClassSymbol =
-        pluginContext.referenceClass(
+        irCompat.referenceClass(
+            pluginContext,
             ClassId(
                 FqName("io.github.molelabs.aspectk.runtime"),
                 FqName("ProceedingJoinPoint.OnProceedListener"),

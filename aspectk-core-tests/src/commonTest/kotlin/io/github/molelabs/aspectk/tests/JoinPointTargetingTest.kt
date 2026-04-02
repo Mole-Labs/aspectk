@@ -243,7 +243,7 @@ class JoinPointTargetingTest {
     internal class Example6
 
     @Test
-    fun `@After JoinPoint should be injected into extension function`() {
+    fun `After JoinPoint should be injected into extension function`() {
         Example6().afterExtension("extensionArg")
         assertEquals(true, ExampleAspect6.executed)
     }
@@ -273,7 +273,7 @@ class JoinPointTargetingTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected into suspend function`() = runTest {
+    fun `After JoinPoint should be injected into suspend function`() = runTest {
         Example7().suspendFun("suspendArg", CoroutineScope(StandardTestDispatcher()))
         assertEquals(true, ExampleAspect7.executed)
     }
@@ -295,7 +295,7 @@ class JoinPointTargetingTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected into top-level function`() {
+    fun `After JoinPoint should be injected into top-level function`() {
         afterTopLevel("topLevelArg")
         assertEquals(true, ExampleAspect8.executed)
     }
@@ -326,7 +326,7 @@ class JoinPointTargetingTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected into getter`() {
+    fun `After JoinPoint should be injected into getter`() {
         Example9().run()
         assertEquals(true, ExampleAspect9.executed)
     }
@@ -358,7 +358,7 @@ class JoinPointTargetingTest {
     }
 
     @Test
-    fun `@After JoinPoint should be injected into setter`() {
+    fun `After JoinPoint should be injected into setter`() {
         Example10().run()
         assertEquals(true, ExampleAspect10.executed)
     }
@@ -386,7 +386,7 @@ class JoinPointTargetingTest {
     internal class Example11
 
     @Test
-    fun `@Around ProceedingJoinPoint should be injected into extension function`() {
+    fun `Around ProceedingJoinPoint should be injected into extension function`() {
         Example11().aroundExtension("extensionArg")
         assertEquals(true, ExampleAspect11.executed)
     }
@@ -409,7 +409,7 @@ class JoinPointTargetingTest {
     }
 
     @Test
-    fun `@Around ProceedingJoinPoint should be injected into top-level function`() {
+    fun `Around ProceedingJoinPoint should be injected into top-level function`() {
         aroundTopLevel("topLevelArg")
         assertEquals(true, ExampleAspect12.executed)
     }

@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irBlockBody
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
@@ -32,6 +31,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrGetValue
 import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
+import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.transformStatement
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.ir.util.statements
@@ -86,7 +86,7 @@ internal class LocalFunctionGenerator(
                     name = Name.identifier(localFuncName)
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = declaration.returnType
-                    origin = IrDeclarationOrigin.LOCAL_FUNCTION
+                    origin = aspectKCompilerContext.irCompat.localFunctionOrigin()
                 }.apply {
                     parent = declaration
                 }
@@ -131,6 +131,7 @@ internal class LocalFunctionGenerator(
      *    local function's own parameters, so that `proceed(vararg args)` argument
      *    substitution takes effect correctly.
      */
+    @OptIn(UnsafeDuringIrConstructionAPI::class)
     private class BodyTransformer(
         private val localFunc: IrSimpleFunction,
         private val paramSubstitutions: Map<IrValueParameter, IrValueParameter>,
@@ -141,8 +142,9 @@ internal class LocalFunctionGenerator(
         }
 
         override fun visitGetValue(expression: IrGetValue): IrExpression {
-            val replacement = paramSubstitutions[expression.symbol.owner]
-                ?: return super.visitGetValue(expression)
+            val replacement =
+                paramSubstitutions[expression.symbol.owner]
+                    ?: return super.visitGetValue(expression)
             return IrGetValueImpl(
                 startOffset = expression.startOffset,
                 endOffset = expression.endOffset,
