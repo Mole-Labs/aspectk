@@ -65,6 +65,11 @@ dependencies {
     shadowBundle(project(":aspectk-core-compat:compat-2320"))
 
     testRuntimeOnly(libs.kotlin.compiler)
+    testRuntimeOnly(project(":aspectk-core-compat"))
+    testRuntimeOnly(project(":aspectk-core-compat:compat-2220"))
+    testRuntimeOnly(project(":aspectk-core-compat:compat-2310"))
+    testRuntimeOnly(project(":aspectk-core-compat:compat-2320"))
+
     testImplementation(libs.test.mockk)
     testImplementation(libs.kotlin.coroutine.core)
     testImplementation(libs.kotlin.coroutine.test)
