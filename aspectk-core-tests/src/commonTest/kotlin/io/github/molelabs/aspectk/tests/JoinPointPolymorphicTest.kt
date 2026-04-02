@@ -319,7 +319,7 @@ class JoinPointPolymorphicTest {
     }
 
     @Test
-    fun `@After advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
+    fun `After advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
         Derived8().run()
         assertEquals(0, ExampleAspect8.executionCount)
 
@@ -350,7 +350,7 @@ class JoinPointPolymorphicTest {
     }
 
     @Test
-    fun `@After advice should execute on overriding method when inherits is true`() {
+    fun `After advice should execute on overriding method when inherits is true`() {
         Derived9().run()
         assertEquals(1, ExampleAspect9.executionCount)
     }
@@ -381,7 +381,7 @@ class JoinPointPolymorphicTest {
     }
 
     @Test
-    fun `@Around advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
+    fun `Around advice should not execute for overriding method when annotation is on superclass and inherits is false`() {
         Derived10().run()
         assertEquals(0, ExampleAspect10.executionCount)
 
@@ -413,7 +413,7 @@ class JoinPointPolymorphicTest {
     }
 
     @Test
-    fun `@Around advice should execute on overriding method when inherits is true`() {
+    fun `Around advice should execute on overriding method when inherits is true`() {
         Derived11().run()
         assertEquals(1, ExampleAspect11.executionCount)
     }

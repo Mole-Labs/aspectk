@@ -19,6 +19,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
     id("io.github.mole-labs.aspectk.build")
     alias(libs.plugins.diffplug.spotless)
+    alias(libs.plugins.shadow)
     kotlin("kapt")
 }
 
@@ -47,6 +48,11 @@ repositories {
     mavenCentral()
 }
 
+val shadowBundle: Configuration by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
 dependencies {
     compileOnly(libs.kotlin.compiler)
     compileOnly(libs.google.autoservice.annotations)
@@ -55,6 +61,12 @@ dependencies {
     runtimeOnly(project(":aspectk-core-compat:compat-2220"))
     runtimeOnly(project(":aspectk-core-compat:compat-2310"))
     runtimeOnly(project(":aspectk-core-compat:compat-2320"))
+
+    shadowBundle(project(":aspectk-core-compat"))
+    shadowBundle(project(":aspectk-core-compat:compat-2220"))
+    shadowBundle(project(":aspectk-core-compat:compat-2310"))
+    shadowBundle(project(":aspectk-core-compat:compat-2320"))
+
     testRuntimeOnly(libs.kotlin.compiler)
     testImplementation(libs.test.mockk)
     testImplementation(libs.kotlin.coroutine.core)
@@ -64,6 +76,28 @@ dependencies {
     testImplementation(libs.kotlin.compile.testing)
     testImplementation(libs.kotlin.test)
     kapt(libs.google.autoservice)
+}
+
+tasks.shadowJar {
+    configurations = listOf(shadowBundle)
+    archiveClassifier.set("")
+    mergeServiceFiles()
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin:.*"))
+        exclude(dependency("org.jetbrains:.*"))
+        exclude(dependency("org.intellij:.*"))
+    }
+}
+
+tasks.jar {
+    enabled = false
+}
+
+listOf("runtimeElements", "apiElements").forEach { variantName ->
+    configurations.named(variantName) {
+        outgoing.artifacts.removeIf { it.type == "jar" }
+        outgoing.artifact(tasks.shadowJar)
+    }
 }
 
 tasks.test {

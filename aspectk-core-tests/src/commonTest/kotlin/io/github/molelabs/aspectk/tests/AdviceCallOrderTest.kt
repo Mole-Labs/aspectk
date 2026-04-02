@@ -49,7 +49,7 @@ class AdviceCallOrderTest {
     }
 
     @Test
-    fun `@Before advice executes before target function body`() {
+    fun `Before advice executes before target function body`() {
         Example1().work()
         assertEquals(listOf("before", "body"), ExampleAspect1.executionLog)
     }
@@ -75,7 +75,7 @@ class AdviceCallOrderTest {
     }
 
     @Test
-    fun `@After advice executes after target function body`() {
+    fun `After advice executes after target function body`() {
         Example2().work()
         assertEquals(listOf("body", "after"), ExampleAspect2.executionLog)
     }
@@ -104,7 +104,7 @@ class AdviceCallOrderTest {
     }
 
     @Test
-    fun `@Around advice executes both before and after target function body`() {
+    fun `Around advice executes both before and after target function body`() {
         Example3().work()
         assertEquals(listOf("before", "body", "after"), ExampleAspect3.executionLog)
     }
@@ -128,7 +128,7 @@ class AdviceCallOrderTest {
     }
 
     @Test
-    fun `@After advice is invoked even when the original function throws`() {
+    fun `After advice is invoked even when the original function throws`() {
         assertFailsWith<RuntimeException> {
             Example4().riskyWork()
         }
@@ -154,7 +154,7 @@ class AdviceCallOrderTest {
     }
 
     @Test
-    fun `@After advice is invoked after a normally returning function`() {
+    fun `After advice is invoked after a normally returning function`() {
         Example5().normalWork()
         assertTrue(ExampleAspect5.called, "Expected @After advice to be called after normal return")
     }

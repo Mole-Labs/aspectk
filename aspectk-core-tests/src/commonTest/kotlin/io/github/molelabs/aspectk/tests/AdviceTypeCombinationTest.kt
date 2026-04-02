@@ -80,7 +80,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before and @After both execute in correct order`() {
+    fun `same aspect - Before and After both execute in correct order`() {
         ExampleAc1A().work()
         assertEquals(listOf("before", "body", "after"), AspectAc1A.log)
     }
@@ -111,7 +111,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before and @After both execute even when function throws`() {
+    fun `same aspect - Before and After both execute even when function throws`() {
         assertFailsWith<RuntimeException> { ExampleAc1B().work() }
         assertTrue(AspectAc1B.log.contains("before"))
         assertTrue(AspectAc1B.log.contains("after"))
@@ -148,7 +148,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before executes before @Around wraps the body`() {
+    fun `same aspect - Before executes before Around wraps the body`() {
         ExampleAc2().work()
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc2.log)
     }
@@ -184,7 +184,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Around wins when declared after @After (last-wins)`() {
+    fun `same aspect - Around wins when declared after After - last-wins`() {
         ExampleAc3A().work()
         // @Around is last-registered → only @Around runs; @After is skipped
         assertEquals(listOf("around-before", "body", "around-after"), AspectAc3A.log)
@@ -219,7 +219,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Around wins when declared after @After, even when function throws (last-wins)`() {
+    fun `same aspect - Around wins when declared after After even when function throws - last-wins`() {
         // @Around is last-registered → @Around runs; @After is skipped
         assertFailsWith<RuntimeException> { ExampleAc3B().work() }
         assertTrue(AspectAc3B.log.contains("around-before"))
@@ -262,7 +262,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before and @Around execute when @Around is last, @After is skipped (last-wins)`() {
+    fun `same aspect - Before and Around execute when Around is last After is skipped - last-wins`() {
         ExampleAc4A().work()
         // @Around is last-registered → @Around wins; @After is skipped; @Before always runs
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc4A.log)
@@ -302,7 +302,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Before and @Around execute on throw when @Around is last, @After is skipped (last-wins)`() {
+    fun `same aspect - Before and Around execute on throw when Around is last After is skipped - last-wins`() {
         // @Around is last-registered → @Around wins; @After is skipped; @Before always runs
         assertFailsWith<RuntimeException> { ExampleAc4B().work() }
         assertTrue(AspectAc4B.log.contains("before"))
@@ -343,7 +343,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @Before and @After in different aspects execute in correct order`() {
+    fun `cross-aspect - Before and After in different aspects execute in correct order`() {
         ExampleAc5().work()
         assertEquals(listOf("before", "body", "after"), AspectAc5Before.log)
     }
@@ -382,7 +382,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @Before and @Around in different aspects execute in correct order`() {
+    fun `cross-aspect - Before and Around in different aspects execute in correct order`() {
         ExampleAc6().work()
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc6Before.log)
     }
@@ -419,7 +419,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @Around wins when its aspect is declared after @After aspect (last-wins)`() {
+    fun `cross-aspect - Around wins when its aspect is declared after After aspect - last-wins`() {
         // AspectAc7Around is declared after AspectAc7After → @Around is last-registered → @Around wins
         ExampleAc7().work()
         assertEquals(listOf("around-before", "body", "around-after"), AspectAc7After.log)
@@ -448,7 +448,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Around can substitute parameters via proceed when combined with @Before`() {
+    fun `same aspect - Around can substitute parameters via proceed when combined with Before`() {
         val result = ExampleAc9().greet("alice", 3)
         assertEquals("modified-99", result)
     }
@@ -479,7 +479,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Around can substitute parameters via proceed when declared after @After`() {
+    fun `same aspect - Around can substitute parameters via proceed when declared after After`() {
         val result = ExampleAc10A().greet("alice", 3)
         assertEquals("modified-99", result)
     }
@@ -505,7 +505,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `same aspect - @Around cannot substitute parameters when @After is declared after it`() {
+    fun `same aspect - Around cannot substitute parameters when After is declared after it`() {
         // Since @Around is not executed, proceed(newArgs) is never called.
         // The original function runs with the caller's initial parameters ("alice", 3).
         val result = ExampleAc10B().greet("alice", 3)
@@ -552,7 +552,7 @@ class AdviceTypeCombinationTest {
     }
 
     @Test
-    fun `cross-aspect - @Before and @Around execute when @Around aspect is last, @After aspect is skipped (last-wins)`() {
+    fun `cross-aspect - Before and Around execute when Around aspect is last After aspect is skipped - last-wins`() {
         // AspectAc8Around is declared last → @Around wins; @After is skipped; @Before always runs
         ExampleAc8().work()
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc8Before.log)
