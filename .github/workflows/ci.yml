@@ -1,8 +1,12 @@
 name: CI
 
 on:
-  pull_request_target:
-    types: [opened, synchronize]
+  pull_request:
+    types: [ opened, synchronize ]
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -32,23 +36,14 @@ jobs:
       - name: Run aspectk-core-tests (JVM)
         run: ./gradlew :aspectk-core-tests:jvmTest
 
-      - name: Run aspectk-core-tests (all supported Kotlin versions)
-        run: ./gradlew :aspectk-core-tests:testAllSupportedVersions
+      - name: Run aspectk-core-tests (JS)
+        run: ./gradlew kotlinUpgradeYarnLock :aspectk-core-tests:jsTest
 
       - name: Run aspectk-core-tests (WasmJs)
         run: ./gradlew :aspectk-core-tests:wasmJsTest
 
-      - name: Publish to Maven Local (required by sample)
-        run: ./gradlew publishToMavenLocal
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
-
-      - name: Run sample tests (JVM)
-        run: ./gradlew -p sample :composeApp:jvmTest
+      - name: Run aspectk-core-tests (all supported Kotlin versions)
+        run: ./gradlew :aspectk-core-tests:testAllSupportedVersions
 
   test-ios:
     runs-on: macos-latest
