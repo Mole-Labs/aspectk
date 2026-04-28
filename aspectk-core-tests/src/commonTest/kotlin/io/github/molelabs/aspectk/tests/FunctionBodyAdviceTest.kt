@@ -46,7 +46,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `local variable referencing another local variable computes correctly under @Around`() {
+    fun `local variable referencing another local variable computes correctly under Around Aspect`() {
         assertEquals(42, Example1().compute())
     }
 
@@ -68,7 +68,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `local variable referencing a parameter computes correctly under @Around`() {
+    fun `local variable referencing a parameter computes correctly under Around Aspect`() {
         assertEquals(10, Example2().double(5))
     }
 
@@ -90,7 +90,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `lambda capturing a local variable executes correctly under @Around`() {
+    fun `lambda capturing a local variable executes correctly under Around Aspect`() {
         assertEquals(36, Example3().sumWithBase())
     }
 
@@ -112,7 +112,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `local function declaration inside body executes correctly under @Around`() {
+    fun `local function declaration inside body executes correctly under Around Aspect`() {
         assertEquals("Hello, World!", Example4().greet("World"))
     }
 
@@ -139,7 +139,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `when expression in body executes correctly under @Before`() {
+    fun `when expression in body executes correctly under Before Aspect`() {
         val result = Example5().classify(1)
         assertTrue(ExampleAspect5.called)
         assertEquals("positive", result)
@@ -169,7 +169,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `try-catch block in body executes correctly under @After`() {
+    fun `try-catch block in body executes correctly under After Aspect`() {
         val result = Example6().safeOp(null)
         assertTrue(ExampleAspect6.called)
         assertEquals("fallback", result)
@@ -198,7 +198,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `for loop in body executes correctly under @Before`() {
+    fun `for loop in body executes correctly under Before Aspect`() {
         val result = Example7().sumUpTo(10)
         assertTrue(ExampleAspect7.called)
         assertEquals(55, result)
@@ -224,7 +224,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `member property access in body computes correctly under @Around`() {
+    fun `member property access in body computes correctly under Around Aspect`() {
         assertEquals(12, Example8().scale(4))
     }
 
@@ -250,7 +250,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `member function call in body computes correctly under @Around`() {
+    fun `member function call in body computes correctly under Around Aspect`() {
         assertEquals(12, Example9().compute(4))
     }
 
@@ -282,7 +282,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `external class function call in body executes correctly under @After`() {
+    fun `external class function call in body executes correctly under After Aspect`() {
         val result = Example10().process(5)
         assertTrue(ExampleAspect10.called)
         assertEquals(105, result)
@@ -311,7 +311,7 @@ class FunctionBodyAdviceTest {
     }
 
     @Test
-    fun `sequence builder (coroutine) in body executes correctly under @Around`() {
+    fun `coroutine sequence builder in body executes correctly under Around Aspect`() {
         assertEquals(42, Example11().generateWithCoroutine())
     }
 }
