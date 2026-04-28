@@ -21,6 +21,7 @@ kotlin {
     tvosSimulatorArm64()
     tvosArm64()
     iosArm64()
+    iosX64()
 
     // Tier 3
     mingwX64()
