@@ -19,7 +19,6 @@ import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrFunction
@@ -49,8 +48,6 @@ internal class LocalFunctionGenerator(
      * constructor expression that references this local function.
      */
     fun generateLocalFunction(declaration: IrFunction): IrSimpleFunction {
-        val originalStatements =
-            (declaration.body as? IrBlockBody)?.statements?.toList().orEmpty()
         val valueParams =
             declaration.parameters.filter { it.kind == IrParameterKind.Regular }
         val localFuncName = $$"$$${declaration.name.asString()}"
@@ -64,7 +61,7 @@ internal class LocalFunctionGenerator(
                 }
 
         return if (localFunc.isNullOrEmpty()) {
-            buildLocalFunction(declaration, originalStatements, valueParams, localFuncName)
+            buildLocalFunction(declaration, valueParams, localFuncName)
         } else {
             localFunc.first() as? IrSimpleFunction ?: reportCompilerBug("Unexpected local function")
         }
@@ -76,7 +73,6 @@ internal class LocalFunctionGenerator(
      */
     private fun buildLocalFunction(
         declaration: IrFunction,
-        originalStatements: List<IrStatement>,
         valueParams: List<IrValueParameter>,
         localFuncName: String,
     ): IrSimpleFunction {
@@ -107,12 +103,14 @@ internal class LocalFunctionGenerator(
         val paramSubstitutions: Map<IrValueParameter, IrValueParameter> =
             valueParams.zip(localParams).associate { (outer, local) -> outer to local }
 
+        // Deep-copy the entire body in one pass so that intra-body variable references
+        // (e.g., `val b = a + 1`) are correctly remapped to the local function's own
+        // symbols.  Copying statement-by-statement would give each call its own SymbolRemapper,
         val copiedStatements =
-            originalStatements.map {
-                it.deepCopyWithSymbols(localFunc).transformStatement(
-                    BodyTransformer(localFunc, paramSubstitutions),
-                )
-            }
+            (declaration.body?.deepCopyWithSymbols(localFunc) as? IrBlockBody)
+                ?.statements
+                ?.map { it.transformStatement(BodyTransformer(localFunc, declaration, paramSubstitutions)) }
+                .orEmpty()
 
         localFunc.body =
             aspectKCompilerContext.withIrBuilder(localFunc.symbol) {
@@ -134,10 +132,18 @@ internal class LocalFunctionGenerator(
     @OptIn(UnsafeDuringIrConstructionAPI::class)
     private class BodyTransformer(
         private val localFunc: IrSimpleFunction,
+        private val declaration: IrFunction,
         private val paramSubstitutions: Map<IrValueParameter, IrValueParameter>,
     ) : IrElementTransformerVoid() {
         override fun visitReturn(expression: IrReturn): IrExpression {
-            expression.returnTargetSymbol = localFunc.symbol
+            // Only remap returns that target the outer function. After deepCopyWithSymbols,
+            // returns targeting the outer function still point to declaration.symbol (it is
+            // outside the copied subtree and is not remapped). Returns inside nested lambdas
+            // or local functions point to their own (newly deep-copied) symbols and must NOT
+            // be redirected to localFunc, or they would short-circuit the enclosing body.
+            if (expression.returnTargetSymbol == declaration.symbol) {
+                expression.returnTargetSymbol = localFunc.symbol
+            }
             return super.visitReturn(expression)
         }
 
