@@ -5,6 +5,42 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2]
+
+### Fixed
+
+- **`@Around` on functions with complex bodies now compiles correctly** — the IR deep-copy
+  of the local function body was performed statement-by-statement, giving each call its own
+  `SymbolRemapper`. References between local variables (e.g. `val b = a + 1`) were left
+  pointing to the outer function's symbols, which the JVM lowering phase misidentified as
+  closure captures. Once the outer body was cleared the missing frame slot caused
+  `IllegalStateException: No mapping for symbol` at codegen. The entire body is now
+  deep-copied in a single pass so all intra-body references are correctly remapped.
+  ([#AroundLocalFunctionGenerationTest](https://github.com/mole-labs/aspectk))
+
+- **`@Around` on functions containing lambdas or nested local functions no longer returns
+  wrong values** — `BodyTransformer.visitReturn` previously redirected every `IrReturn` to
+  the generated `$<name>` local function, including returns inside nested lambdas and local
+  functions. This caused constructs such as `listOf(1,2,3).sumOf { it + base }` to
+  short-circuit after the first element. The transformer now only redirects returns that
+  originally targeted the outer function.
+
+### Added
+
+- **Extension functions on `JoinPoint`** (`JoinPointExtensions.kt`):
+    - `getArg<T>(name)` — retrieves a named argument, cast to `T`; throws on missing name
+    - `getArgOrNull<T>(name)` — same as above but returns `null` on missing name or cast failure
+    - `getTarget<T>()` — casts `target` to `T`; throws on `null` or cast failure
+    - `getTargetOrNull<T>()` — casts `target` to `T`; returns `null` otherwise
+    - `findAnnotation<T>()` — finds `AnnotationInfo` by annotation type on the intercepted function
+
+- **Extension functions on `MethodSignature`** (`MethodSignatureExtensions.kt`):
+    - `findAnnotation<T>()` — finds `AnnotationInfo` by annotation type in `annotations`
+
+- **Extension functions on `AnnotationInfo`** (`AnnotationInfoExtensions.kt`):
+    - `getArg<T>(paramName)` — retrieves a named annotation argument, cast to `T`
+    - `getArgOrNull<T>(paramName)` — same but returns `null` on missing name or cast failure
+
 ## [0.2.0]
 
 ### Added
