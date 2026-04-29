@@ -225,3 +225,120 @@ expect fun platformGreet(name: String)
 // jp.target  → null
 // jp.args    → [name]
 ```
+
+## Extension Functions
+
+AspectK ships a set of inline extension functions on `JoinPoint`, `MethodSignature`, and
+`AnnotationInfo` to reduce boilerplate when reading intercept context at runtime.
+
+### `JoinPoint` extensions
+
+#### `getArg<T>(name: String): T`
+
+Returns the argument value for the parameter named `name`, cast to `T`.
+Throws `NoSuchElementException` if the parameter does not exist, or `ClassCastException`
+if the value cannot be cast.
+
+```kotlin
+@Around(target = [Transactional::class])
+fun doAround(pjp: ProceedingJoinPoint): Any? {
+    val userId = pjp.getArg<String>("userId")
+    return pjp.proceed()
+}
+```
+
+#### `getArgOrNull<T>(name: String): T?`
+
+Returns the argument value for the parameter named `name`, cast to `T`, or `null` if
+the parameter does not exist or the value cannot be cast.
+
+```kotlin
+@Before(target = [Logged::class])
+fun doBefore(jp: JoinPoint) {
+    val label = jp.getArgOrNull<String>("label") ?: "unknown"
+}
+```
+
+#### `getTarget<T>(): T`
+
+Returns `JoinPoint.target` cast to `T`. Useful when advice code needs to interact with
+the receiver beyond the generic `Any?` type.
+Throws `ClassCastException` if the cast fails, or `NullPointerException` if `target`
+is `null` (top-level or companion-object function).
+
+```kotlin
+@Before(target = [Audited::class])
+fun doBefore(jp: JoinPoint) {
+    val service = jp.getTarget<UserService>()
+    service.recordAccess()
+}
+```
+
+#### `getTargetOrNull<T>(): T?`
+
+Returns `JoinPoint.target` cast to `T`, or `null` if the target is `null` or cannot be
+cast.
+
+```kotlin
+@Before(target = [Audited::class])
+fun doBefore(jp: JoinPoint) {
+    jp.getTargetOrNull<UserService>()?.recordAccess()
+}
+```
+
+#### `findAnnotation<T : Annotation>(): AnnotationInfo?`
+
+Returns the `AnnotationInfo` for annotation `T` on the intercepted function, or `null`
+if the annotation is not present. Delegates to `MethodSignature.findAnnotation<T>()`.
+
+```kotlin
+@Before(target = [RateLimit::class])
+fun doBefore(jp: JoinPoint) {
+    val rateLimit = jp.findAnnotation<RateLimit>() ?: return
+    val limit = rateLimit.getArg<Int>("maxCalls")
+}
+```
+
+### `MethodSignature` extensions
+
+#### `findAnnotation<T : Annotation>(): AnnotationInfo?`
+
+Returns the `AnnotationInfo` for annotation `T` in `MethodSignature.annotations`, or
+`null` if the annotation is not present.
+
+```kotlin
+@Before(target = [Secured::class])
+fun doBefore(jp: JoinPoint) {
+    val secured = jp.signature.findAnnotation<Secured>() ?: return
+    val role = secured.getArg<String>("role")
+}
+```
+
+### `AnnotationInfo` extensions
+
+#### `getArg<T>(paramName: String): T`
+
+Returns the annotation argument value for the parameter named `paramName`, cast to `T`.
+Throws `NoSuchElementException` if the parameter does not exist, or `ClassCastException`
+if the value cannot be cast.
+
+```kotlin
+@Before(target = [RateLimit::class])
+fun doBefore(jp: JoinPoint) {
+    val info = jp.findAnnotation<RateLimit>()!!
+    val maxCalls = info.getArg<Int>("maxCalls")
+}
+```
+
+#### `getArgOrNull<T>(paramName: String): T?`
+
+Returns the annotation argument value for the parameter named `paramName`, cast to `T`,
+or `null` if the parameter does not exist or the value cannot be cast.
+
+```kotlin
+@Before(target = [RateLimit::class])
+fun doBefore(jp: JoinPoint) {
+    val info = jp.findAnnotation<RateLimit>()!!
+    val maxCalls = info.getArgOrNull<Int>("maxCalls") ?: 100
+}
+```
