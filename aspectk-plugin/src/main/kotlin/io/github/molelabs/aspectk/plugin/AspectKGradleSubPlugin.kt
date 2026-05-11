@@ -15,8 +15,10 @@
  */
 package io.github.molelabs.aspectk.plugin
 
+import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
@@ -49,6 +51,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
 
     @OptIn(ExperimentalBuildToolsApi::class, ExperimentalKotlinGradlePluginApi::class)
     override fun apply(target: Project) {
+        GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
         val compilerVersionProvider =
             target.kotlinExtension.compilerVersion.map { KotlinToolingVersion(it) }
                 ?: target.provider { target.kotlinToolingVersion }
@@ -95,6 +98,15 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
                 .configure {
                     it.dependencies.addLater(aspectKRuntimeDependency)
                 }
+        }
+
+        target.pluginManager.withPlugin("com.android.base") {
+            val androidExtension = target.extensions.getByName("android") as CommonExtension<*, *, *, *, *, *>
+            androidExtension.sourceSets.configureEach { sourceSet ->
+                target.configurations.named(sourceSet.implementationConfigurationName).configure {
+                    it.dependencies.addLater(aspectKRuntimeDependency)
+                }
+            }
         }
 
         target.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
