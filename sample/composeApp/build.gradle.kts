@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.multiplatform)
-    id("io.github.mole-labs.aspectk") version "0.2.2"
+    id("io.github.mole-labs.aspectk") version "0.2.3"
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
 }
