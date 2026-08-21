@@ -19,7 +19,7 @@ Add to `gradle/libs.versions.toml`:
 aspectk = "LATEST_VERSION"
 
 [plugins]
-aspectk = { id = "io.github.mole-labs.aspectk.compiler", version.ref = "aspectk" }
+aspectk = { id = "io.github.mole-labs.aspectk", version.ref = "aspectk" }
 ```
 
 Then in your `build.gradle.kts`:
