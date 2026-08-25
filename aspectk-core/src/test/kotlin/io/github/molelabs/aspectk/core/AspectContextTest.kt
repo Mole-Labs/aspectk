@@ -24,8 +24,8 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.name.FqName
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -34,9 +34,9 @@ import java.util.concurrent.ConcurrentHashMap
 class AspectLookUpTest {
     private lateinit var aspectLookUp: AspectLookUp
 
-    private val aspectContext1 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
-    private val aspectContext2 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
-    private val aspectContext3 = AspectContext(mockIrFunction(), mockIrClassSymbol(), Kind.BEFORE, false)
+    private val aspectContext1 = AspectContext(mockIrSimpleFunctionSymbol(), mockIrClassSymbol(), Kind.BEFORE, false)
+    private val aspectContext2 = AspectContext(mockIrSimpleFunctionSymbol(), mockIrClassSymbol(), Kind.BEFORE, false)
+    private val aspectContext3 = AspectContext(mockIrSimpleFunctionSymbol(), mockIrClassSymbol(), Kind.BEFORE, false)
 
     @Test
     fun `add and get AspectContexts for a single FqName`() {
@@ -172,7 +172,7 @@ class AspectLookUpTest {
                     repeat(numAddsPerThread) {
                         val context =
                             AspectContext(
-                                mockIrFunction(),
+                                mockIrSimpleFunctionSymbol(),
                                 mockIrClassSymbol(),
                                 Kind.BEFORE,
                                 false,
@@ -222,7 +222,7 @@ class AspectLookUpTest {
     }
 }
 
-fun mockIrFunction(): IrFunction = mockk(relaxed = true)
+fun mockIrSimpleFunctionSymbol(): IrSimpleFunctionSymbol = mockk(relaxed = true)
 
 fun mockIrClassSymbol(): IrClassSymbol = mockk(relaxed = true)
 

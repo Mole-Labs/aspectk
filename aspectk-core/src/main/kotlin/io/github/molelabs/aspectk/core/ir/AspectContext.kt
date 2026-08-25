@@ -19,9 +19,9 @@ import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AFTER
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AROUND
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.BEFORE
 import org.jetbrains.kotlin.ir.IrElement
-import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.name.FqName
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -61,7 +61,7 @@ internal class AspectLookUp {
 }
 
 internal data class AspectContext(
-    val advice: IrFunction,
+    val advice: IrSimpleFunctionSymbol,
     val aspect: IrClassSymbol,
     val kind: Kind,
     val inherits: Boolean = false,
