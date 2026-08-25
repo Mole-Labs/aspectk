@@ -17,6 +17,7 @@ package io.github.molelabs.aspectk.core
 
 import com.tschuchort.compiletesting.JvmCompilationResult
 import com.tschuchort.compiletesting.KotlinCompilation
+import com.tschuchort.compiletesting.PluginOption
 import com.tschuchort.compiletesting.SourceFile
 import io.github.molelabs.aspectk.runtime.MethodParameter
 import org.intellij.lang.annotations.Language
@@ -24,6 +25,7 @@ import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.JvmDefaultMode
 import org.junit.jupiter.api.Assertions.assertNotNull
+import java.io.File
 import java.net.URLClassLoader
 
 @OptIn(ExperimentalCompilerApi::class)
@@ -52,6 +54,34 @@ fun compile(
     },
     plugin,
 )
+
+@OptIn(ExperimentalCompilerApi::class)
+fun compileWithHints(
+    sourceFiles: List<SourceFile>,
+    hintsOutputDir: File? = null,
+    hintsPaths: List<File> = emptyList(),
+    extraClasspath: List<File> = emptyList(),
+): JvmCompilationResult = KotlinCompilation()
+    .apply {
+        jvmDefault = JvmDefaultMode.DISABLE.description
+        jvmTarget = "17"
+        languageVersion = "2.3"
+        sources = sourceFiles
+        verbose = true
+        compilerPluginRegistrars = listOf(AspectKCompilerPluginRegistrar())
+        commandLineProcessors = listOf(AspectKCommandLineProcessor())
+        pluginOptions =
+            buildList {
+                hintsOutputDir?.let {
+                    add(PluginOption("io.github.mole-labs.aspectk", AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_OPTION, it.absolutePath))
+                }
+                hintsPaths.forEach {
+                    add(PluginOption("io.github.mole-labs.aspectk", AspectKCommandLineProcessor.HINTS_PATH_OPTION, it.absolutePath))
+                }
+            }
+        inheritClassPath = true
+        classpaths = classpaths + extraClasspath
+    }.compile()
 
 fun URLClassLoader.assertAndGetField(
     className: String,
