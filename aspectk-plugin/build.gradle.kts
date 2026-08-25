@@ -39,5 +39,4 @@ gradlePlugin {
 dependencies {
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin.api)
-    compileOnly(libs.android.gradleApi)
 }
