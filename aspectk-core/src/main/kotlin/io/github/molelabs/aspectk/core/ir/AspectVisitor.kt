@@ -90,7 +90,7 @@ internal class AspectVisitor(
                     ?: reportCompilerBug("advice argument type should not be null")
             val context =
                 AspectContext(
-                    advice = func,
+                    advice = func.symbol,
                     aspect = aspectClass.symbol,
                     kind = kind,
                     methodSignature = null,

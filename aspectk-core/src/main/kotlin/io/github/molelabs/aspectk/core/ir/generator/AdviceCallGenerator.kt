@@ -56,7 +56,7 @@ internal class AdviceCallGenerator(
         irBlock {
             aspectKContext.aspectLookUp[target].forEach { context ->
                 if (context.canInsertAdvice(checkInherits, Kind.BEFORE)) {
-                    +irCall(context.advice.symbol).apply {
+                    +irCall(context.advice).apply {
                         dispatchReceiver = irGetObject(context.aspect)
                         arguments[1] = joinPointExpr.deepCopyWithSymbols()
                     }
@@ -123,7 +123,7 @@ internal class AdviceCallGenerator(
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
         irBlock {
             if (context.canInsertAdvice(checkInherits, Kind.AFTER)) {
-                +irCall(context.advice.symbol).apply {
+                +irCall(context.advice).apply {
                     dispatchReceiver = irGetObject(context.aspect)
                     arguments[1] = joinPointExpr.deepCopyWithSymbols()
                 }
@@ -208,7 +208,7 @@ internal class AdviceCallGenerator(
             if (context.canInsertAdvice(checkInherits, Kind.AROUND)) {
                 +irReturn(
                     irAs(
-                        irCall(context.advice.symbol).apply {
+                        irCall(context.advice).apply {
                             dispatchReceiver = irGetObject(context.aspect)
                             arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
                         },
