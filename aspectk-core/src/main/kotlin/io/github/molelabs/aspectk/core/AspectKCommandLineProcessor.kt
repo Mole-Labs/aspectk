@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core
 
+import com.google.auto.service.AutoService
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
@@ -27,7 +28,11 @@ import org.jetbrains.kotlin.config.CompilerConfigurationKey
 // - hintsOutputDir: where this module writes its own advice hints (single value).
 // - hintsPath: a directory containing an upstream module's hints.json (repeatable).
 // The pluginId must match the subpluginId declared in the Gradle plugin (AspectKGradleSubPlugin).
+// @AutoService writes the META-INF/services entry the real compiler's -P argument parser
+// needs to discover this class via ServiceLoader — without it, -P options for this plugin
+// are silently never processed outside of test harnesses that register it explicitly.
 @OptIn(ExperimentalCompilerApi::class)
+@AutoService(CommandLineProcessor::class)
 internal class AspectKCommandLineProcessor : CommandLineProcessor {
     override val pluginId: String = "io.github.mole-labs.aspectk"
 

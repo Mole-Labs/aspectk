@@ -107,7 +107,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         // (docs/design-decision/cross-module-weaving.md §3 "Gradle wiring").
         project.configurations
             .getByName(kotlinCompilation.compileDependencyConfigurationName)
-            .dependencies
+            .allDependencies
             .withType(ProjectDependency::class.java)
             .configureEach { projectDependency ->
                 project.dependencies.add(
