@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.hints.HintRecord
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFile
@@ -25,6 +26,7 @@ import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.expressions.IrVarargElement
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.classFqName
+import org.jetbrains.kotlin.ir.util.classId
 import org.jetbrains.kotlin.ir.util.functions
 import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
@@ -62,17 +64,17 @@ internal class AspectVisitor(
                 val kind = AspectContext.find(fqName) ?: reportCompilerBug("kind not found: $fqName")
                 val inherits = (annotation.arguments[1] as? IrConst)?.value as? Boolean
 
-                when (val targetArg = annotation.arguments[0]) {
-                    is IrVararg -> {
-                        targetArg.elements.forEach { element ->
-                            processElement(element, func, declaration, kind, inherits)
-                        }
+                val targetFqNames =
+                    when (val targetArg = annotation.arguments[0]) {
+                        is IrVararg ->
+                            targetArg.elements.mapNotNull { element ->
+                                processElement(element, func, declaration, kind, inherits)
+                            }
+
+                        else -> reportCompilerBug("invalid targetArg: $targetArg")
                     }
 
-                    else -> {
-                        reportCompilerBug("invalid targetArg: $targetArg")
-                    }
-                }
+                recordHint(declaration, func, kind, inherits ?: false, targetFqNames)
             }
         }
     }
@@ -83,7 +85,7 @@ internal class AspectVisitor(
         aspectClass: IrClass,
         kind: AspectContext.Kind,
         inherits: Boolean?,
-    ) {
+    ): String? {
         if (element is IrClassReference) {
             val targetFqName =
                 element.classType.classFqName
@@ -100,7 +102,34 @@ internal class AspectVisitor(
                 fqName = targetFqName,
                 aspectContext = inherits?.let { context.copy(inherits = it) } ?: context,
             )
+            return targetFqName.asString()
         }
+        return null
+    }
+
+    // One HintRecord per advice function, listing every target it was just registered against
+    // above — this is what a downstream module's compiler plugin reads back to reconstruct the
+    // same AspectContext entries without ever seeing this module's IR
+    // (docs/design-decision/cross-module-weaving.md §4).
+    private fun recordHint(
+        aspectClass: IrClass,
+        func: IrSimpleFunction,
+        kind: AspectContext.Kind,
+        inherits: Boolean,
+        targets: List<String>,
+    ) {
+        if (targets.isEmpty()) return
+        val classId = aspectClass.classId ?: reportCompilerBug("aspect class should have a ClassId: ${aspectClass.name}")
+        aspectkContext.localHints.add(
+            HintRecord(
+                packageName = classId.packageFqName.asString(),
+                className = classId.relativeClassName.asString(),
+                functionName = func.name.asString(),
+                kind = kind.name,
+                targets = targets,
+                inherits = inherits,
+            ),
+        )
     }
 
     private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
