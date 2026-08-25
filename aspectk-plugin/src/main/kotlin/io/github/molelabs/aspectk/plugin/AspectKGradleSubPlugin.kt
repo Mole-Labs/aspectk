@@ -17,7 +17,10 @@ package io.github.molelabs.aspectk.plugin
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
+import org.gradle.api.file.Directory
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -42,7 +45,83 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             project.dependencies.add("commonMainImplementation", "${BuildConfig.GROUP}:aspectk-runtime:${BuildConfig.VERSION}")
         }
 
-        return project.provider { emptyList() }
+        val hintsDir =
+            project.layout.buildDirectory.dir(
+                "generated/aspectk/hints/${kotlinCompilation.target.targetName}/${kotlinCompilation.name}",
+            )
+
+        kotlinCompilation.compileTaskProvider.configure { task ->
+            task.outputs.dir(hintsDir).withPropertyName("aspectkHintsDir")
+        }
+
+        val hintsConfiguration = registerHintsConfigurations(project, kotlinCompilation, hintsDir)
+
+        return project.provider {
+            buildList {
+                add(SubpluginOption("hintsOutputDir", hintsDir.get().asFile.absolutePath))
+                hintsConfiguration.incoming.files.forEach { file ->
+                    add(SubpluginOption("hintsPath", file.absolutePath))
+                }
+            }
+        }
+    }
+
+    // Naming is a pure function of (targetName, compilationName) alone, so a downstream
+    // project can name the exact configuration it needs on an upstream project without any
+    // cross-project introspection. This only propagates automatically to/from other projects
+    // that also apply this Gradle plugin with a matching target+compilation name — see
+    // docs/design-decision/cross-module-weaving.md §3 "What we're giving up".
+    private fun hintsElementsConfigurationName(
+        targetName: String,
+        compilationName: String,
+    ): String = "aspectkHints${targetName.replaceFirstChar { it.uppercase() }}${compilationName.replaceFirstChar { it.uppercase() }}Elements"
+
+    private fun registerHintsConfigurations(
+        project: Project,
+        kotlinCompilation: KotlinCompilation<*>,
+        hintsDir: Provider<Directory>,
+    ): Configuration {
+        val elementsName = hintsElementsConfigurationName(kotlinCompilation.target.targetName, kotlinCompilation.name)
+        val elementsConfig =
+            project.configurations.maybeCreate(elementsName).apply {
+                isCanBeConsumed = true
+                isCanBeResolved = false
+                isVisible = false
+            }
+        project.artifacts.add(elementsConfig.name, hintsDir) {
+            it.builtBy(kotlinCompilation.compileTaskProvider)
+        }
+
+        val resolvableName = "${elementsName}Classpath"
+        val resolvableConfig =
+            project.configurations.maybeCreate(resolvableName).apply {
+                isCanBeConsumed = false
+                isCanBeResolved = true
+                isVisible = false
+            }
+
+        // Mirror this compilation's own project dependencies, but pointed at the SAME named
+        // hints-elements configuration on each dependency project instead of its default variant.
+        // Because that configuration on the dependency project is wired the same recursive way,
+        // Gradle's ordinary configuration-graph resolution walks and dedups the rest transitively
+        // (docs/design-decision/cross-module-weaving.md §3 "Gradle wiring").
+        project.configurations
+            .getByName(kotlinCompilation.compileDependencyConfigurationName)
+            .dependencies
+            .withType(ProjectDependency::class.java)
+            .configureEach { projectDependency ->
+                project.dependencies.add(
+                    resolvableConfig.name,
+                    project.dependencies.project(
+                        mapOf(
+                            "path" to projectDependency.path,
+                            "configuration" to elementsName,
+                        ),
+                    ),
+                )
+            }
+
+        return resolvableConfig
     }
 
     override fun getCompilerPluginId(): String = BuildConfig.COMPILER_PLUGIN_ID
