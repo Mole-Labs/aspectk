@@ -62,9 +62,12 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         return project.provider {
             buildList {
                 add(SubpluginOption("hintsOutputDir", hintsDir.get().asFile.absolutePath))
-                hintsConfiguration.incoming.files.forEach { file ->
-                    add(SubpluginOption("hintsPath", file.absolutePath))
-                }
+                hintsConfiguration.incoming
+                    .artifactView { view -> view.isLenient = true }
+                    .files
+                    .forEach { file ->
+                        add(SubpluginOption("hintsPath", file.absolutePath))
+                    }
             }
         }
     }
