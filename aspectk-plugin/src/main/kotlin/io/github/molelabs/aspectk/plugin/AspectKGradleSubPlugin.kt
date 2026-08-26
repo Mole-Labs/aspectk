@@ -31,11 +31,7 @@ import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 
 internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
     // Adds the aspectk-runtime dependency per compilation instead of per platform-specific
-    // extension (multiplatform/Android/JVM source sets). This works uniformly for every
-    // Kotlin target — including plain, non-Android Kotlin/Multiplatform projects — without
-    // ever referencing an Android Gradle Plugin type, which used to make plugin class
-    // decoration fail outright for non-Android consumers (see
-    // https://github.com/Mole-Labs/aspectk/issues/28). Same approach Metro's Gradle plugin
+    // extension (multiplatform/Android/JVM source sets). Same approach Metro's Gradle plugin
     // uses: https://github.com/ZacSweers/metro/blob/main/gradle-plugin/src/main/kotlin/dev/zacsweers/metro/gradle/MetroGradleSubplugin.kt
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
