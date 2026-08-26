@@ -5,9 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
-    // No AspectK plugin here -- composeApp declares no @Aspect and no advice-target annotations
-    // of its own. It only assembles already-woven feature modules; it doesn't need to know
-    // AspectK exists.
 }
 
 android {
