@@ -86,9 +86,7 @@ internal class ProceedingJoinPointGenerator(
                     ?: irNull(context.irBuiltIns.anyNType)
                 arguments[1] =
                     irCall(signatureProperty.getter!!).apply {
-                        insertDispatchReceiver(
-                            irGetObject((signatureProperty.parent as IrClass).symbol),
-                        )
+                        dispatchReceiver = irGetObject((signatureProperty.parent as IrClass).symbol)
                     }
                 arguments[2] = argsExpression
                 arguments[3] =

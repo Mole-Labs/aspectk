@@ -48,9 +48,7 @@ internal class JoinPointGenerator(
             arguments[0] = receiver
             arguments[1] =
                 irCall(methodSignatureProperty.getter!!).apply {
-                    insertDispatchReceiver(
-                        irGetObject((methodSignatureProperty.parent as IrClass).symbol),
-                    )
+                    dispatchReceiver = irGetObject((methodSignatureProperty.parent as IrClass).symbol)
                 }
             arguments[2] =
                 aspectKContext.createIrListOf(

@@ -15,7 +15,10 @@
  */
 package io.github.molelabs.aspectk.core.compat
 
+import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -40,4 +43,9 @@ class IrCompatImpl2320 : IrCompat {
     override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> = pluginContext.finderForBuiltins().findFunctions(callableId)
 
     override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? = pluginContext.finderForBuiltins().findClass(classId)
+
+    @OptIn(ExperimentalCompilerApi::class)
+    override fun CompilerPluginRegistrar.ExtensionStorage.registerIrGenerationExtension(extension: IrGenerationExtension) {
+        IrGenerationExtension.registerExtension(extension)
+    }
 }
