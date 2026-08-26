@@ -19,7 +19,6 @@ import com.google.auto.service.AutoService
 import io.github.molelabs.aspectk.core.compat.IrCompat
 import io.github.molelabs.aspectk.core.hints.HintsCodec
 import io.github.molelabs.aspectk.core.ir.AdviceGenerationExtension
-import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -48,8 +47,10 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
             configuration
                 .getList(AspectKCommandLineProcessor.HINTS_PATHS_KEY)
                 .flatMap { dir -> HintsCodec.read(File(dir, "hints.json")) }
-        IrGenerationExtension.registerExtension(
-            AdviceGenerationExtension(irCompat, hintsOutputDir, externalHints),
-        )
+        with(irCompat) {
+            registerIrGenerationExtension(
+                AdviceGenerationExtension(irCompat, hintsOutputDir, externalHints),
+            )
+        }
     }
 }

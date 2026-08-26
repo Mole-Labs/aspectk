@@ -25,8 +25,8 @@ import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
 
-class IrCompatImpl2310 : IrCompat {
-    override val kotlinVersion: KotlinVersion = KotlinVersion(2, 3, 10)
+class IrCompatImpl2400 : IrCompat {
+    override val kotlinVersion: KotlinVersion = KotlinVersion(2, 4, 0)
 
     override fun instanceReceiverOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.INSTANCE_RECEIVER
 
@@ -40,9 +40,9 @@ class IrCompatImpl2310 : IrCompat {
 
     override fun valueParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
 
-    override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> = pluginContext.referenceFunctions(callableId)
+    override fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol> = pluginContext.finderForBuiltins().findFunctions(callableId)
 
-    override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? = pluginContext.referenceClass(classId)
+    override fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol? = pluginContext.finderForBuiltins().findClass(classId)
 
     @OptIn(ExperimentalCompilerApi::class)
     override fun CompilerPluginRegistrar.ExtensionStorage.registerIrGenerationExtension(extension: IrGenerationExtension) {

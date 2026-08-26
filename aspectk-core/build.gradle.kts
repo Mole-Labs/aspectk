@@ -53,6 +53,15 @@ val shadowBundle: Configuration by configurations.creating {
     isCanBeResolved = true
 }
 
+// -PtestKotlinLang (testAllSupportedVersions) lowers the whole build's Kotlin Gradle Plugin
+// version, so an older frontend can't compile compat-2400 (needs kotlin-compiler:2.4.0). Only
+// wire it in when it's actually buildable.
+val testKotlinLangVersion = providers.gradleProperty("testKotlinLang").orNull
+val supportsCompat2400 =
+    testKotlinLangVersion == null ||
+        org.jetbrains.kotlin.tooling.core.KotlinToolingVersion(testKotlinLangVersion) >=
+        org.jetbrains.kotlin.tooling.core.KotlinToolingVersion("2.4.0")
+
 dependencies {
     compileOnly(libs.kotlin.compiler)
     compileOnly(libs.google.autoservice.annotations)
@@ -63,12 +72,14 @@ dependencies {
     shadowBundle(project(":aspectk-core-compat:compat-2220"))
     shadowBundle(project(":aspectk-core-compat:compat-2310"))
     shadowBundle(project(":aspectk-core-compat:compat-2320"))
+    if (supportsCompat2400) shadowBundle(project(":aspectk-core-compat:compat-2400"))
 
     testRuntimeOnly(libs.kotlin.compiler)
     testRuntimeOnly(project(":aspectk-core-compat"))
     testRuntimeOnly(project(":aspectk-core-compat:compat-2220"))
     testRuntimeOnly(project(":aspectk-core-compat:compat-2310"))
     testRuntimeOnly(project(":aspectk-core-compat:compat-2320"))
+    if (supportsCompat2400) testRuntimeOnly(project(":aspectk-core-compat:compat-2400"))
 
     testImplementation(libs.test.mockk)
     testImplementation(libs.kotlin.coroutine.core)

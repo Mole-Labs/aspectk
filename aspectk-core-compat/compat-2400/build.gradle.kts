@@ -13,18 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.molelabs.aspectk.plugin
 
-import java.io.File
+plugins {
+    id("java-library")
+    id("org.jetbrains.kotlin.jvm")
+}
 
-internal val ASPECT_RELEVANT_MARKERS = listOf("@Aspect", "@Before", "@After", "@Around")
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
-private val LINE_COMMENT = Regex("//.*")
-private val BLOCK_COMMENT = Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL)
+kotlin {
+    jvmToolchain(17)
+}
 
-private fun stripComments(text: String): String = text.replace(BLOCK_COMMENT, "").replace(LINE_COMMENT, "")
-
-internal fun fileHasAspectMarker(file: File): Boolean {
-    val text = stripComments(file.readText())
-    return ASPECT_RELEVANT_MARKERS.any { marker -> marker in text }
+dependencies {
+    compileOnly("org.jetbrains.kotlin:kotlin-compiler:2.4.0")
+    compileOnly(project(":aspectk-core-compat"))
 }
