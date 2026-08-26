@@ -57,6 +57,8 @@ internal class AspectVisitor(
         declaration.acceptChildrenVoid(this)
         if (canSkip(declaration)) return super.visitClass(declaration)
 
+        declaration.classId?.let { aspectkContext.visitedAspectClassIds.add(it) }
+
         declaration.functions.forEach { func ->
             func.annotations.forEach { annotation ->
                 val fqName = annotation.type.classFqName ?: return@forEach
