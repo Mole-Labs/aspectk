@@ -84,7 +84,8 @@ Convention plugins:
 - **Thread safety**: `AspectLookUp` uses `ConcurrentHashMap` and `Collections.synchronizedList/Set`; tests verify concurrent safety.
 - **IR verification in tests**: Compiler args `-Xverify-ir=error` and `-Xverify-ir-visibility` ensure generated IR is valid.
 - **Binary compatibility**: `kotlinx.binary-compatibility-validator` runs on `:runtime` and `:plugin` to catch API breaks.
-- **Backwards compatibility**: `AspectKBuildExtension.enableBackwardsCompatibility(lowestSupportedKotlinVersion)` controls minimum supported Kotlin version in `:plugin`.
+- **Backwards compatibility**: `AspectKBuildExtension.enableBackwardsCompatibility(lowestSupportedKotlinVersion)` controls minimum supported Kotlin version in `:plugin`. The full supported Kotlin range (currently 2.2.20–2.4.10, see `supported-versions.txt`) is exercised via `:aspectk-core-tests:testAllSupportedVersions` in CI.
+- **`aspectk-core-compat`**: isolates K2 compiler-internal API differences across the supported Kotlin range behind the `IrCompat` interface, with one implementation module per API-shape break (`compat-2220`, `compat-2310`, `compat-2320`, `compat-2400`), each compiled against its own pinned `kotlin-compiler` version and picked at runtime via `ServiceLoader` + `KotlinVersion.CURRENT` (`IrCompat.create`). Covers both small IR lookup differences (`referenceFunctions`/`referenceClass`) and the compiler-plugin registration mechanism itself (`IrGenerationExtension.registerExtension`, whose supertype changed from `ProjectExtensionDescriptor` to `ExtensionPointDescriptor` at Kotlin 2.4.0 — KT-83341).
 
 ## Code Style
 
@@ -96,7 +97,7 @@ Convention plugins:
 
 | Component | Version |
 |---|---|
-| Kotlin | 2.2.21 |
+| Kotlin | 2.3.20 (dev-time); supports 2.2.20–2.4.10 (`supported-versions.txt`) |
 | JVM target | 17 |
 | Kotlin Compile Testing (kctfork) | 0.12.1 |
 | JUnit Jupiter | 5.8.1 |

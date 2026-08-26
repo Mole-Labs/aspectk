@@ -15,7 +15,10 @@
  */
 package io.github.molelabs.aspectk.core.compat
 
+import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
+import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -41,6 +44,12 @@ interface IrCompat {
     fun referenceFunctions(pluginContext: IrPluginContext, callableId: CallableId): Collection<IrSimpleFunctionSymbol>
 
     fun referenceClass(pluginContext: IrPluginContext, classId: ClassId): IrClassSymbol?
+
+    // IrGenerationExtension.Companion's supertype changed between 2.3.20 and 2.4.0
+    // (ProjectExtensionDescriptor -> ExtensionPointDescriptor, KT-83341), a binary break: a
+    // plugin jar compiled against the old shape throws ClassCastException on a newer daemon.
+    @OptIn(ExperimentalCompilerApi::class)
+    fun CompilerPluginRegistrar.ExtensionStorage.registerIrGenerationExtension(extension: IrGenerationExtension)
 
     companion object {
         fun create(version: KotlinVersion): IrCompat = ServiceLoader
