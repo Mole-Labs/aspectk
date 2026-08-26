@@ -1,20 +1,21 @@
 # AspectK Compiler Plugin Architecture Overview
 
-A description of how the current (single-module) weaving pipeline actually works, for reference when designing new features.
+A description of how the weaving pipeline actually works, for reference when designing new features.
 
 ## Entry point
 
-`AspectKCompilerPluginRegistrar` (`aspectk-core/.../AspectKCompilerPluginRegistrar.kt`) is auto-registered with the K2 compiler via `@AutoService(CompilerPluginRegistrar::class)`. In `registerExtensions()`, it picks the IR compatibility layer matching the current Kotlin version via `IrCompat.create(KotlinVersion.CURRENT)`, then registers `AdviceGenerationExtension` as an `IrGenerationExtension`.
+`AspectKCompilerPluginRegistrar` (`aspectk-core/.../AspectKCompilerPluginRegistrar.kt`) is auto-registered with the K2 compiler via `@AutoService(CompilerPluginRegistrar::class)`. In `registerExtensions()`, it picks the IR compatibility layer matching the current Kotlin version via `IrCompat.create(KotlinVersion.CURRENT)`, then registers `AdviceGenerationExtension` as an `IrGenerationExtension` through `irCompat.registerIrGenerationExtension(...)` rather than calling the compiler API directly — `IrGenerationExtension.Companion`'s own supertype changed in a binary-incompatible way at Kotlin 2.4.0 (KT-83341), so each `IrCompat` implementation module needs its own compiled bytecode bound against its own pinned `kotlin-compiler` version.
 
-`AspectKCommandLineProcessor` is the hook for `-P plugin:<id>:<key>=<value>` compiler options, but currently `pluginOptions` is empty — there are no options yet.
+`AspectKCommandLineProcessor` is the hook for `-P plugin:<id>:<key>=<value>` compiler options: `hintsOutputDir` (where this module writes its own `hints.json`) and `hintsPath` (repeatable — a dependency's `hints.json` directory to read). See [cross-module weaving](cross-module-weaving.md).
 
 ## IR generation pipeline (`AdviceGenerationExtension.generate()`)
 
 Runs once per module, in this order (`aspectk-core/.../ir/AdviceGenerationExtension.kt:46-69`):
 
-1. `moduleFragment.acceptChildren(AspectVisitor(...), null)` — scans `@Aspect` declarations and populates `AspectLookUp`.
-2. `moduleFragment.acceptChildren(InheritableVisitor(...), null)` — tracks override relationships for targets where `inherits = true`.
-3. `moduleFragment.transform(AspectTransformer(...), null)` — actually inserts advice calls into function bodies.
+1. `moduleFragment.acceptChildren(AspectVisitor(...), null)` — scans `@Aspect` declarations, populates `AspectLookUp`, records one `HintRecord` per advice into `localHints`, and tracks which `@Aspect` classes were actually visited this round (`visitedAspectClassIds`).
+2. Hints merge: `@Aspect` classes this round didn't visit are carried forward by re-reading this module's own previous `hints.json` and resolving them via `IrCompat.referenceClass`/`referenceFunctions`; hints from `hintsPath` (other modules) are merged the same way. Both get added into `AspectLookUp` after the local results. See [cross-module weaving](cross-module-weaving.md) for why this exists.
+3. `moduleFragment.acceptChildren(InheritableVisitor(...), null)` — tracks override relationships for targets where `inherits = true`.
+4. `moduleFragment.transform(AspectTransformer(...), null)` — actually inserts advice calls into function bodies.
 
 All three stages share one `AspectKIrCompilerContext` (pluginContext + irCompat + `AspectLookUp`).
 
@@ -37,10 +38,14 @@ internal class AspectLookUp {
 }
 
 internal data class AspectContext(
-    val advice: IrFunction,       // the advice function itself (currently a local IrFunction)
+    val advice: IrSimpleFunctionSymbol,  // the advice function's symbol (not the IrFunction itself --
+                                          // AdviceCallGenerator only ever needs .symbol, so this
+                                          // resolves the same way whether the advice is local or
+                                          // came from another module's hints.json)
     val aspect: IrClassSymbol,    // the @Aspect object the advice belongs to
     val kind: Kind,                // BEFORE / AFTER / AROUND
     val inherits: Boolean = false,
+    val methodSignature: IrExpression? = null, // unused (TODO in source) -- always null today
 )
 ```
 
@@ -83,16 +88,17 @@ Because of this ordering dependency, **when a single function has 2+ `@Around` a
 
 ## Utilities
 
-- `IrCompat` (`aspectk-core-compat/`) — a compatibility layer absorbing IR API differences across Kotlin versions. Uses `ServiceLoader` to find version-specific implementations and picks the closest match to `kotlinVersion`. `referenceFunctions(pluginContext, callableId)` / `referenceClass(pluginContext, classId)` can **also resolve symbols from dependencies (including already-compiled modules)** — the technical basis for cross-module weaving being feasible.
+- `IrCompat` (`aspectk-core-compat/`) — a compatibility layer absorbing IR API differences across Kotlin versions: one implementation module per API-shape break (`compat-2220`/`2310`/`2320`/`2400`), each compiled against its own pinned `kotlin-compiler` version, picked at runtime via `ServiceLoader` + `KotlinVersion.CURRENT`. `referenceFunctions(pluginContext, callableId)` / `referenceClass(pluginContext, classId)` can **also resolve symbols from dependencies (including already-compiled modules)** — the technical basis for cross-module weaving being feasible.
 - `IrExtension.kt` — IR-builder helpers such as `createIrListOf`, `createKClassExpression`, `withIrBuilder`.
 - `Util.kt` — `reportCompilerBug()`: the shared error used when an internal plugin invariant is broken, prompting the user to file an issue.
 - `Tracer.kt` — a utility for tracing (logging/timing) the advice-generation stages per module.
 
-## Summary: single-module weaving flow
+## Summary: one module's weaving flow
 
 ```
 IrGenerationExtension.generate(moduleFragment)
-  └─ AspectVisitor          : scan @Aspect -> populate AspectLookUp (target FqName -> AspectContext[])
+  └─ AspectVisitor          : scan @Aspect -> populate AspectLookUp, record localHints, track visitedAspectClassIds
+  └─ hints merge             : carry-forward (same-module, unvisited @Aspect classes) + hintsPath (other modules)
   └─ InheritableVisitor      : track overrides for inherits=true targets
   └─ AspectTransformer       : visit every IrSimpleFunction
        └─ has target annotation? -> generateInner()
@@ -101,4 +107,4 @@ IrGenerationExtension.generate(moduleFragment)
             └─ process BEFORE contexts (prepended last)
 ```
 
-This entire flow happens **within a single module's IR** — `AspectLookUp` only exists for the lifetime of that one `generate()` call for that module and is never persisted anywhere. That's the root cause of why weaving can't cross module boundaries today.
+`AspectLookUp` itself still only exists for one `generate()` call — but `hints.json` (see [cross-module weaving](cross-module-weaving.md)) now persists enough per-advice metadata across modules and builds that `AspectLookUp` can be reconstructed for advice this round's IR never directly saw, whether that's a dependency's aspect or this module's own aspect from a file an incremental round didn't touch. Kotlin's incremental compilation only hands `generate()` the dirty subset of a module's files, which is the thing this whole mechanism exists to work around; see cross-module-weaving.md's incremental-compilation section for the two failure modes that motivated it and how each is (or isn't) fixed.

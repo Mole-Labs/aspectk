@@ -64,7 +64,7 @@ This principle should hold as-is when extended to a multi-`@Around` chain: `@Aft
 Building the chain requires deciding somewhere that "`doAround1` is outer, `doAround2` is inner." A related decision was already made in the [cross-module weaving design](cross-module-weaving.md), the doc that prompted this one:
 
 - No explicit integer `order` field (cross-module integer collisions, YAGNI).
-- Instead, **discovery order**: local advice first, then dependency hints merged into `AspectLookUp` in whatever order Gradle resolved them.
+- Instead, **discovery order**: local advice first, then dependency hints merged into `AspectLookUp` in whatever order Gradle resolved them. Since the incremental-compilation fix (cross-module-weaving.md §9), "local" itself can split into two sub-groups on an incremental round — advice from `@Aspect` classes this round's IR walk actually visited, added first, then same-module advice carried forward from a previous round's `hints.json` for classes it didn't. On any clean build the second group is empty, so this only matters if a single target function ends up with `@Around` advices from both groups in the same incremental round — worth a test case whenever this feature is implemented.
 
 Applying the same principle here is the consistent choice: **the order of the `AspectContext` list in `AspectLookUp[target]` = the chain's wrapping order.** No separate ordering concept needs inventing — the essence of this feature is changing `generateInner()` from "each iteration overwrites via `statement.clear()`" to "each iteration folds/nests into the previous one."
 
