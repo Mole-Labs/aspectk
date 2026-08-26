@@ -67,6 +67,7 @@ Naming is a pure function of `(targetName, compilationName)`, so this only propa
 - The consumer (B) resolves the classpath configuration to get the path list, and passes it to the compiler plugin via `SubpluginOption("hintsPath", ...)`.
 - `AspectKCommandLineProcessor` has `hintsOutputDir` (single) and `hintsPath` (repeatable) options, stored into `CompilerConfiguration`, read in `AspectKCompilerPluginRegistrar.registerExtensions()` and merged into `AdviceGenerationExtension`'s `externalHints`.
 - Task dependencies are wired automatically via the outgoing/incoming configuration relationship — Gradle prevents the classic failure mode of the producer compiling after (or in parallel with) the consumer and the consumer reading stale or missing hints.
+- **A project dependency doesn't have to apply this plugin at all.** AspectK is opt-in per module (e.g. a plain data/db module can sit between two participating modules in the dependency graph and never register a hints-elements configuration of its own). Resolving the classpath configuration strictly failed the whole build in that case ("no variant with that configuration name exists"); resolved via a lenient `artifactView` instead, so a non-participating dependency is silently omitted rather than blocking the build.
 - (Lower priority, still open) build cache: `hintsPath` passes absolute paths as plain `SubpluginOption` values, which means (a) no cache hit across machines, and (b) — found during the incremental-compilation work below — the option isn't tracked as a content-sensitive task input, so a consumer's `compileKotlin` can stay UP-TO-DATE and never re-read a producer's changed `hints.json`. `@PathSensitive`/a `FilesSubpluginOption`-style variant would fix both; not yet done.
 
 ### What we're giving up
@@ -96,31 +97,9 @@ This only works within the same Gradle build. Aspects in a module published to M
   - Both paths converge on the same `AspectContext` constructor.
 - `AspectTransformer`/`AdviceCallGenerator`/the generators need **no code changes** — since they already only work with symbols, they behave identically regardless of whether a symbol came from the local module or was resolved cross-module.
 
-## 6. Out of scope (YAGNI)
-
-- Glob-based pointcut matching — the existing exact-annotation-FqName targeting is kept.
-- An explicit `order` API — see section 4.
-- Aspects in published binaries (Maven Central etc.) — see "What we're giving up" in section 3.
-- A new serialization library — see section 4.
-
-## 7. Acceptance criteria
-
-- A multi-module sample where an aspect declared in `:core` correctly weaves into targets in `:feature`, which depends on `:core`. **Done** — `sample/cross-module-core` -> `sample/cross-module-feature`, plus a diamond variant (`cross-module-branch-a`/`b` in between) added later. The diamond sample isn't build-verified yet: it pins the last *published* plugin version, which predates the incremental-compilation and diamond-transitivity fixes in section 9.
-- Since the carrier is build-directory-based, there's no JVM/Native split — verify JVM and at least one Kotlin/Native target (e.g. linuxX64) **in the same slice**. **Partially done** — the two-module sample compiles+links on `linuxX64` (execution itself is skipped on a macOS host, expected). The functional-test suite that exercises incremental compilation and the diamond case (section 9) is JVM-only via GradleRunner; it hasn't been re-run against a Native target.
-- No modification should be required at the target call site (an annotation is enough — zero configuration on B's side). **Done.**
-
-## 8. Remaining tasks (original plan)
-
-- [x] Serialize advice metadata (`package`/`class`/`function`/`kind`/`targets`/`inherits`) to the build directory as JSON at compile time (manual writer) — `HintRecord`/`HintsCodec`.
-- [x] Gradle plugin: register the producer's hints directory as an outgoing configuration/artifact, wire consumer-side resolution and `SubpluginOption` passing — `registerHintsConfigurations`.
-- [x] Add a hints-path option to `AspectKCommandLineProcessor`; load and merge in `AspectKCompilerPluginRegistrar`.
-- [x] Narrow `AspectContext.advice` to `IrSimpleFunctionSymbol`.
-- [x] Implement cross-module advice/aspect symbol resolution (reusing `IrCompat.referenceFunctions`/`referenceClass`).
-- [x] Add a `:core` → `:feature` multi-module sample, verify JVM + a Native target.
-
 All of the above shipped, but real Gradle incremental-build testing (not covered by the original plan) surfaced correctness gaps beyond it — see section 9.
 
-## 9. Incremental compilation correctness (found after initial implementation)
+## 6. Incremental compilation correctness
 
 `AspectVisitor` discovers `@Aspect`/`@Before` by walking whatever `IrModuleFragment` the K2 compiler hands to `IrGenerationExtension.generate()` — never through a symbol-resolution API. On a real (non-clean) Gradle build, that `moduleFragment` may only contain the files Kotlin's own incremental compiler decided are dirty this round, not the whole module. A Gradle TestKit functional-test suite (`aspectk-plugin/src/functionalTest`, real `GradleRunner` builds, not kctfork) was built specifically to catch this, and found three distinct failure modes, each now fixed:
 
