@@ -21,20 +21,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-// Diamond project graph:
-//
 //        aspect-module (declares @Aspect/@Before)
 //         /        \
 //   branch-a      branch-b
 //         \        /
 //       feature-module (has the @LogCall target, depends on BOTH branches)
 //
-// aspect-module is reachable from feature-module via TWO different 2-hop paths. This checks
-// whether AspectKGradleSubPlugin.registerHintsConfigurations's per-project "hints elements"
-// wiring actually propagates transitively beyond one hop at all (feature-module never directly
-// depends on aspect-module), and, if it does, whether resolving it via two separate paths causes
-// advice to be woven twice instead of once -- see docs/design-decision/cross-module-weaving.md
-// §3 "Gradle wiring".
+// See docs/design-decision/cross-module-weaving.md §3 "Gradle wiring".
 class DiamondDependencyWeavingFunctionalTest {
     @TempDir
     lateinit var projectDir: File
@@ -81,10 +74,7 @@ class DiamondDependencyWeavingFunctionalTest {
                 useJUnitPlatform()
             }
         """.trimIndent()
-        // branch-a/branch-b re-expose aspect-module via `api` (needs java-library for that
-        // configuration to exist) so feature-module's own compile classpath can see LogCall and
-        // LoggingAspect through them -- an ordinary Kotlin visibility requirement, unrelated to
-        // AspectK's own hints propagation, which is what this test actually exercises.
+        // branch-a/branch-b re-expose aspect-module via `api` so feature-module can see it
         writeFile(projectDir, "aspect-module/build.gradle.kts", moduleBuildFile)
         val branchBuildFile = """
             plugins {
@@ -135,8 +125,7 @@ class DiamondDependencyWeavingFunctionalTest {
             }
             """.trimIndent(),
         )
-        // Pass-through modules: each just needs to compile and depend on aspect-module. No
-        // aspect content of their own.
+        // pass-through, no aspect content of their own
         writeFile(projectDir, "branch-a/src/main/kotlin/BranchA.kt", "class BranchA\n")
         writeFile(projectDir, "branch-b/src/main/kotlin/BranchB.kt", "class BranchB\n")
         writeFile(

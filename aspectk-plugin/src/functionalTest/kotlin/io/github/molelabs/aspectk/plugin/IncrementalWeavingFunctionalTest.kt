@@ -21,25 +21,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-// AspectVisitor discovers @Aspect/@Before by walking whatever IrModuleFragment the K2 compiler
-// hands to IrGenerationExtension.generate() (moduleFragment.acceptChildren(...)), never through a
-// symbol-resolution API (referenceClass/referenceFunctions/lookupFunctions). Real Gradle
-// incremental compilation may only include the "dirty" subset of files in that moduleFragment on
-// a non-clean build. These tests reproduce (or disprove) that hypothesis against a real Gradle
-// build, split into the two ways an incremental round can go stale:
-//  - Scenario A: the file with the TARGET annotation is edited; the file with the @Aspect/@Before
-//    is untouched. The edited file is trivially dirty either way; the question is whether the
-//    untouched aspect file is still visible to AspectVisitor during this same round.
-//  - Scenario B: the file with the @Aspect/@Before is edited; the target file is untouched. The
-//    target file isn't even part of this round's dirty set, so nothing can fix this within the
-//    round -- see docs/design-decision/cross-module-weaving.md for the LookupTracker-based
-//    recovery path this pipeline does not currently participate in.
+// See docs/design-decision/cross-module-weaving.md §9 for the two incremental-round failure
+// modes these reproduce against a real Gradle build.
 class IncrementalWeavingFunctionalTest {
     @TempDir
     lateinit var projectDir: File
 
-    // Control: everything present from a single clean build (no incremental round at all).
-    // If this fails too, the harness/plugin setup itself is broken, not IC specifically.
+    // Control: no incremental round at all.
     @Test
     fun `advice applies on a single clean build`() {
         writeSettingsAndBuildFiles()
@@ -130,13 +118,12 @@ class IncrementalWeavingFunctionalTest {
             """.trimIndent(),
         )
 
-        // Round 1: establishes the incremental-compilation baseline. Target isn't annotated yet.
+        // given: round 1, Target unannotated
         runGradle(projectDir, testKitDir(), "compileKotlin").also {
             assertEquals(TaskOutcome.SUCCESS, it.task(":compileKotlin")?.outcome)
         }
 
-        // Round 2 (incremental, same project/build dirs): ONLY Target.kt is edited.
-        // Aspect.kt is untouched.
+        // when: round 2, only Target.kt edited
         writeFile(
             projectDir,
             "src/main/kotlin/Target.kt",
@@ -186,8 +173,7 @@ class IncrementalWeavingFunctionalTest {
             }
             """.trimIndent(),
         )
-        // Target is annotated from the start and never edited again -- only Aspect.kt changes
-        // between rounds.
+        // Target annotated from the start, never edited again
         writeFile(
             projectDir,
             "src/main/kotlin/Target.kt",
@@ -201,14 +187,12 @@ class IncrementalWeavingFunctionalTest {
             """.trimIndent(),
         )
 
-        // Round 1: establishes the incremental-compilation baseline. LoggingAspect has no advice
-        // yet, so there's nothing to weave into Target.
+        // given: round 1, LoggingAspect has no advice yet
         runGradle(projectDir, testKitDir(), "compileKotlin").also {
             assertEquals(TaskOutcome.SUCCESS, it.task(":compileKotlin")?.outcome)
         }
 
-        // Round 2 (incremental, same project/build dirs): ONLY Aspect.kt is edited -- a @Before
-        // advice is added. Target.kt is untouched.
+        // when: round 2, only Aspect.kt edited (adds @Before)
         writeFile(
             projectDir,
             "src/main/kotlin/Aspect.kt",

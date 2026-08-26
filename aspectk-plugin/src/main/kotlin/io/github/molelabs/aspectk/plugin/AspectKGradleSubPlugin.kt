@@ -107,7 +107,6 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         // hints-elements configuration on each dependency project instead of its default variant.
         // Because that configuration on the dependency project is wired the same recursive way,
         // Gradle's ordinary configuration-graph resolution walks and dedups the rest transitively
-        // (docs/design-decision/cross-module-weaving.md §3 "Gradle wiring").
         project.configurations
             .getByName(kotlinCompilation.compileDependencyConfigurationName)
             .allDependencies
@@ -124,33 +123,21 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
                 )
             }
 
-        // Without this, elementsConfig only ever exposes THIS module's own hintsDir, so a
-        // consumer more than one project-dependency hop away (e.g. a diamond: feature-module ->
-        // branch-a -> aspect-module) never sees aspect-module's hints at all -- resolvableConfig
-        // collects what THIS module pulled in from its own dependencies, but nothing re-publishes
-        // that onward through elementsConfig without this. extendsFrom makes elementsConfig's
-        // resolved content = this module's own artifact + everything resolvableConfig collected,
-        // recursively -- the same pattern Gradle's own apiElements uses to propagate `api`
-        // dependencies transitively.
+        // Without this, elementsConfig only ever exposes THIS module's own hintsDir
         elementsConfig.extendsFrom(resolvableConfig)
 
         return resolvableConfig
     }
 
-    // Same-module weaving is only correct within a single incremental round when the target and
-    // its advice are both part of that round's IR (see docs/design-decision/
-    // cross-module-weaving.md). AspectKIrCompilerContext.visitedAspectClassIds now recovers a
-    // target-file-only edit by carrying forward the aspect's last-known hints, but an
-    // aspect-file-only edit still needs its target files re-woven, and those files simply aren't
-    // part of a round that doesn't touch them -- no compiler-plugin-level fix can reach that.
-    // So: force one full (non-incremental) recompile of this compilation whenever a file that
-    // ACTUALLY CHANGED this round mentions @Aspect/@Before/@After/@Around (DetectAspectChangeTask,
-    // via Gradle's own InputChanges -- not "does this compilation contain one of those anywhere",
-    // which would force a full recompile on every future edit, forever, once a module uses
-    // AspectK at all). That's the one class of edit Kotlin's own dirty-file tracking can't be
-    // relied on to propagate correctly for this plugin. False positives just cost an extra full
-    // compile, and false negatives would silently reintroduce the bug this exists to prevent, so
-    // err conservative -- see AspectChangeDetection.kt.
+    // Weaving requires the target and its advice in the same incremental round. A target-only edit
+    // is fine -- AspectKIrCompilerContext.visitedAspectClassIds carries the aspect's last-known
+    // hints forward. An aspect-only edit is not: the target files needing a re-weave aren't in a
+    // round that doesn't touch them, and choosing what to compile is above the plugin's reach.
+    // So DetectAspectChangeTask forces a full recompile when a file that CHANGED THIS ROUND mentions
+    // @Aspect/@Before/@After/@Around -- via Gradle's InputChanges, not "does this compilation contain
+    // one anywhere", which would mean a full recompile forever once a module uses AspectK.
+    // Err conservative: a false positive costs one extra compile, a false negative silently ships
+    // unwoven bytecode. See AspectChangeDetection.kt and docs/design-decision/cross-module-weaving.md.
     private fun registerAspectChangeDetection(
         project: Project,
         kotlinCompilation: KotlinCompilation<*>,
