@@ -87,7 +87,9 @@ class AspectKBuildPlugin : Plugin<Project> {
                         }
                     }
                 }
-                signAllPublications()
+                if (project.hasProperty("signingInMemoryKey")) {
+                    signAllPublications()
+                }
                 publishToMavenCentral(
                     automaticRelease = true,
                 )
