@@ -21,6 +21,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -30,6 +31,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.kotlinToolingVersion
+import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 
 internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
@@ -55,6 +57,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         }
 
         val hintsConfiguration = registerHintsConfigurations(project, kotlinCompilation, hintsDir)
+        registerAspectChangeDetection(project, kotlinCompilation)
 
         return project.provider {
             buildList {
@@ -121,7 +124,67 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
                 )
             }
 
+        // Without this, elementsConfig only ever exposes THIS module's own hintsDir, so a
+        // consumer more than one project-dependency hop away (e.g. a diamond: feature-module ->
+        // branch-a -> aspect-module) never sees aspect-module's hints at all -- resolvableConfig
+        // collects what THIS module pulled in from its own dependencies, but nothing re-publishes
+        // that onward through elementsConfig without this. extendsFrom makes elementsConfig's
+        // resolved content = this module's own artifact + everything resolvableConfig collected,
+        // recursively -- the same pattern Gradle's own apiElements uses to propagate `api`
+        // dependencies transitively.
+        elementsConfig.extendsFrom(resolvableConfig)
+
         return resolvableConfig
+    }
+
+    // Same-module weaving is only correct within a single incremental round when the target and
+    // its advice are both part of that round's IR (see docs/design-decision/
+    // cross-module-weaving.md). AspectKIrCompilerContext.visitedAspectClassIds now recovers a
+    // target-file-only edit by carrying forward the aspect's last-known hints, but an
+    // aspect-file-only edit still needs its target files re-woven, and those files simply aren't
+    // part of a round that doesn't touch them -- no compiler-plugin-level fix can reach that.
+    // So: force one full (non-incremental) recompile of this compilation whenever a file that
+    // ACTUALLY CHANGED this round mentions @Aspect/@Before/@After/@Around (DetectAspectChangeTask,
+    // via Gradle's own InputChanges -- not "does this compilation contain one of those anywhere",
+    // which would force a full recompile on every future edit, forever, once a module uses
+    // AspectK at all). That's the one class of edit Kotlin's own dirty-file tracking can't be
+    // relied on to propagate correctly for this plugin. False positives just cost an extra full
+    // compile, and false negatives would silently reintroduce the bug this exists to prevent, so
+    // err conservative -- see AspectChangeDetection.kt.
+    private fun registerAspectChangeDetection(
+        project: Project,
+        kotlinCompilation: KotlinCompilation<*>,
+    ) {
+        val sources: FileCollection =
+            kotlinCompilation.allKotlinSourceSets.fold(project.files() as FileCollection) { acc, sourceSet ->
+                acc + sourceSet.kotlin
+            }
+
+        val detectTaskName =
+            "detectAspectChange${
+                kotlinCompilation.target.targetName.replaceFirstChar { it.uppercase() }
+            }${kotlinCompilation.name.replaceFirstChar { it.uppercase() }}"
+        val detectTask =
+            project.tasks.register(detectTaskName, DetectAspectChangeTask::class.java) { task ->
+                task.sources.setFrom(sources)
+                task.resultFile.set(
+                    project.layout.buildDirectory.file(
+                        "generated/aspectk/aspect-change/${kotlinCompilation.target.targetName}/${kotlinCompilation.name}.txt",
+                    ),
+                )
+            }
+
+        kotlinCompilation.compileTaskProvider.configure { task ->
+            val abstractCompile = task as? AbstractKotlinCompile<*> ?: return@configure
+            abstractCompile.dependsOn(detectTask)
+            val resultFileProvider = detectTask.flatMap { it.resultFile }
+            abstractCompile.doFirst {
+                val resultFile = resultFileProvider.get().asFile
+                if (resultFile.exists() && resultFile.readText() == "true") {
+                    abstractCompile.incremental = false
+                }
+            }
+        }
     }
 
     override fun getCompilerPluginId(): String = BuildConfig.COMPILER_PLUGIN_ID

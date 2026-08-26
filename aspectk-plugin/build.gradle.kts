@@ -39,4 +39,64 @@ gradlePlugin {
 dependencies {
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin.api)
+    testImplementation(libs.junit.jupiter)
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+// Functional tests drive real Gradle builds (GradleRunner) against the plugin as actually
+// published, so they can exercise things unit tests can't: real incremental compilation
+// across separate invocations, real ServiceLoader discovery, real Configuration resolution.
+sourceSets {
+    create("functionalTest") {
+        kotlin.srcDir("src/functionalTest/kotlin")
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+}
+
+configurations["functionalTestImplementation"].extendsFrom(configurations["implementation"])
+configurations["functionalTestRuntimeOnly"].extendsFrom(configurations["runtimeOnly"])
+
+dependencies {
+    add("functionalTestImplementation", gradleTestKit())
+    add("functionalTestImplementation", libs.junit.jupiter)
+}
+
+// Publishes the current working tree to the same throwaway "testing" repo the release
+// pipeline already defines (AspectKBuildPlugin.publish() -> build/localMaven), so a
+// functional test project can consume aspectk-core/aspectk-runtime/aspectk-plugin by
+// applying `id("io.github.mole-labs.aspectk") version PUBLISH_VERSION` without touching
+// mavenLocal()/~/.m2 (avoids the immutable-non-SNAPSHOT-version caching trap).
+val publishForFunctionalTest =
+    listOf(
+        ":aspectk-runtime:publishAllPublicationsToTestingRepository",
+        ":aspectk-core:publishAllPublicationsToTestingRepository",
+        ":aspectk-plugin:publishAllPublicationsToTestingRepository",
+    )
+
+val functionalTest by tasks.registering(Test::class) {
+    description = "Runs functional tests against real Gradle builds."
+    group = "verification"
+    testClassesDirs = sourceSets["functionalTest"].output.classesDirs
+    classpath = sourceSets["functionalTest"].runtimeClasspath
+    useJUnitPlatform()
+    dependsOn(publishForFunctionalTest)
+    systemProperty(
+        "aspectk.testRepo",
+        rootProject.layout.buildDirectory.dir("localMaven").get().asFile.absolutePath,
+    )
+    systemProperty("aspectk.version", project.property("PUBLISH_VERSION") as String)
+    systemProperty("aspectk.kotlinVersion", libs.versions.kotlin.get())
+    // A stable, shared GradleRunner TestKit home instead of a fresh one per test: a fresh one
+    // downloads/generates Gradle's own internal jars from scratch every time (~350MB each) and,
+    // since it must NOT be JUnit-@TempDir-cleaned (a lingering TestKit daemon can still hold
+    // locks right after the build finishes, racing JUnit's own cleanup), that used to just pile
+    // up on disk across runs.
+    systemProperty(
+        "aspectk.testKitHome",
+        rootProject.layout.buildDirectory.dir("functionalTestGradleHome").get().asFile.absolutePath,
+    )
 }
