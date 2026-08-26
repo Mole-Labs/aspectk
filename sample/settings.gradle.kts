@@ -1,5 +1,9 @@
 pluginManagement {
     repositories {
+        // Throwaway repo the root aspectk build publishes an unreleased PUBLISH_VERSION to
+        // (AspectKBuildPlugin.publish() -> build/localMaven) -- see :core's build.gradle.kts
+        // for why this is used instead of mavenLocal().
+        maven(url = "../build/localMaven")
         mavenCentral()
         mavenLocal()
         google {
@@ -16,6 +20,7 @@ pluginManagement {
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
+        maven(url = "../build/localMaven")
         mavenCentral()
         mavenLocal()
         google()
@@ -29,3 +34,8 @@ plugins {
 
 rootProject.name = "aspectk-sample"
 include(":composeApp")
+include(":core")
+include(":data")
+include(":feature-user")
+include(":feature-payment")
+include(":feature-catalog")

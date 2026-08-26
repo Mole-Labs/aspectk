@@ -5,7 +5,6 @@ import sample.multiplatform.aspects.LoggingAspect
 import sample.multiplatform.aspects.PermissionAspect
 import sample.multiplatform.aspects.TracingAspect
 import sample.multiplatform.db.FakeUserDao
-import sample.multiplatform.service.PaymentService
 import sample.multiplatform.service.UserService
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -16,7 +15,6 @@ import kotlin.test.assertTrue
 class TracingAspectTest {
 
     private lateinit var userService: UserService
-    private lateinit var paymentService: PaymentService
 
     @BeforeTest
     fun setUp() {
@@ -24,9 +22,7 @@ class TracingAspectTest {
         LoggingAspect.clearLogs()
         PermissionAspect.grantedPermissions += "ADMIN"
         PermissionAspect.grantedPermissions += "READ_USER_DATA"
-        PermissionAspect.grantedPermissions += "PAYMENT"
         userService = UserService(FakeUserDao())
-        paymentService = PaymentService()
     }
 
     @AfterTest
@@ -54,16 +50,6 @@ class TracingAspectTest {
     }
 
     @Test
-    fun `TracingAspect should use method name when spanName is empty`() {
-        paymentService.getTransactionCount()
-
-        assertTrue(
-            TracingAspect.callStack.any { it.contains("get-transaction-count") },
-            "spanName이 지정된 경우 해당 이름이 기록되어야 합니다",
-        )
-    }
-
-    @Test
     fun `TracingAspect should track depth for nested traced calls`() = runTest {
         val traceLogs = mutableListOf<String>()
         TracingAspect.logger = { traceLogs.add(it) }
@@ -81,5 +67,4 @@ class TracingAspectTest {
 
         assertEquals(2, TracingAspect.callStack.size, "두 번의 @Trace 함수 호출이 누적되어야 합니다")
     }
-
 }

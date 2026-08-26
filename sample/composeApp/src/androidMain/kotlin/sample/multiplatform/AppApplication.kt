@@ -1,15 +1,11 @@
 package sample.multiplatform
 
 import android.app.Application
+import sample.multiplatform.db.DatabaseContext
 
 class AppApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        appContext = this
-    }
-
-    companion object {
-        lateinit var appContext: AppApplication
-            private set
+        DatabaseContext.appContext = this
     }
 }

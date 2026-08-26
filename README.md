@@ -76,6 +76,7 @@ fun processOrder(orderId: String, amount: Double) {
 | **Kotlin Multiplatform** | JVM, Android, JS (IR), WASM/JS, Native Tier 1–3 |
 | **K2 IR powered** | Built on the Kotlin 2.x IR transformation API |
 | **Many-to-many targeting** | One `@Before` can list multiple target annotations; one function can match multiple aspects |
+| **Cross-module weaving** | An `@Aspect` in one module weaves into targets in a different, downstream module — no configuration beyond applying the plugin to both |
 | **Inheritance support** | `@Before(inherits = true)` intercepts overriding functions automatically |
 | **Rich join point metadata** | `JoinPoint` exposes receiver, method signature, parameters, annotations, and arguments |
 

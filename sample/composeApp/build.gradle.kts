@@ -1,11 +1,8 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.multiplatform)
-    id("io.github.mole-labs.aspectk") version "0.2.3"
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
 }
@@ -47,8 +44,11 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.androidx.room.runtime)
-                implementation(libs.androidx.sqlite.bundled)
+                implementation(project(":core"))
+                implementation(project(":data"))
+                implementation(project(":feature-user"))
+                implementation(project(":feature-payment"))
+                implementation(project(":feature-catalog"))
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
@@ -83,21 +83,6 @@ compose.desktop {
             packageName = "aspectk-sample"
             packageVersion = "1.0.0"
         }
-    }
-}
-
-dependencies {
-    add("kspCommonMainMetadata", libs.androidx.room.compiler)
-    add("kspAndroid", libs.androidx.room.compiler)
-    add("kspJvm", libs.androidx.room.compiler)
-    add("kspIosArm64", libs.androidx.room.compiler)
-    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
-}
-
-// commonMain KSP 가 먼저 실행된 후 각 플랫폼 컴파일이 실행되도록 보장
-tasks.withType<KotlinCompilationTask<*>>().configureEach {
-    if (name != "kspCommonMainKotlinMetadata") {
-        dependsOn("kspCommonMainKotlinMetadata")
     }
 }
 
