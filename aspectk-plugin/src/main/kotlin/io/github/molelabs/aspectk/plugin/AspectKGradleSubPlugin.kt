@@ -180,7 +180,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             val resultFileProvider = detectTask.flatMap { it.resultFile }
             abstractCompile.doFirst {
                 val resultFile = resultFileProvider.get().asFile
-                if (resultFile.exists() && resultFile.readText() == "true") {
+                if (!resultFile.exists() || resultFile.readText() != "false") {
                     abstractCompile.incremental = false
                 }
             }

@@ -46,21 +46,20 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
 
     @TaskAction
     fun detect(inputChanges: InputChanges) {
+        // No prior execution state for this task (first run, build-cache miss, --rerun-tasks)
+        // means there's no basis to claim "nothing aspect-relevant changed"
         val relevant =
-            inputChanges.getFileChanges(sources).any { change ->
-                if (change.file.extension != "kt") {
-                    false
-                } else {
-                    when (change.changeType) {
-                        ChangeType.MODIFIED -> change.file.isFile && fileHasAspectMarker(change.file)
-
-                        // Can't read a removed file's (now nonexistent) content, and an added
-                        // file has nothing to compare against -- treat both conservatively as
-                        // relevant, same false-positives-are-cheap philosophy as elsewhere here.
-                        ChangeType.ADDED, ChangeType.REMOVED -> true
+            !inputChanges.isIncremental ||
+                inputChanges.getFileChanges(sources).any { change ->
+                    if (change.file.extension != "kt") {
+                        false
+                    } else {
+                        when (change.changeType) {
+                            ChangeType.MODIFIED, ChangeType.ADDED -> change.file.isFile && fileHasAspectMarker(change.file)
+                            ChangeType.REMOVED -> true
+                        }
                     }
                 }
-            }
         val file = resultFile.get().asFile
         file.parentFile?.mkdirs()
         file.writeText(relevant.toString())
