@@ -19,7 +19,7 @@ Add to `gradle/libs.versions.toml`:
 aspectk = "LATEST_VERSION"
 
 [plugins]
-aspectk = { id = "io.github.mole-labs.aspectk.compiler", version.ref = "aspectk" }
+aspectk = { id = "io.github.mole-labs.aspectk", version.ref = "aspectk" }
 ```
 
 Then in your `build.gradle.kts`:
@@ -39,9 +39,9 @@ plugins {
 
 | AspectK Version | Supported Kotlin Range |
 |-----------------|----------------------|
-| 0.1.0 | 2.2.20 ~ 2.2.21 |
+| 0.3.0 | 2.2.20 ~ 2.4.10 |
 
 !!! note
-    AspectK uses the K2 compiler IR API. Only Kotlin **2.2.x** is supported.
-    Each release is tied to a specific Kotlin minor series — check the [compatibility table](../reference/compatibility.md)
+    AspectK uses the K2 compiler IR API. Each release is tied to a specific Kotlin range —
+    check the [compatibility table](../reference/compatibility.md) for the full version history
     before upgrading either dependency.

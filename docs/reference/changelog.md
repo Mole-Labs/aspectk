@@ -5,6 +5,33 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0]
+
+### Added
+
+- **Cross-module weaving.** An `@Aspect` declared in one module now correctly weaves into
+  targets in a different, downstream module that depends on it — no configuration needed
+  beyond applying the plugin to both modules. Works transitively through any dependency depth,
+  including diamond-shaped graphs, and a module that never uses AspectK doesn't need the
+  plugin applied at all, even sitting between two participating modules.
+- **Kotlin 2.4.0 / 2.4.10 support**, via a new `aspectk-core-compat:compat-2400` module.
+  Supported Kotlin range is now 2.2.20 ~ 2.4.10 (see the
+  [compatibility table](compatibility.md)).
+- AspectK no longer requires the Android Gradle Plugin on the classpath — applying it to a
+  plain (non-Android) Kotlin Multiplatform module now works correctly.
+
+### Fixed
+
+- **Incremental-build correctness.** Real (non-clean) Gradle builds could previously miss
+  re-weaving in three cases, all now fixed:
+    - Editing only a target file (aspect file untouched) could leave the target unwoven if the
+      aspect's file wasn't part of that incremental round.
+    - Editing only an aspect file (target file untouched) could leave a stale target unwoven,
+      since Kotlin's own incremental compiler wouldn't recompile it — a full recompile is now
+      forced only when a file that actually changed declares or drops aspect content.
+    - Cross-module hints only propagated one dependency hop; a target reachable only
+      transitively (e.g. through a diamond) could miss the aspect's hints entirely.
+
 ## [0.2.2]
 
 ### Fixed

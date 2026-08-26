@@ -43,6 +43,7 @@ nav:
     - Multiple Targets: features/multiple-targets.md
     - Inheritance: features/inheritance.md
     - Multiplatform: features/multiplatform.md
+    - Cross-Module Weaving: features/cross-module-weaving.md
   - Reference:
     - Compatibility: reference/compatibility.md
     - Changelog: reference/changelog.md

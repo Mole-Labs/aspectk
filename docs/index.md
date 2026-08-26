@@ -29,7 +29,7 @@ AspectK is a Kotlin compiler plugin that injects advice code at compile time —
 ```kotlin
 // build.gradle.kts
 plugins {
-    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+    id("io.github.mole-labs.aspectk") version "LATEST_VERSION"
 }
 ```
 

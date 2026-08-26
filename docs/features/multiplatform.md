@@ -28,7 +28,7 @@ library support all major Kotlin targets.
 // build.gradle.kts
 plugins {
     kotlin("multiplatform")
-    id("io.github.mole-labs.aspectk.compiler") version "LATEST_VERSION"
+    id("io.github.mole-labs.aspectk") version "LATEST_VERSION"
 }
 
 kotlin {
@@ -95,4 +95,4 @@ actual fun platformLog(methodName: String) { OSLog.log(methodName) }
 |-----------|---------|
 | Reflection (`KClass`) | Available on all platforms; generic erasure applies everywhere |
 | `JoinPoint.target` | Always available; `null` for top-level functions on all platforms |
-| Aspect discovery | Only aspects within the same compilation unit are discovered |
+| Aspect discovery | Works across module boundaries, not just within one compilation unit — see [Cross-Module Weaving](cross-module-weaving.md) |
