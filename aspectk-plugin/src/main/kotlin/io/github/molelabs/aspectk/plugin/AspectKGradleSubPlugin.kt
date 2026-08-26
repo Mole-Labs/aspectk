@@ -15,27 +15,33 @@
  */
 package io.github.molelabs.aspectk.plugin
 
-import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.SourceSetContainer
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet.Companion.COMMON_MAIN_SOURCE_SET_NAME
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSetContainer
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.kotlinToolingVersion
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
 
 internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
+    // Adds the aspectk-runtime dependency per compilation instead of per platform-specific
+    // extension (multiplatform/Android/JVM source sets). Same approach Metro's Gradle plugin
+    // uses: https://github.com/ZacSweers/metro/blob/main/gradle-plugin/src/main/kotlin/dev/zacsweers/metro/gradle/MetroGradleSubplugin.kt
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
+
+        val implConfig = kotlinCompilation.defaultSourceSet.implementationConfigurationName
+        project.dependencies.add(implConfig, "${BuildConfig.GROUP}:aspectk-runtime:${BuildConfig.VERSION}")
+        if (implConfig == "metadataCompilationImplementation") {
+            project.dependencies.add("commonMainImplementation", "${BuildConfig.GROUP}:aspectk-runtime:${BuildConfig.VERSION}")
+        }
+
         return project.provider { emptyList() }
     }
 
@@ -77,44 +83,6 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
                     "Supported Kotlin versions: ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.first()} - ${BuildConfig.SUPPORTED_KOTLIN_VERSIONS.last()}"
                     """.trimIndent(),
                 )
-            }
-        }
-
-        val aspectKRuntimeDependency =
-            target.provider {
-                target.dependencyFactory.create(
-                    BuildConfig.GROUP,
-                    "aspectk-runtime",
-                    BuildConfig.VERSION,
-                )
-            }
-
-        target.pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-            val kotlin = target.extensions.getByName("kotlin") as KotlinSourceSetContainer
-            val commonMainSourceSet = kotlin.sourceSets.getByName(COMMON_MAIN_SOURCE_SET_NAME)
-
-            target.configurations
-                .named(commonMainSourceSet.implementationConfigurationName)
-                .configure {
-                    it.dependencies.addLater(aspectKRuntimeDependency)
-                }
-        }
-
-        target.pluginManager.withPlugin("com.android.base") {
-            val androidExtension = target.extensions.getByName("android") as CommonExtension<*, *, *, *, *, *>
-            androidExtension.sourceSets.configureEach { sourceSet ->
-                target.configurations.named(sourceSet.implementationConfigurationName).configure {
-                    it.dependencies.addLater(aspectKRuntimeDependency)
-                }
-            }
-        }
-
-        target.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
-            val sourceSets = target.extensions.getByName("sourceSets") as SourceSetContainer
-            sourceSets.configureEach { sourceSet ->
-                target.configurations.named(sourceSet.implementationConfigurationName).configure {
-                    it.dependencies.addLater(aspectKRuntimeDependency)
-                }
             }
         }
     }
