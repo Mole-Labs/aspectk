@@ -16,6 +16,7 @@
 package io.github.molelabs.aspectk.core.ir
 
 import io.github.molelabs.aspectk.core.compat.IrCompat
+import io.github.molelabs.aspectk.core.hints.HintRecord
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
@@ -23,11 +24,18 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeWith
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
+import java.util.Collections
 
 internal data class AspectKIrCompilerContext(
     val pluginContext: IrPluginContext,
     val irCompat: IrCompat,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
+    val localHints: MutableList<HintRecord> = Collections.synchronizedList(mutableListOf()),
+    // ClassIds of every @Aspect class AspectVisitor actually walked this round. Distinguishes
+    // "not part of this incremental round's moduleFragment" (old hints.json entry still valid,
+    // carry it forward) from "walked this round and now has fewer/no advice" (old entry is
+    // stale, must not be resurrected) -- see docs/design-decision/cross-module-weaving.md.
+    val visitedAspectClassIds: MutableSet<ClassId> = Collections.synchronizedSet(mutableSetOf()),
 ) {
     val joinPointSymbol: IrClassSymbol = getSymbol(JOIN_POINT_FQ_NAME)
     val proceedingJoinPointSymbol: IrClassSymbol = getSymbol(PROCEEDING_JOIN_POINT_FQ_NAME)

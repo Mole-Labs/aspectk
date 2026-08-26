@@ -15,24 +15,63 @@
  */
 package io.github.molelabs.aspectk.core
 
+import com.google.auto.service.AutoService
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
+import org.jetbrains.kotlin.compiler.plugin.CliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.CompilerConfigurationKey
 
 // Handles -P plugin:<pluginId>:<key>=<value> arguments passed to the Kotlin compiler.
-// AspectK requires no configuration options at this time, so pluginOptions is empty and
-// processOption is a no-op. The pluginId must match the subpluginId declared in the
-// Gradle plugin (AspectKGradleSubPlugin).
+// Two options support cross-module weaving (docs/design-decision/cross-module-weaving.md):
+// - hintsOutputDir: where this module writes its own advice hints (single value).
+// - hintsPath: a directory containing an upstream module's hints.json (repeatable).
+// The pluginId must match the subpluginId declared in the Gradle plugin (AspectKGradleSubPlugin).
+// @AutoService writes the META-INF/services entry the real compiler's -P argument parser
+// needs to discover this class via ServiceLoader — without it, -P options for this plugin
+// are silently never processed outside of test harnesses that register it explicitly.
 @OptIn(ExperimentalCompilerApi::class)
+@AutoService(CommandLineProcessor::class)
 internal class AspectKCommandLineProcessor : CommandLineProcessor {
     override val pluginId: String = "io.github.mole-labs.aspectk"
 
-    override val pluginOptions: Collection<AbstractCliOption> = emptyList()
+    override val pluginOptions: Collection<AbstractCliOption> =
+        listOf(
+            CliOption(
+                optionName = HINTS_OUTPUT_DIR_OPTION,
+                valueDescription = "<path>",
+                description = "Directory this module writes its own aspect hints to.",
+                required = false,
+            ),
+            CliOption(
+                optionName = HINTS_PATH_OPTION,
+                valueDescription = "<path>",
+                description = "Directory containing an upstream module's aspect hints (hints.json). May repeat.",
+                required = false,
+                allowMultipleOccurrences = true,
+            ),
+        )
 
     override fun processOption(
         option: AbstractCliOption,
         value: String,
         configuration: CompilerConfiguration,
-    ) = Unit
+    ) {
+        when (option.optionName) {
+            HINTS_OUTPUT_DIR_OPTION -> configuration.put(HINTS_OUTPUT_DIR_KEY, value)
+            HINTS_PATH_OPTION -> configuration.put(HINTS_PATHS_KEY, (configuration.getList(HINTS_PATHS_KEY) + value).toMutableList())
+            else -> error("Unexpected AspectK plugin option: ${option.optionName}")
+        }
+    }
+
+    companion object {
+        const val HINTS_OUTPUT_DIR_OPTION = "hintsOutputDir"
+        const val HINTS_PATH_OPTION = "hintsPath"
+
+        val HINTS_OUTPUT_DIR_KEY: CompilerConfigurationKey<String> =
+            CompilerConfigurationKey.create("aspectk hints output directory")
+        val HINTS_PATHS_KEY: CompilerConfigurationKey<MutableList<String>> =
+            CompilerConfigurationKey.create("aspectk cross-module hints directories")
+    }
 }

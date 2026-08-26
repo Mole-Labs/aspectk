@@ -17,11 +17,13 @@ package io.github.molelabs.aspectk.core
 
 import com.google.auto.service.AutoService
 import io.github.molelabs.aspectk.core.compat.IrCompat
+import io.github.molelabs.aspectk.core.hints.HintsCodec
 import io.github.molelabs.aspectk.core.ir.AdviceGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import java.io.File
 
 // Entry point for the AspectK Kotlin compiler plugin.
 // @AutoService writes a service-provider file into META-INF at compile time so that the
@@ -41,8 +43,13 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         val currentVersion = KotlinVersion.CURRENT
         val irCompat = IrCompat.create(currentVersion)
+        val hintsOutputDir = configuration.get(AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_KEY)
+        val externalHints =
+            configuration
+                .getList(AspectKCommandLineProcessor.HINTS_PATHS_KEY)
+                .flatMap { dir -> HintsCodec.read(File(dir, "hints.json")) }
         IrGenerationExtension.registerExtension(
-            AdviceGenerationExtension(irCompat),
+            AdviceGenerationExtension(irCompat, hintsOutputDir, externalHints),
         )
     }
 }
