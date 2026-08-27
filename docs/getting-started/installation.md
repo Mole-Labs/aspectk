@@ -39,7 +39,7 @@ plugins {
 
 | AspectK Version | Supported Kotlin Range |
 |-----------------|----------------------|
-| 0.3.0 | 2.2.20 ~ 2.4.10 |
+| 0.3.0 ~ 0.3.1 | 2.2.20 ~ 2.4.10 |
 
 !!! note
     AspectK uses the K2 compiler IR API. Each release is tied to a specific Kotlin range —

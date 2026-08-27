@@ -5,6 +5,19 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1]
+
+### Fixed
+
+- **`@Before`/`@After` now weave correctly into `suspend` functions whose body actually
+  suspends** (e.g. calls `delay`) — the generated local wrapper function is now declared
+  `suspend` when the target is, matching the target's continuation.
+
+### Added
+
+- **`@Around` on `suspend` functions**, via a new `SuspendProceedingJoinPoint` — advice can be
+  declared `suspend` and call `proceed()` to resume the suspending target body.
+
 ## [0.3.0]
 
 ### Added

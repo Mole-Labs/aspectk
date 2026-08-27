@@ -10,7 +10,7 @@ in Kotlin 2.0 and requires K2 compiler mode.
 | 0.1.0 | 2.2.20 ~ 2.2.21 |
 | 0.1.1 ~ 0.2.0 | 2.2.20 ~ 2.3.10 |
 | 0.2.1 ~ 0.2.3 | 2.2.20 ~ 2.3.20 |
-| 0.3.0 | 2.2.20 ~ 2.4.10 |
+| 0.3.0 ~ 0.3.1 | 2.2.20 ~ 2.4.10 |
 
 !!! note
     Each AspectK release is tested against a specific Kotlin minor series. Using a Kotlin
@@ -26,7 +26,7 @@ For iOS targets, use the **exact Kotlin version** listed below:
 |-----------------|---------------------|
 | 0.1.0 ~ 0.1.1 | 2.2.20 |
 | 0.2.0 | 2.3.10 |
-| 0.2.1 ~ 0.3.0 | 2.3.20 |
+| 0.2.1 ~ 0.3.1 | 2.3.20 |
 
 !!! warning
     On iOS targets, using a Kotlin version different from the one listed above is not supported
