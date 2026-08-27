@@ -18,6 +18,7 @@ package io.github.molelabs.aspectk.tests
 import io.github.molelabs.aspectk.runtime.After
 import io.github.molelabs.aspectk.runtime.Around
 import io.github.molelabs.aspectk.runtime.Aspect
+import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
 import io.github.molelabs.aspectk.runtime.SuspendProceedingJoinPoint
 import io.github.molelabs.aspectk.tests.SuspendBodyAdviceTest.AroundTopLevelTarget
@@ -50,9 +51,9 @@ class SuspendBodyAdviceTest {
         AfterValueAspect.ran = false
         AfterThrowAspect.ran = false
         AroundMemberAspect.proceeded = false
+        BeforeSuspendAspect.ran = false
+        AroundRetryAspect.attempts = 0
     }
-
-    // 1. @After on a suspend member function that suspends and then returns a value.
 
     @Target(AnnotationTarget.FUNCTION)
     annotation class AfterValueTarget
@@ -82,9 +83,6 @@ class SuspendBodyAdviceTest {
         assertEquals(5, result)
         assertTrue(AfterValueAspect.ran)
     }
-
-    // 2. @After on a suspend function that throws *after* suspending:
-    //    the advice still runs (finally semantics) and the exception still propagates.
 
     @Target(AnnotationTarget.FUNCTION)
     annotation class AfterThrowTarget
@@ -117,9 +115,6 @@ class SuspendBodyAdviceTest {
         assertTrue(AfterThrowAspect.ran)
     }
 
-    // 3. @Around on a suspend member function: proceed() resumes the suspending body,
-    //    and the advice transforms the result.
-
     @Target(AnnotationTarget.FUNCTION)
     annotation class AroundMemberTarget
 
@@ -150,8 +145,6 @@ class SuspendBodyAdviceTest {
         assertTrue(AroundMemberAspect.proceeded)
     }
 
-    // 4. @Around on a top-level suspend function: proceed(vararg) substitutes an argument.
-
     @Target(AnnotationTarget.FUNCTION)
     annotation class AroundTopLevelTarget
 
@@ -168,8 +161,6 @@ class SuspendBodyAdviceTest {
     fun `around advice on a top-level suspending function can substitute an argument`() = runTest {
         assertEquals("got=replaced", topLevelEcho("original"))
     }
-
-    // 5. @Around that never calls proceed(): the suspending body is skipped entirely.
 
     @Target(AnnotationTarget.FUNCTION)
     annotation class AroundSkipTarget
@@ -196,6 +187,100 @@ class SuspendBodyAdviceTest {
         val loader = Loader()
         assertEquals("stubbed", loader.load())
         assertFalse(loader.bodyRan)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class BeforeSuspendTarget
+
+    @Aspect
+    object BeforeSuspendAspect {
+        var ran = false
+
+        @Before(BeforeSuspendTarget::class)
+        fun doBefore(joinPoint: JoinPoint) {
+            ran = true
+            assertEquals("fetch", joinPoint.signature.methodName)
+        }
+    }
+
+    class Repository {
+        @BeforeSuspendTarget
+        suspend fun fetch(id: String): String {
+            delay(1)
+            return "value-$id"
+        }
+    }
+
+    @Test
+    fun `before advice runs ahead of a suspending body and does not affect the result`() = runTest {
+        val result = Repository().fetch("42")
+        assertEquals("value-42", result)
+        assertTrue(BeforeSuspendAspect.ran)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class AroundRetryTarget
+
+    @Aspect
+    object AroundRetryAspect {
+        var attempts = 0
+
+        @Around(AroundRetryTarget::class)
+        suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+            val first = pjp.proceed() as String
+            val second = pjp.proceed() as String
+            return "$first,$second"
+        }
+    }
+
+    class FlakyService {
+        @AroundRetryTarget
+        suspend fun call(): String {
+            AroundRetryAspect.attempts++
+            delay(1)
+            return "attempt-${AroundRetryAspect.attempts}"
+        }
+    }
+
+    @Test
+    fun `around advice can call proceed twice and re-run the suspending body each time`() = runTest {
+        val result = FlakyService().call()
+        assertEquals("attempt-1,attempt-2", result)
+        assertEquals(2, AroundRetryAspect.attempts)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class ConditionalSuspendTarget
+
+    @Aspect
+    object ConditionalSuspendAspect {
+        var ran = 0
+
+        @After(ConditionalSuspendTarget::class)
+        fun doAfter(joinPoint: JoinPoint) {
+            ran++
+        }
+    }
+
+    class ConditionalWorker {
+        @ConditionalSuspendTarget
+        suspend fun work(shouldSuspend: Boolean): String {
+            if (shouldSuspend) {
+                delay(1)
+                return "suspended"
+            }
+            return "sync"
+        }
+    }
+
+    @Test
+    fun `after advice on a conditionally suspending body works whether or not that call suspends`() = runTest {
+        ConditionalSuspendAspect.ran = 0
+        val worker = ConditionalWorker()
+
+        assertEquals("sync", worker.work(shouldSuspend = false))
+        assertEquals("suspended", worker.work(shouldSuspend = true))
+        assertEquals(2, ConditionalSuspendAspect.ran)
     }
 }
 
