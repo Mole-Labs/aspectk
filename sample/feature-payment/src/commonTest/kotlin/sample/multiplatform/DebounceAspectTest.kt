@@ -15,7 +15,7 @@ class DebounceAspectTest {
 
     private lateinit var paymentService: PaymentService
 
-    // 테스트에서 시간을 직접 제어하기 위한 가변 변수
+    // Mutable variable used to control the clock directly in tests
     private var fakeNow = 0L
 
     @BeforeTest
@@ -26,7 +26,7 @@ class DebounceAspectTest {
         PermissionAspect.grantedPermissions += "REFUND"
 
         fakeNow = 0L
-        // DebounceAspect의 시간 제공자를 mock으로 교체
+        // Swap DebounceAspect's time provider for a mock
         DebounceAspect.timeProvider = { fakeNow }
         paymentService = PaymentService()
     }
@@ -45,15 +45,15 @@ class DebounceAspectTest {
 
         val txnId = paymentService.requestPayment("order-001", 100.0)
 
-        assertTrue(txnId.startsWith("TXN-"), "첫 번째 호출은 정상 처리되어야 합니다")
+        assertTrue(txnId.startsWith("TXN-"), "The first call should be processed normally")
     }
 
     @Test
     fun `DebounceAspect should throw DoubleClickException on rapid re-call`() {
         fakeNow = 0L
-        paymentService.requestPayment("order-001", 100.0) // 첫 호출 성공
+        paymentService.requestPayment("order-001", 100.0) // first call succeeds
 
-        fakeNow = 500L // 500ms 후 (쿨다운 1000ms 이내)
+        fakeNow = 500L // 500ms later (within the 1000ms cooldown)
         assertFailsWith<DoubleClickException> {
             paymentService.requestPayment("order-002", 200.0)
         }
@@ -62,12 +62,12 @@ class DebounceAspectTest {
     @Test
     fun `DebounceAspect should allow call after cooldown period`() {
         fakeNow = 0L
-        paymentService.requestPayment("order-001", 100.0) // 첫 호출
+        paymentService.requestPayment("order-001", 100.0) // first call
 
-        fakeNow = 1500L // 1500ms 후 (쿨다운 1000ms 경과)
-        val txnId = paymentService.requestPayment("order-002", 200.0) // 성공
+        fakeNow = 1500L // 1500ms later (past the 1000ms cooldown)
+        val txnId = paymentService.requestPayment("order-002", 200.0) // succeeds
 
-        assertTrue(txnId.startsWith("TXN-"), "쿨다운 이후 호출은 허용되어야 합니다")
+        assertTrue(txnId.startsWith("TXN-"), "A call made after the cooldown should be allowed")
     }
 
     @Test
@@ -82,23 +82,23 @@ class DebounceAspectTest {
 
         assertTrue(
             exception.message?.contains("requestPayment") == true,
-            "예외 메시지에 함수명이 포함되어야 합니다",
+            "The exception message should include the function name",
         )
         assertTrue(
             exception.message?.contains("800") == true,
-            "남은 대기 시간(800ms)이 메시지에 포함되어야 합니다",
+            "The remaining wait time (800ms) should be included in the message",
         )
     }
 
     @Test
     fun `DebounceAspect should track cooldown per function independently`() {
         fakeNow = 0L
-        paymentService.requestPayment("order-001", 100.0) // requestPayment 첫 호출 (cooldown=1000ms)
+        paymentService.requestPayment("order-001", 100.0) // first requestPayment call (cooldown=1000ms)
 
         fakeNow = 100L
-        // refund는 별도 함수이므로 별도 쿨다운 추적 (cooldown=500ms)
+        // refund is a separate function, so it tracks its own cooldown (cooldown=500ms)
         val refundResult = paymentService.refund("TXN-1-ORDER-001")
-        assertTrue(refundResult, "다른 함수는 독립적으로 쿨다운을 추적해야 합니다")
+        assertTrue(refundResult, "Different functions should track their cooldowns independently")
     }
 
     @Test
@@ -106,13 +106,13 @@ class DebounceAspectTest {
         fakeNow = 0L
         paymentService.refund("TXN-1-ORDER") // refund cooldown=500ms
 
-        fakeNow = 300L // 300ms 후 (500ms 쿨다운 이내)
+        fakeNow = 300L // 300ms later (within the 500ms cooldown)
         assertFailsWith<DoubleClickException> {
             paymentService.refund("TXN-1-ORDER")
         }
 
-        fakeNow = 600L // 600ms 후 (500ms 쿨다운 경과)
+        fakeNow = 600L // 600ms later (past the 500ms cooldown)
         val result = paymentService.refund("TXN-1-ORDER")
-        assertTrue(result, "쿨다운(500ms) 이후에는 환불이 허용되어야 합니다")
+        assertTrue(result, "Refunds should be allowed once the cooldown (500ms) has elapsed")
     }
 }

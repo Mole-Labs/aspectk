@@ -11,9 +11,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * BaseViewModel의 메서드를 오버라이드하지 않는 최소 구현체.
- * BaseViewModel의 어노테이션이 붙은 메서드가 직접 호출되므로
- * inherits=true 없이도 Aspect가 동작하는 기본 케이스를 검증합니다.
+ * Minimal implementation that doesn't override any of BaseViewModel's methods.
+ * Since BaseViewModel's annotated method is called directly, this verifies the
+ * baseline case where the aspect applies without needing inherits=true.
  */
 private class MinimalViewModel : BaseViewModel()
 
@@ -33,11 +33,11 @@ class AuditAspectTest {
     fun `AuditAspect should record log when annotated BaseViewModel method is called`() {
         val vm = MinimalViewModel()
 
-        // MinimalViewModel은 loadData()를 오버라이드하지 않으므로
-        // @AuditAction이 직접 붙어 있는 BaseViewModel.loadData()가 호출됨
+        // MinimalViewModel doesn't override loadData(), so this calls
+        // BaseViewModel.loadData(), which is directly annotated with @AuditAction
         vm.loadData()
 
-        assertTrue(AuditAspect.auditLogs.isNotEmpty(), "BaseViewModel 메서드 호출 시 감사 로그가 기록되어야 합니다")
+        assertTrue(AuditAspect.auditLogs.isNotEmpty(), "An audit log should be recorded when a BaseViewModel method is called")
     }
 
     @Test
@@ -48,7 +48,7 @@ class AuditAspectTest {
 
         assertTrue(
             AuditAspect.auditLogs.any { it.contains("loadData") },
-            "ProductViewModel.loadData()는 @AuditAction 없이도 Aspect가 동작해야 합니다 (inherits=true)",
+            "ProductViewModel.loadData() should trigger the aspect even without @AuditAction (inherits=true)",
         )
     }
 
@@ -60,14 +60,14 @@ class AuditAspectTest {
 
         assertTrue(
             AuditAspect.auditLogs.any { it.contains("loadData") },
-            "OrderViewModel.loadData()는 @AuditAction 없이도 Aspect가 동작해야 합니다 (inherits=true)",
+            "OrderViewModel.loadData() should trigger the aspect even without @AuditAction (inherits=true)",
         )
     }
 
     @Test
     fun `AuditAspect should extract action parameter from annotation when method is directly annotated`() {
-        // MinimalViewModel은 오버라이드 없이 BaseViewModel.loadData()를 그대로 사용하므로
-        // @AuditAction(action = "load-data")가 annotationInfo에서 읽힘
+        // MinimalViewModel uses BaseViewModel.loadData() as-is without overriding it,
+        // so @AuditAction(action = "load-data") is read from its annotationInfo
         val vm = MinimalViewModel()
 
         vm.loadData()
@@ -75,7 +75,7 @@ class AuditAspectTest {
         val log = AuditAspect.auditLogs.first { it.contains("loadData") }
         assertTrue(
             log.contains("action=load-data"),
-            "어노테이션의 action 파라미터가 감사 로그에 반영되어야 합니다",
+            "The annotation's action parameter should be reflected in the audit log",
         )
     }
 
@@ -89,6 +89,6 @@ class AuditAspectTest {
         productVm.submit("new-product")
         orderVm.reset()
 
-        assertEquals(4, AuditAspect.auditLogs.size, "네 번의 ViewModel 메서드 호출이 모두 감사 로그에 누적되어야 합니다")
+        assertEquals(4, AuditAspect.auditLogs.size, "All four ViewModel method calls should accumulate in the audit log")
     }
 }

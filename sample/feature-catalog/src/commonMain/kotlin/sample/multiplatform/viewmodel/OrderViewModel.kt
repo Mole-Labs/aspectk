@@ -1,6 +1,6 @@
 package sample.multiplatform.viewmodel
 
-// @AuditAction 없음 → inherits=true 덕분에 Aspect가 동작함
+// No @AuditAction here → the aspect still applies thanks to inherits=true
 class OrderViewModel : BaseViewModel() {
     val orders = mutableListOf<String>()
 

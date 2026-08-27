@@ -3,20 +3,23 @@ package sample.multiplatform.aspects
 import io.github.molelabs.aspectk.runtime.After
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.findAnnotation
+import io.github.molelabs.aspectk.runtime.getArgOrNull
 import sample.multiplatform.annotations.AuditAction
 
 /**
- * [AuditAction] 어노테이션이 붙은 함수(및 그 오버라이딩 메서드)의 호출을 감사(Audit) 로그로 기록합니다.
+ * Records calls to functions (and their overriding methods) annotated with [AuditAction]
+ * as audit log entries.
  *
- * `@After` 어드바이스를 사용하므로 대상 함수가 정상적으로 반환된 **이후**에 로그를 기록합니다.
- * 이를 통해 실제로 동작이 완료된 시점을 감사 기록으로 남길 수 있습니다.
+ * Uses `@After` advice, so the log is written **after** the target function returns
+ * successfully — capturing the moment the action actually completed.
  *
- * `inherits = true`를 사용하므로 부모 클래스에만 [AuditAction]이 붙어 있어도
- * 자식 클래스의 오버라이딩 메서드에 대한 Advice가 자동 적용됩니다.
+ * With `inherits = true`, advice is automatically applied to overriding methods in
+ * subclasses even when only the parent class carries [AuditAction].
  *
- * 출력 형식: `[AUDIT] action=<action> | method=<methodName>`
+ * Output format: `[AUDIT] action=<action> | method=<methodName>`
  *
- * 사용 예:
+ * ### Example
  * ```kotlin
  * @Aspect
  * object AuditAspect {
@@ -27,19 +30,16 @@ import sample.multiplatform.annotations.AuditAction
  */
 @Aspect
 object AuditAspect {
-    /** 감사 로그 출력 핸들러. 테스트에서 오버라이드하여 출력 내용을 캡처할 수 있습니다. */
+    /** Audit-log output handler. Can be overridden in tests to capture the output. */
     var auditLogger: (String) -> Unit = { println(it) }
 
-    /** 수집된 감사 로그 목록. 테스트에서 사용합니다. */
+    /** Collected audit log entries. Used by tests. */
     val auditLogs = mutableListOf<String>()
 
     @After(AuditAction::class, inherits = true)
     fun audit(joinPoint: JoinPoint) {
-        val annotationInfo =
-            joinPoint.signature.annotations
-                .firstOrNull { it.typeName.contains("AuditAction") }
         val action =
-            annotationInfo?.argByName("action") as? String
+            joinPoint.findAnnotation<AuditAction>()?.getArgOrNull<String>("action")
                 ?: joinPoint.signature.methodName
         val message = "[AUDIT] action=$action | method=${joinPoint.signature.methodName}"
         auditLogs.add(message)
@@ -47,9 +47,4 @@ object AuditAspect {
     }
 
     fun clearLogs() = auditLogs.clear()
-}
-
-private fun io.github.molelabs.aspectk.runtime.AnnotationInfo.argByName(name: String): Any? {
-    val index = parameterNames.indexOf(name)
-    return if (index >= 0) args.getOrNull(index) else null
 }

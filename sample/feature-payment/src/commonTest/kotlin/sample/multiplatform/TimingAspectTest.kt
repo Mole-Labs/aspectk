@@ -45,7 +45,7 @@ class TimingAspectTest {
         fakeNow = 0L
         paymentService.requestPayment("order-001", 100.0)
 
-        assertEquals(1, TimingAspect.timings.size, "requestPayment 호출 후 타이밍이 기록되어야 합니다")
+        assertEquals(1, TimingAspect.timings.size, "A timing should be recorded after requestPayment is called")
     }
 
     @Test
@@ -55,7 +55,7 @@ class TimingAspectTest {
 
         assertTrue(
             TimingAspect.timings.first().contains("requestPayment"),
-            "타이밍 로그에 함수명이 포함되어야 합니다",
+            "The timing log should include the function name",
         )
     }
 
@@ -63,7 +63,7 @@ class TimingAspectTest {
     fun `TimingAspect should measure elapsed time via clock`() {
         var callCount = 0
         TimingAspect.clock = {
-            // 첫 번째 호출(start)은 0, 두 번째 호출(end)은 42
+            // First call (start) returns 0, second call (end) returns 42
             if (callCount++ == 0) 0L else 42L
         }
 
@@ -71,7 +71,7 @@ class TimingAspectTest {
 
         assertTrue(
             TimingAspect.timings.first().contains("42ms"),
-            "측정된 경과 시간이 타이밍 로그에 포함되어야 합니다",
+            "The measured elapsed time should be included in the timing log",
         )
     }
 
@@ -80,7 +80,7 @@ class TimingAspectTest {
         fakeNow = 0L
         val result = paymentService.requestPayment("order-001", 100.0)
 
-        assertTrue(result.startsWith("TXN-"), "원본 함수의 반환값이 그대로 전달되어야 합니다")
+        assertTrue(result.startsWith("TXN-"), "The original function's return value should be passed through unchanged")
     }
 
     @Test
@@ -91,6 +91,6 @@ class TimingAspectTest {
         fakeNow = 2000L
         paymentService.requestPayment("order-002", 200.0)
 
-        assertEquals(2, TimingAspect.timings.size, "두 번의 호출이 모두 기록되어야 합니다")
+        assertEquals(2, TimingAspect.timings.size, "Both calls should be recorded")
     }
 }

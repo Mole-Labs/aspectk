@@ -7,21 +7,21 @@ import sample.multiplatform.annotations.Timed
 import sample.multiplatform.annotations.Trace
 
 /**
- * 결제 처리 서비스 샘플.
+ * Sample payment-processing service.
  *
- * - [PreventDoubleClick]: 결제 버튼 중복 클릭 방지
- * - [RequirePermission]: 민감한 결제 기능 접근 제어
- * - [Trace]: 결제 흐름 전체 추적
+ * - [PreventDoubleClick]: prevents duplicate clicks on the payment button
+ * - [RequirePermission]: gates access to sensitive payment operations
+ * - [Trace]: traces the full payment flow
  */
 class PaymentService {
 
     private var transactionCount = 0
 
     /**
-     * 결제를 요청합니다.
+     * Requests a payment.
      *
-     * - [PreventDoubleClick]: 기본 1000ms 쿨다운으로 중복 결제 요청을 방지합니다.
-     * - [Timed]: 결제 처리 소요 시간을 측정합니다.
+     * - [PreventDoubleClick]: prevents duplicate payment requests with a default 1000ms cooldown.
+     * - [Timed]: measures how long payment processing takes.
      */
     @Timed
     @PreventDoubleClick(cooldownMs = 1000L)
@@ -31,10 +31,10 @@ class PaymentService {
     }
 
     /**
-     * 결제를 환불합니다.
+     * Refunds a payment.
      *
-     * - [PreventDoubleClick]: 500ms 쿨다운으로 중복 환불을 방지합니다.
-     * - [RequirePermission]: "REFUND" 권한이 있어야 환불할 수 있습니다.
+     * - [PreventDoubleClick]: prevents duplicate refunds with a 500ms cooldown.
+     * - [RequirePermission]: requires the "REFUND" permission.
      */
     @LogExecution(tag = "PaymentService", level = "WARN")
     @PreventDoubleClick(cooldownMs = 500L)
@@ -44,8 +44,8 @@ class PaymentService {
     }
 
     /**
-     * 결제 내역을 조회합니다.
-     * - 별도 권한 없이 조회 가능하지만 모든 호출이 로깅됩니다.
+     * Retrieves payment history.
+     * - No permission required, but every call is logged.
      */
     @LogExecution(tag = "PaymentService")
     @Trace(spanName = "get-transaction-count")

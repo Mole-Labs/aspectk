@@ -7,13 +7,13 @@ import sample.multiplatform.db.User
 import sample.multiplatform.db.UserDao
 
 /**
- * 사용자 관리 서비스 샘플.
+ * Sample user-management service.
  *
- * - [LogExecution]: 모든 메서드의 호출 정보를 자동 로깅
- * - [RequirePermission]: 권한이 필요한 메서드에 접근 제어
- * - [Trace]: 메서드 호출 계층 추적
+ * - [LogExecution]: automatically logs call info for every method
+ * - [RequirePermission]: gates access to methods that require a permission
+ * - [Trace]: traces the method-call hierarchy
  *
- * Room KMP를 통해 플랫폼별 SQLite DB에 사용자 데이터를 영속 저장합니다.
+ * Persists user data to a platform-specific SQLite database via Room KMP.
  */
 class UserService(private val dao: UserDao) {
 
@@ -21,8 +21,8 @@ class UserService(private val dao: UserDao) {
     val isLoggedIn: Boolean get() = _isLoggedIn
 
     /**
-     * 사용자 로그인을 처리합니다.
-     * 데모용으로 자격증명을 하드코딩합니다.
+     * Handles user login.
+     * Credentials are hardcoded for demo purposes.
      */
     @LogExecution(tag = "UserService", level = "INFO")
     @Trace(spanName = "user-login")
@@ -33,8 +33,8 @@ class UserService(private val dao: UserDao) {
     }
 
     /**
-     * 현재 세션을 종료합니다.
-     * - [LogExecution]: 로그아웃 이벤트를 자동 로깅합니다.
+     * Ends the current session.
+     * - [LogExecution]: automatically logs the logout event.
      */
     @LogExecution(tag = "UserService", level = "INFO")
     fun logout() {
@@ -42,8 +42,8 @@ class UserService(private val dao: UserDao) {
     }
 
     /**
-     * 전체 사용자 목록을 조회합니다.
-     * - [RequirePermission]: "READ_USER_DATA" 권한이 없으면 차단됩니다.
+     * Retrieves the full list of users.
+     * - [RequirePermission]: blocked without the "READ_USER_DATA" permission.
      */
     @LogExecution(tag = "UserService")
     @RequirePermission("READ_USER_DATA")
@@ -52,8 +52,8 @@ class UserService(private val dao: UserDao) {
     }
 
     /**
-     * 새 사용자를 등록합니다.
-     * - [RequirePermission]: "ADMIN" 권한이 없으면 차단됩니다.
+     * Registers a new user.
+     * - [RequirePermission]: blocked without the "ADMIN" permission.
      */
     @LogExecution(tag = "UserService", level = "WARN")
     @RequirePermission("ADMIN")
@@ -63,8 +63,8 @@ class UserService(private val dao: UserDao) {
     }
 
     /**
-     * 사용자를 삭제합니다.
-     * - [RequirePermission]: "ADMIN" 권한이 없으면 차단됩니다.
+     * Deletes a user.
+     * - [RequirePermission]: blocked without the "ADMIN" permission.
      */
     @LogExecution(tag = "UserService", level = "WARN")
     @RequirePermission("ADMIN")

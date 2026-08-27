@@ -3,21 +3,23 @@ package sample.multiplatform.aspects
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.findAnnotation
+import io.github.molelabs.aspectk.runtime.getArgOrNull
 import sample.multiplatform.annotations.Trace
 
 /**
- * [Trace] 어노테이션이 붙은 함수 호출을 계층적으로 추적합니다.
+ * Traces calls to functions annotated with [Trace] hierarchically.
  *
- * 호출 깊이(depth)에 따라 들여쓰기하여 함수 호출 트리를 시각화합니다.
+ * Indents output based on call depth to visualize the function-call tree.
  *
- * 출력 예:
+ * ### Example output
  * ```
  * [TRACE] → processOrder (depth=1)
  * [TRACE]   → validatePayment (depth=2)
  * [TRACE]     → chargeCard (depth=3)
  * ```
  *
- * 사용 예:
+ * ### Example usage
  * ```kotlin
  * @Trace(spanName = "validate-payment")
  * fun validatePayment(orderId: String) { ... }
@@ -25,24 +27,19 @@ import sample.multiplatform.annotations.Trace
  */
 @Aspect
 object TracingAspect {
-    /** 현재 추적 중인 스팬 스택. 들여쓰기 깊이 계산에 사용됩니다. */
+    /** Stack of spans currently being traced. Used to compute the indentation depth. */
     val callStack = mutableListOf<String>()
 
-    /** 트레이스 출력 핸들러. 테스트에서 오버라이드할 수 있습니다. */
+    /** Trace-output handler. Can be overridden in tests. */
     var logger: (String) -> Unit = { message -> println(message) }
 
     @Before(Trace::class)
     fun trace(joinPoint: JoinPoint) {
-        val annotationInfo =
-            joinPoint.signature.annotations.firstOrNull {
-                it.typeName.contains("Trace")
-            }
         val spanName =
-            annotationInfo
-                ?.let { info ->
-                    val idx = info.parameterNames.indexOf("spanName")
-                    (info.args.getOrNull(idx) as? String)?.takeIf { it.isNotEmpty() }
-                } ?: joinPoint.signature.methodName
+            joinPoint
+                .findAnnotation<Trace>()
+                ?.getArgOrNull<String>("spanName")
+                ?.takeIf { it.isNotEmpty() } ?: joinPoint.signature.methodName
 
         val depth = callStack.size
         val indent = "  ".repeat(depth)
@@ -52,6 +49,6 @@ object TracingAspect {
         logger(message)
     }
 
-    /** 스택을 초기화합니다. 각 테스트 케이스 시작 전에 호출하세요. */
+    /** Clears the stack. Call this before each test case starts. */
     fun clearStack() = callStack.clear()
 }

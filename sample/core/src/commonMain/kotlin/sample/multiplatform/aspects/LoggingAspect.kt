@@ -3,14 +3,16 @@ package sample.multiplatform.aspects
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.findAnnotation
+import io.github.molelabs.aspectk.runtime.getArgOrNull
 import sample.multiplatform.annotations.LogExecution
 
 /**
- * [LogExecution] 어노테이션이 붙은 함수 호출을 가로채서 콘솔에 로그를 출력합니다.
+ * Intercepts calls to functions annotated with [LogExecution] and logs them to the console.
  *
- * 출력 형식: `[LEVEL][TAG] → methodName(param1=value1, param2=value2) : ReturnType`
+ * Output format: `[LEVEL][TAG] → methodName(param1=value1, param2=value2) : ReturnType`
  *
- * 사용 예:
+ * ### Example
  * ```kotlin
  * @LogExecution(tag = "UserService", level = "INFO")
  * fun login(username: String, password: String): Boolean { ... }
@@ -19,25 +21,22 @@ import sample.multiplatform.annotations.LogExecution
  */
 @Aspect
 object LoggingAspect {
-    /** 로그 출력 핸들러. 테스트에서 오버라이드하여 출력 내용을 캡처할 수 있습니다. */
+    /** Log-output handler. Can be overridden in tests to capture the output. */
     var logger: (String) -> Unit = { message -> println(message) }
 
-    /** 수집된 로그 메시지 목록. 테스트에서 사용합니다. */
+    /** Collected log messages. Used by tests. */
     val logs = mutableListOf<String>()
 
     @Before(LogExecution::class)
     fun log(joinPoint: JoinPoint) {
         val signature = joinPoint.signature
 
-        // @LogExecution 어노테이션의 tag, level 파라미터 추출
-        val annotationInfo =
-            signature.annotations.firstOrNull {
-                it.typeName.contains("LogExecution")
-            }
-        val tag = annotationInfo?.argByName("tag") as? String ?: "ASPECTK"
-        val level = annotationInfo?.argByName("level") as? String ?: "DEBUG"
+        // Extract the tag and level parameters from the @LogExecution annotation
+        val annotationInfo = joinPoint.findAnnotation<LogExecution>()
+        val tag = annotationInfo?.getArgOrNull<String>("tag") ?: "ASPECTK"
+        val level = annotationInfo?.getArgOrNull<String>("level") ?: "DEBUG"
 
-        // 파라미터 목록 구성 (args[0]은 receiver, args[1..]이 파라미터)
+        // Build the parameter list (args[0] is the receiver, args[1..] are the parameters)
         val paramStr =
             signature.parameter
                 .drop(1)
@@ -53,10 +52,4 @@ object LoggingAspect {
     }
 
     fun clearLogs() = logs.clear()
-}
-
-/** [io.github.molelabs.aspectk.runtime.AnnotationInfo]에서 파라미터 이름으로 값을 조회하는 헬퍼. */
-private fun io.github.molelabs.aspectk.runtime.AnnotationInfo.argByName(name: String): Any? {
-    val index = parameterNames.indexOf(name)
-    return if (index >= 0) args.getOrNull(index) else null
 }

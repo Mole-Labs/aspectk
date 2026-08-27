@@ -33,7 +33,7 @@ class LoggingAspectTest {
     fun `LoggingAspect should record log when annotated function is called`() {
         userService.login("alice", "pass123")
 
-        assertTrue(LoggingAspect.logs.isNotEmpty(), "로그가 기록되어야 합니다")
+        assertTrue(LoggingAspect.logs.isNotEmpty(), "A log entry should be recorded")
     }
 
     @Test
@@ -41,7 +41,7 @@ class LoggingAspectTest {
         userService.login("alice", "pass123")
 
         val log = LoggingAspect.logs.first { it.contains("login") }
-        assertTrue(log.contains("login"), "로그에 함수명이 포함되어야 합니다")
+        assertTrue(log.contains("login"), "The log should include the function name")
     }
 
     @Test
@@ -49,8 +49,8 @@ class LoggingAspectTest {
         userService.login("alice", "pass123")
 
         val log = LoggingAspect.logs.first { it.contains("login") }
-        assertTrue(log.contains("[INFO]"), "level=INFO가 로그에 반영되어야 합니다")
-        assertTrue(log.contains("[UserService]"), "tag=UserService가 로그에 반영되어야 합니다")
+        assertTrue(log.contains("[INFO]"), "level=INFO should be reflected in the log")
+        assertTrue(log.contains("[UserService]"), "tag=UserService should be reflected in the log")
     }
 
     @Test
@@ -58,8 +58,8 @@ class LoggingAspectTest {
         userService.login("alice", "secretpassword")
 
         val log = LoggingAspect.logs.first { it.contains("login") }
-        assertTrue(log.contains("***"), "비밀번호는 마스킹되어야 합니다")
-        assertTrue(!log.contains("secretpassword"), "실제 비밀번호가 로그에 노출되면 안 됩니다")
+        assertTrue(log.contains("***"), "The password should be masked")
+        assertTrue(!log.contains("secretpassword"), "The actual password must not be exposed in the log")
     }
 
     @Test
@@ -68,7 +68,7 @@ class LoggingAspectTest {
         userService.createUser("bob", "bob@example.com")
         userService.getAllUsers()
 
-        assertEquals(3, LoggingAspect.logs.size, "세 번의 함수 호출이 모두 기록되어야 합니다")
+        assertEquals(3, LoggingAspect.logs.size, "All three function calls should be recorded")
     }
 
     @Test
@@ -76,6 +76,6 @@ class LoggingAspectTest {
         userService.getAllUsers()
 
         val log = LoggingAspect.logs.first { it.contains("getAllUsers") }
-        assertTrue(log.contains("List"), "반환 타입이 로그에 포함되어야 합니다")
+        assertTrue(log.contains("List"), "The return type should be included in the log")
     }
 }

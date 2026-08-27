@@ -28,7 +28,7 @@ class TracingAspectTest {
 
         assertTrue(
             TracingAspect.callStack.any { it.contains("get-transaction-count") },
-            "spanName이 지정된 경우 해당 이름이 기록되어야 합니다",
+            "When spanName is specified, that name should be recorded",
         )
     }
 }
