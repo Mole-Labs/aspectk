@@ -39,12 +39,12 @@ class PermissionAspectTest {
 
         val result = userService.getAllUsers()
 
-        assertTrue(result.isEmpty(), "권한이 있으면 함수가 정상 실행되어야 합니다")
+        assertTrue(result.isEmpty(), "The function should run normally when the permission is granted")
     }
 
     @Test
     fun `PermissionAspect should throw PermissionDeniedException when permission is missing`() = runTest {
-        // READ_USER_DATA 권한 없이 호출
+        // Call without the READ_USER_DATA permission
         assertFailsWith<PermissionDeniedException> {
             userService.getAllUsers()
         }
@@ -58,7 +58,7 @@ class PermissionAspectTest {
 
         assertTrue(
             exception.message?.contains("READ_USER_DATA") == true,
-            "예외 메시지에 권한 이름이 포함되어야 합니다",
+            "The exception message should include the permission name",
         )
     }
 
@@ -70,7 +70,7 @@ class PermissionAspectTest {
 
         assertTrue(
             exception.message?.contains("getAllUsers") == true,
-            "예외 메시지에 함수명이 포함되어야 합니다",
+            "The exception message should include the function name",
         )
     }
 
@@ -80,7 +80,7 @@ class PermissionAspectTest {
 
         val created = userService.createUser("alice", "alice@example.com")
 
-        assertTrue(created, "ADMIN 권한이 있으면 createUser가 성공해야 합니다")
+        assertTrue(created, "createUser should succeed when the ADMIN permission is granted")
     }
 
     @Test
@@ -92,13 +92,13 @@ class PermissionAspectTest {
 
     @Test
     fun `PermissionAspect should handle multiple permissions independently`() = runTest {
-        // READ_USER_DATA만 부여
+        // Grant only READ_USER_DATA
         PermissionAspect.grantedPermissions += "READ_USER_DATA"
 
-        val users = userService.getAllUsers() // 성공
+        val users = userService.getAllUsers() // succeeds
         assertTrue(users.isEmpty())
 
-        // ADMIN은 없으므로 차단
+        // Blocked because ADMIN is not granted
         assertFailsWith<PermissionDeniedException> {
             userService.createUser("alice", "alice@example.com")
         }
@@ -107,19 +107,19 @@ class PermissionAspectTest {
     @Test
     fun `PermissionAspect should deny access after revoking permission`() = runTest {
         PermissionAspect.grantedPermissions += "READ_USER_DATA"
-        userService.getAllUsers() // 성공
+        userService.getAllUsers() // succeeds
 
         PermissionAspect.revokeAll()
 
         assertFailsWith<PermissionDeniedException> {
-            userService.getAllUsers() // 권한 없음
+            userService.getAllUsers() // no permission
         }
     }
 
     @Test
     fun `functions without RequirePermission should execute without permission check`() {
-        // login은 @RequirePermission이 없으므로 권한 없이도 실행되어야 함
+        // login has no @RequirePermission, so it should run without a permission check
         val result = userService.login("admin", "secret")
-        assertFalse(result.not(), "로그인 함수는 권한 검사 없이 실행되어야 합니다")
+        assertFalse(result.not(), "The login function should run without a permission check")
     }
 }

@@ -1,13 +1,14 @@
 package sample.multiplatform.annotations
 
 /**
- * 함수의 실행 시간을 밀리초 단위로 측정하여 로그에 출력합니다.
+ * Measures a function's execution time in milliseconds and logs the result.
  *
- * [sample.multiplatform.aspects.TimingAspect]가 `@Around` 어드바이스로
+ * [sample.multiplatform.aspects.TimingAspect] uses an `@Around` advice to measure the
+ * time elapsed before and after the
  * [ProceedingJoinPoint.proceed][io.github.molelabs.aspectk.runtime.ProceedingJoinPoint.proceed]
- * 호출 전후의 시간 차이를 측정합니다.
+ * call.
  *
- * 사용 예:
+ * ### Example
  * ```kotlin
  * @Timed
  * fun requestPayment(orderId: String, amount: Double): String { ... }

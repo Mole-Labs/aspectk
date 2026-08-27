@@ -36,7 +36,7 @@ class TracingAspectTest {
     fun `TracingAspect should add span to call stack when traced function is called`() {
         userService.login("alice", "pass")
 
-        assertTrue(TracingAspect.callStack.isNotEmpty(), "callStack에 스팬이 기록되어야 합니다")
+        assertTrue(TracingAspect.callStack.isNotEmpty(), "A span should be recorded in callStack")
     }
 
     @Test
@@ -45,7 +45,7 @@ class TracingAspectTest {
 
         assertTrue(
             TracingAspect.callStack.contains("user-login"),
-            "spanName='user-login'이 callStack에 기록되어야 합니다",
+            "spanName='user-login' should be recorded in callStack",
         )
     }
 
@@ -56,8 +56,8 @@ class TracingAspectTest {
 
         userService.createUser("alice", "alice@example.com")
 
-        // createUser는 @Trace(spanName="create-user") 보유
-        assertTrue(traceLogs.any { it.contains("create-user") }, "create-user 스팬이 추적되어야 합니다")
+        // createUser carries @Trace(spanName="create-user")
+        assertTrue(traceLogs.any { it.contains("create-user") }, "The create-user span should be traced")
     }
 
     @Test
@@ -65,6 +65,6 @@ class TracingAspectTest {
         userService.login("alice", "pass")
         userService.createUser("bob", "bob@example.com")
 
-        assertEquals(2, TracingAspect.callStack.size, "두 번의 @Trace 함수 호출이 누적되어야 합니다")
+        assertEquals(2, TracingAspect.callStack.size, "Both @Trace function calls should accumulate")
     }
 }

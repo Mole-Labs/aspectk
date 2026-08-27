@@ -1,9 +1,9 @@
 package sample.multiplatform.annotations
 
 /**
- * 함수 호출 계층(스택 깊이)을 추적하여 트레이싱 로그를 출력합니다.
+ * Traces the function-call hierarchy (stack depth) and emits tracing logs.
  *
- * @param spanName 트레이싱 스팬 이름. 비어있으면 함수명을 사용합니다.
+ * @param spanName Name of the tracing span. Falls back to the function name if empty.
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)

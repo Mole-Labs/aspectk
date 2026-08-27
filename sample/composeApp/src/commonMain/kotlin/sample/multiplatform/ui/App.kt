@@ -52,7 +52,7 @@ fun App() {
     var isError by remember { mutableStateOf(false) }
     var isLoggedIn by remember { mutableStateOf(false) }
 
-    // 앱 시작 시 초기 권한 부여 및 로그 핸들러 설정
+    // Grant initial permissions and wire up log handlers on app start
     remember {
         PermissionAspect.grantedPermissions += "READ_USER_DATA"
         PermissionAspect.grantedPermissions += "REFUND"
@@ -139,7 +139,7 @@ fun App() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 상태 카드
+                // Status card
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = statusMessage,
@@ -151,7 +151,7 @@ fun App() {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // UserService 버튼들
+                // UserService buttons
                 Text("UserService", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -195,13 +195,13 @@ fun App() {
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            // 권한 박탈 후 호출 → PermissionDeniedException 데모
+                            // Call after revoking permissions → demonstrates PermissionDeniedException
                             PermissionAspect.revokeAll()
                             runSafelySuspend {
                                 userService.getAllUsers()
                                 "unreachable"
                             }
-                            // 복원
+                            // Restore
                             PermissionAspect.grantedPermissions += "ADMIN"
                             PermissionAspect.grantedPermissions += "READ_USER_DATA"
                             PermissionAspect.grantedPermissions += "REFUND"
@@ -225,7 +225,7 @@ fun App() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // PaymentService 버튼들
+                // PaymentService buttons
                 Text("PaymentService", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -243,7 +243,7 @@ fun App() {
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = {
-                            // 빠른 연속 클릭 → DoubleClickException 데모
+                            // Rapid consecutive clicks → demonstrates DoubleClickException
                             runSafely {
                                 paymentService.requestPayment("order-rapid", 1.0)
                                 "unreachable"
@@ -254,7 +254,7 @@ fun App() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ViewModel (inherits=true) 버튼들
+                // ViewModel (inherits=true) buttons
                 Text("ViewModel (inherits=true)", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -297,7 +297,7 @@ fun App() {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 로그 패널
+                // Log panel
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

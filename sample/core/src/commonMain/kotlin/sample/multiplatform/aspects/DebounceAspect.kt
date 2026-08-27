@@ -3,32 +3,34 @@ package sample.multiplatform.aspects
 import io.github.molelabs.aspectk.runtime.Aspect
 import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
+import io.github.molelabs.aspectk.runtime.findAnnotation
+import io.github.molelabs.aspectk.runtime.getArgOrNull
 import sample.multiplatform.annotations.PreventDoubleClick
 import sample.multiplatform.exceptions.DoubleClickException
 import sample.multiplatform.platform.currentTimeMillis
 
 /**
- * [PreventDoubleClick] 어노테이션이 붙은 함수의 중복(빠른 연속) 호출을 방지합니다.
+ * Prevents duplicate (rapid, repeated) calls to functions annotated with [PreventDoubleClick].
  *
- * 각 함수별 마지막 호출 시각을 기록하고, 쿨다운 시간 이내에 재호출되면
- * [DoubleClickException]을 던져 함수 실행을 차단합니다.
+ * Records the last call time per function, and throws [DoubleClickException] to block
+ * execution if the function is called again within the cooldown period.
  *
- * 사용 예:
+ * ### Example
  * ```kotlin
  * @PreventDoubleClick(cooldownMs = 500L)
  * fun onSubmitButtonClick() { ... }
- * // 500ms 이내 재호출 시 → DoubleClickException
+ * // re-calling within 500ms → DoubleClickException
  * ```
  */
 @Aspect
 object DebounceAspect {
     /**
-     * 현재 시각을 밀리초로 반환하는 제공자.
-     * 테스트에서 시간을 제어하기 위해 교체할 수 있습니다.
+     * Provider that returns the current time in milliseconds.
+     * Can be swapped out in tests to control the clock.
      */
     var timeProvider: () -> Long = { currentTimeMillis() }
 
-    /** 함수명 → 마지막 호출 시각(ms) 매핑. */
+    /** Maps function name → last call time (ms). */
     private val lastCallTime = mutableMapOf<String, Long>()
 
     @Before(PreventDoubleClick::class)
@@ -36,16 +38,8 @@ object DebounceAspect {
         val methodName = joinPoint.signature.methodName
         val now = timeProvider()
 
-        val annotationInfo =
-            joinPoint.signature.annotations.firstOrNull {
-                it.typeName.contains("PreventDoubleClick")
-            }
         val cooldownMs =
-            annotationInfo
-                ?.let { info ->
-                    val idx = info.parameterNames.indexOf("cooldownMs")
-                    info.args.getOrNull(idx) as? Long
-                } ?: 1000L
+            joinPoint.findAnnotation<PreventDoubleClick>()?.getArgOrNull<Long>("cooldownMs") ?: 1000L
 
         val lastTime = lastCallTime[methodName] ?: -cooldownMs
         val elapsed = now - lastTime
@@ -61,6 +55,6 @@ object DebounceAspect {
         lastCallTime[methodName] = now
     }
 
-    /** 모든 함수의 마지막 호출 시각을 초기화합니다. 테스트 케이스 간 격리에 사용하세요. */
+    /** Resets the last call time for every function. Use this to isolate test cases. */
     fun reset() = lastCallTime.clear()
 }

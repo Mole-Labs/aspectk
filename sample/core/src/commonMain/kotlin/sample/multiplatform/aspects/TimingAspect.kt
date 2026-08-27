@@ -7,15 +7,15 @@ import sample.multiplatform.annotations.Timed
 import sample.multiplatform.platform.currentTimeMillis
 
 /**
- * [Timed] 어노테이션이 붙은 함수의 실행 시간을 측정합니다.
+ * Measures the execution time of functions annotated with [Timed].
  *
- * `@Around` 어드바이스를 사용하므로 원본 함수의 실행을 직접 제어합니다.
- * [ProceedingJoinPoint.proceed]를 호출하기 전과 후의 시각 차이를 측정하여 로그로 출력하고,
- * 원본 함수의 반환값을 그대로 호출자에게 전달합니다.
+ * Uses `@Around` advice, so it directly controls the original function's execution.
+ * It measures the time elapsed before and after calling [ProceedingJoinPoint.proceed],
+ * logs it, and passes the original function's return value through to the caller unchanged.
  *
- * 출력 형식: `[TIMED] methodName completed in Xms`
+ * Output format: `[TIMED] methodName completed in Xms`
  *
- * 사용 예:
+ * ### Example
  * ```kotlin
  * @Timed
  * fun requestPayment(orderId: String, amount: Double): String { ... }
@@ -25,15 +25,15 @@ import sample.multiplatform.platform.currentTimeMillis
 @Aspect
 object TimingAspect {
     /**
-     * 현재 시각을 밀리초로 반환하는 제공자.
-     * 테스트에서 시간을 제어하기 위해 교체할 수 있습니다.
+     * Provider that returns the current time in milliseconds.
+     * Can be swapped out in tests to control the clock.
      */
     var clock: () -> Long = { currentTimeMillis() }
 
-    /** 수집된 측정 결과 목록. 테스트에서 사용합니다. */
+    /** Collected timing results. Used by tests. */
     val timings = mutableListOf<String>()
 
-    /** 타이밍 로그 출력 핸들러. 테스트에서 오버라이드할 수 있습니다. */
+    /** Timing-log output handler. Can be overridden in tests. */
     var logger: (String) -> Unit = { println(it) }
 
     @Around(Timed::class)
@@ -48,6 +48,6 @@ object TimingAspect {
         return result
     }
 
-    /** 수집된 측정 결과를 초기화합니다. 각 테스트 케이스 시작 전에 호출하세요. */
+    /** Clears the collected timing results. Call this before each test case starts. */
     fun clearTimings() = timings.clear()
 }

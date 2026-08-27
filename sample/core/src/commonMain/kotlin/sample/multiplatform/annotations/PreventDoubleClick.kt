@@ -1,10 +1,11 @@
 package sample.multiplatform.annotations
 
 /**
- * 짧은 시간 안에 같은 함수가 중복 호출되는 것을 방지합니다.
- * 쿨다운 시간 내에 재호출되면 [sample.multiplatform.exceptions.DoubleClickException]을 던집니다.
+ * Prevents the same function from being called again within a short time window.
+ * Throws [sample.multiplatform.exceptions.DoubleClickException] if the function is
+ * re-invoked before the cooldown period elapses.
  *
- * @param cooldownMs 중복 호출을 막을 최소 시간 간격 (밀리초). 기본값은 1000ms (1초).
+ * @param cooldownMs Minimum interval, in milliseconds, required between calls. Defaults to 1000ms (1 second).
  */
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.BINARY)
