@@ -82,6 +82,10 @@ internal class LocalFunctionGenerator(
                     name = Name.identifier(localFuncName)
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = declaration.returnType
+                    // The original body may contain suspend calls; if the target is suspend the
+                    // copied body must live in a suspend function too, or the JVM
+                    // AddContinuationLowering fails with "has no continuation".
+                    isSuspend = (declaration as? IrSimpleFunction)?.isSuspend == true
                     origin = aspectKCompilerContext.irCompat.localFunctionOrigin()
                 }.apply {
                     parent = declaration

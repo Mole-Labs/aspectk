@@ -289,6 +289,19 @@ This means `@After` fires if and only if `pjp.proceed()` was called and the orig
 
 See [`@After` Advice](after-advice.md) for details on this design decision.
 
+## Current Limitation — `@Around` on `suspend` functions that suspend
+
+`@Around` weaving copies the original body into a generated local function and invokes it
+through a non-`suspend` `OnProceedListener` SAM. If the target is a `suspend` function whose
+body **actually suspends** (calls another `suspend` function), compilation currently fails in
+the JVM backend (`AddContinuationLowering`: *"has no continuation"*).
+
+`@Around` on a `suspend` function with a non-suspending body still works. `@Before` and
+`@After` work on `suspend` functions regardless of whether the body suspends.
+
+Full `@Around` support for suspending bodies requires making the `proceed()` call chain
+`suspend`-aware, which changes the advice signature — tracked as a follow-up.
+
 ## Current Limitation — One `@Around` Per Target Annotation
 
 At most **one** `@Around` advice can be applied per target annotation. If multiple `@Around`
