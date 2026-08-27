@@ -86,6 +86,15 @@ public abstract interface class io/github/molelabs/aspectk/runtime/ProceedingJoi
 	public abstract fun onProceed (Ljava/util/List;)Ljava/lang/Object;
 }
 
+public abstract interface class io/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
+	public abstract fun proceed (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun proceed ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class io/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint$SuspendOnProceedListener {
+	public abstract fun onProceed (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public final class io/github/molelabs/aspectk/runtime/internal/DefaultJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
 	public fun <init> (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;)V
 	public final fun component1 ()Ljava/lang/Object;
@@ -108,5 +117,14 @@ public final class io/github/molelabs/aspectk/runtime/internal/DefaultProceeding
 	public fun getTarget ()Ljava/lang/Object;
 	public fun proceed ()Ljava/lang/Object;
 	public fun proceed ([Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class io/github/molelabs/aspectk/runtime/internal/DefaultSuspendProceedingJoinPoint : io/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint {
+	public fun <init> (Ljava/lang/Object;Lio/github/molelabs/aspectk/runtime/MethodSignature;Ljava/util/List;Lio/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint$SuspendOnProceedListener;)V
+	public fun getArgs ()Ljava/util/List;
+	public fun getSignature ()Lio/github/molelabs/aspectk/runtime/MethodSignature;
+	public fun getTarget ()Ljava/lang/Object;
+	public fun proceed (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun proceed ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 

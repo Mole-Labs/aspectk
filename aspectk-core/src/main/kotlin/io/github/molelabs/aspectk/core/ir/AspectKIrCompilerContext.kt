@@ -49,6 +49,17 @@ internal data class AspectKIrCompilerContext(
             ),
         ) ?: reportCompilerBug("Cannot find symbol for $ON_PROCEED_LISTENER_FQ_NAME")
     val onProceedListenerType: IrType = onProceedListenerSymbol.typeWith()
+    val suspendProceedingJoinPointSymbol: IrClassSymbol = getSymbol(SUSPEND_PROCEEDING_JOIN_POINT_FQ_NAME)
+    val suspendOnProceedListenerSymbol: IrClassSymbol =
+        irCompat.referenceClass(
+            pluginContext,
+            ClassId(
+                FqName("io.github.molelabs.aspectk.runtime"),
+                FqName("SuspendProceedingJoinPoint.SuspendOnProceedListener"),
+                false,
+            ),
+        ) ?: reportCompilerBug("Cannot find symbol for $SUSPEND_ON_PROCEED_LISTENER_FQ_NAME")
+    val suspendOnProceedListenerType: IrType = suspendOnProceedListenerSymbol.typeWith()
     val methodSignatureSymbol: IrClassSymbol = getSymbol(METHOD_SIGNATURE_FQ_NAME)
     val methodParameterSymbol: IrClassSymbol = getSymbol(METHOD_PARAMETER_FQ_NAME)
     val annotationInfoSymbol: IrClassSymbol = getSymbol(ANNOTATION_INFO_FQ_NAME)
@@ -72,5 +83,7 @@ internal data class AspectKIrCompilerContext(
         const val JOIN_POINT_FQ_NAME = "io.github.molelabs.aspectk.runtime.internal.DefaultJoinPoint"
         const val PROCEEDING_JOIN_POINT_FQ_NAME = "io.github.molelabs.aspectk.runtime.internal.DefaultProceedingJoinPoint"
         const val ON_PROCEED_LISTENER_FQ_NAME = "io.github.molelabs.aspectk.runtime.ProceedingJoinPoint.OnProceedListener"
+        const val SUSPEND_PROCEEDING_JOIN_POINT_FQ_NAME = "io.github.molelabs.aspectk.runtime.internal.DefaultSuspendProceedingJoinPoint"
+        const val SUSPEND_ON_PROCEED_LISTENER_FQ_NAME = "io.github.molelabs.aspectk.runtime.SuspendProceedingJoinPoint.SuspendOnProceedListener"
     }
 }

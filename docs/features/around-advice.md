@@ -289,6 +289,42 @@ This means `@After` fires if and only if `pjp.proceed()` was called and the orig
 
 See [`@After` Advice](after-advice.md) for details on this design decision.
 
+## `@Around` on `suspend` functions
+
+When the intercepted function is `suspend`, `proceed()` has to resume the original
+suspending body, so it must itself `suspend`. For these targets the advice takes a
+`SuspendProceedingJoinPoint` instead of a `ProceedingJoinPoint`
+and must be declared `suspend`:
+
+```kotlin
+@Aspect
+object TimingAspect {
+    @Around(target = [Timed::class])
+    suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+        val start = timeSource.markNow()
+        val result = pjp.proceed()            // suspends
+        println("${pjp.signature.methodName} took ${start.elapsedNow()}")
+        return result
+    }
+}
+
+class Repo {
+    @Timed
+    suspend fun load(id: String): Row {
+        delay(10)
+        return db.fetch(id)
+    }
+}
+```
+
+`SuspendProceedingJoinPoint` has the same surface as `ProceedingJoinPoint`
+(`target`, `signature`, `args`, `proceed()`, `proceed(vararg args)`) — only `proceed`
+is `suspend`. The AspectK plugin picks the join-point type automatically from whether the
+target is `suspend`; a non-suspending target still uses `ProceedingJoinPoint`.
+
+`@Before` and `@After` need no special handling — they work on `suspend` functions with
+the ordinary `JoinPoint`.
+
 ## Current Limitation — One `@Around` Per Target Annotation
 
 At most **one** `@Around` advice can be applied per target annotation. If multiple `@Around`

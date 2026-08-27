@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.android.library)
     // PUBLISH_VERSION, published to the throwaway build/localMaven repo (see settings.gradle.kts)
     // instead of a real release -- lets this sample build against the current working tree.
-    id("io.github.mole-labs.aspectk") version "0.3.0"
+    id("io.github.mole-labs.aspectk") version "0.3.1"
 }
 
 android {
