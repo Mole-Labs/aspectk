@@ -26,6 +26,8 @@ import kotlin.reflect.KClass
  * is never called, the original body is skipped entirely.
  *
  * The advice function must declare exactly one parameter of type [ProceedingJoinPoint].
+ * When the intercepted function is `suspend`, the advice must instead take a
+ * [SuspendProceedingJoinPoint] and be declared `suspend` itself.
  *
  * ### Example
  * ```kotlin
@@ -44,6 +46,7 @@ import kotlin.reflect.KClass
  *
  * @see Aspect
  * @see ProceedingJoinPoint
+ * @see SuspendProceedingJoinPoint
  */
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.CONSTRUCTOR)
 @Retention(AnnotationRetention.BINARY)

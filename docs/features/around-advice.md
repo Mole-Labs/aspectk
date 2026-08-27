@@ -289,18 +289,41 @@ This means `@After` fires if and only if `pjp.proceed()` was called and the orig
 
 See [`@After` Advice](after-advice.md) for details on this design decision.
 
-## Current Limitation — `@Around` on `suspend` functions that suspend
+## `@Around` on `suspend` functions
 
-`@Around` weaving copies the original body into a generated local function and invokes it
-through a non-`suspend` `OnProceedListener` SAM. If the target is a `suspend` function whose
-body **actually suspends** (calls another `suspend` function), compilation currently fails in
-the JVM backend (`AddContinuationLowering`: *"has no continuation"*).
+When the intercepted function is `suspend`, `proceed()` has to resume the original
+suspending body, so it must itself `suspend`. For these targets the advice takes a
+`SuspendProceedingJoinPoint` instead of a `ProceedingJoinPoint`
+and must be declared `suspend`:
 
-`@Around` on a `suspend` function with a non-suspending body still works. `@Before` and
-`@After` work on `suspend` functions regardless of whether the body suspends.
+```kotlin
+@Aspect
+object TimingAspect {
+    @Around(target = [Timed::class])
+    suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+        val start = timeSource.markNow()
+        val result = pjp.proceed()            // suspends
+        println("${pjp.signature.methodName} took ${start.elapsedNow()}")
+        return result
+    }
+}
 
-Full `@Around` support for suspending bodies requires making the `proceed()` call chain
-`suspend`-aware, which changes the advice signature — tracked as a follow-up.
+class Repo {
+    @Timed
+    suspend fun load(id: String): Row {
+        delay(10)
+        return db.fetch(id)
+    }
+}
+```
+
+`SuspendProceedingJoinPoint` has the same surface as `ProceedingJoinPoint`
+(`target`, `signature`, `args`, `proceed()`, `proceed(vararg args)`) — only `proceed`
+is `suspend`. The AspectK plugin picks the join-point type automatically from whether the
+target is `suspend`; a non-suspending target still uses `ProceedingJoinPoint`.
+
+`@Before` and `@After` need no special handling — they work on `suspend` functions with
+the ordinary `JoinPoint`.
 
 ## Current Limitation — One `@Around` Per Target Annotation
 

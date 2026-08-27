@@ -20,6 +20,7 @@ import io.github.molelabs.aspectk.core.ir.createIrListOf
 import io.github.molelabs.aspectk.core.ir.function1Type
 import io.github.molelabs.aspectk.core.ir.listAnyNType
 import io.github.molelabs.aspectk.core.ir.listGetFun
+import io.github.molelabs.aspectk.core.ir.suspendFunction1Type
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
 import org.jetbrains.kotlin.ir.builders.declarations.IrValueParameterBuilder
@@ -57,9 +58,15 @@ internal class ProceedingJoinPointGenerator(
     private val proceedingJoinPointConstructor =
         aspectKCompilerContext.proceedingJoinPointSymbol.constructors.first()
 
+    private val suspendProceedingJoinPointConstructor =
+        aspectKCompilerContext.suspendProceedingJoinPointSymbol.constructors.first()
+
     /**
      * Builds a [DefaultProceedingJoinPoint] constructor call whose `onProceedListener` is
      * `{ args -> localFunc(args[0] as T0, args[1] as T1, ...) }` wrapped as a SAM conversion.
+     *
+     * When [declaration] is `suspend`, builds a `DefaultSuspendProceedingJoinPoint` instead:
+     * the wrapper lambda and its SAM interface are `suspend` so the copied body can resume.
      *
      * [localFunc] must be the value returned by [generateLocalFunction] for the same [declaration].
      */
@@ -68,8 +75,16 @@ internal class ProceedingJoinPointGenerator(
         localFunc: IrSimpleFunction,
         signatureProperty: IrProperty,
     ): IrExpression {
+        val isSuspend = (declaration as? IrSimpleFunction)?.isSuspend == true
         val valueParams = declaration.parameters.filter { it.kind == IrParameterKind.Regular }
-        val wrapperLambda = buildWrapperLambda(declaration, localFunc, valueParams)
+        val wrapperLambda = buildWrapperLambda(declaration, localFunc, valueParams, isSuspend)
+        val constructor = if (isSuspend) suspendProceedingJoinPointConstructor else proceedingJoinPointConstructor
+        val listenerType =
+            if (isSuspend) {
+                aspectKCompilerContext.suspendOnProceedListenerType
+            } else {
+                aspectKCompilerContext.onProceedListenerType
+            }
 
         val argsExpression =
             aspectKCompilerContext.createIrListOf(
@@ -81,7 +96,7 @@ internal class ProceedingJoinPointGenerator(
             )
 
         return aspectKCompilerContext.withIrBuilder(declaration.symbol) {
-            irCall(proceedingJoinPointConstructor).apply {
+            irCall(constructor).apply {
                 arguments[0] = declaration.dispatchReceiverParameter?.let { irGet(it) }
                     ?: irNull(context.irBuiltIns.anyNType)
                 arguments[1] =
@@ -93,9 +108,9 @@ internal class ProceedingJoinPointGenerator(
                     IrTypeOperatorCallImpl(
                         startOffset = -1,
                         endOffset = -1,
-                        type = aspectKCompilerContext.onProceedListenerType,
+                        type = listenerType,
                         operator = IrTypeOperator.SAM_CONVERSION,
-                        typeOperand = aspectKCompilerContext.onProceedListenerType,
+                        typeOperand = listenerType,
                         argument = wrapperLambda,
                     )
             }
@@ -110,6 +125,7 @@ internal class ProceedingJoinPointGenerator(
         declaration: IrFunction,
         localFunc: IrSimpleFunction,
         valueParams: List<IrValueDeclaration>,
+        isSuspend: Boolean,
     ): IrFunctionExpression {
         val lambdaFun =
             aspectKCompilerContext.pluginContext.irFactory
@@ -117,6 +133,7 @@ internal class ProceedingJoinPointGenerator(
                     name = Name.special("<anonymous>")
                     visibility = DescriptorVisibilities.LOCAL
                     returnType = aspectKCompilerContext.pluginContext.irBuiltIns.anyNType
+                    this.isSuspend = isSuspend
                     origin = aspectKCompilerContext.irCompat.localFunctionForLambdaOrigin()
                 }.apply {
                     parent = declaration
@@ -164,7 +181,12 @@ internal class ProceedingJoinPointGenerator(
         return IrFunctionExpressionImpl(
             startOffset = -1,
             endOffset = -1,
-            type = aspectKCompilerContext.function1Type,
+            type =
+            if (isSuspend) {
+                aspectKCompilerContext.suspendFunction1Type
+            } else {
+                aspectKCompilerContext.function1Type
+            },
             function = lambdaFun,
             origin = IrStatementOrigin.LAMBDA,
         )

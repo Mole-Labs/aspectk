@@ -16,30 +16,32 @@
 package io.github.molelabs.aspectk.tests
 
 import io.github.molelabs.aspectk.runtime.After
+import io.github.molelabs.aspectk.runtime.Around
 import io.github.molelabs.aspectk.runtime.Aspect
-import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
-import io.github.molelabs.aspectk.tests.SuspendBodyAdviceTest.CombinedTarget
+import io.github.molelabs.aspectk.runtime.SuspendProceedingJoinPoint
+import io.github.molelabs.aspectk.tests.SuspendBodyAdviceTest.AroundTopLevelTarget
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Regression tests for weaving advice into `suspend` functions whose body actually
- * performs a suspension (i.e. calls another suspend function such as `delay`).
+ * Weaving advice into `suspend` functions whose body actually performs a suspension
+ * (calls another suspend function such as `delay`).
  *
  * `@After`/`@Around` copy the original body into a generated local function `$<name>`.
- * Before the fix that local function was always non-suspend, so a suspend call inside
- * the copied body made the JVM `AddContinuationLowering` fail with:
+ * That local function must be `suspend` when the target is `suspend`, or the JVM
+ * `AddContinuationLowering` fails with "has no continuation".
  *
- *   FUN LOCAL_FUNCTION name:$work ... has no continuation;
- *   can't call FUN ... delay ... [suspend]
- *
- * The fix marks the generated local function `isSuspend` when the target is suspend.
+ * For `@Around` the wrapper lambda also goes through a SAM interface: on a `suspend`
+ * target the plugin emits a `DefaultSuspendProceedingJoinPoint` with a `suspend`
+ * `SuspendOnProceedListener`, and the advice must take a [SuspendProceedingJoinPoint]
+ * and be declared `suspend`.
  */
 @Suppress("UNUSED")
 class SuspendBodyAdviceTest {
@@ -47,7 +49,7 @@ class SuspendBodyAdviceTest {
     fun reset() {
         AfterValueAspect.ran = false
         AfterThrowAspect.ran = false
-        CombinedAspect.events.clear()
+        AroundMemberAspect.proceeded = false
     }
 
     // 1. @After on a suspend member function that suspends and then returns a value.
@@ -115,38 +117,90 @@ class SuspendBodyAdviceTest {
         assertTrue(AfterThrowAspect.ran)
     }
 
-    // 3. @Before + @After on the same top-level suspend function (no dispatch receiver):
-    //    both fire, in order, around a body that suspends.
+    // 3. @Around on a suspend member function: proceed() resumes the suspending body,
+    //    and the advice transforms the result.
 
     @Target(AnnotationTarget.FUNCTION)
-    annotation class CombinedTarget
+    annotation class AroundMemberTarget
 
     @Aspect
-    object CombinedAspect {
-        val events = mutableListOf<String>()
+    object AroundMemberAspect {
+        var proceeded = false
 
-        @Before(CombinedTarget::class)
-        fun doBefore(joinPoint: JoinPoint) {
-            events += "before"
+        @Around(AroundMemberTarget::class)
+        suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+            val result = pjp.proceed() as String
+            proceeded = true
+            return result.uppercase()
         }
+    }
 
-        @After(CombinedTarget::class)
-        fun doAfter(joinPoint: JoinPoint) {
-            events += "after"
+    class Greeter {
+        @AroundMemberTarget
+        suspend fun greet(name: String): String {
+            delay(1)
+            return "hi $name"
         }
     }
 
     @Test
-    fun `before and after both weave into a top-level suspending function`() = runTest {
-        val result = topLevelSuspendingWork("x")
-        assertEquals("done-x", result)
-        assertEquals(listOf("before", "body", "after"), CombinedAspect.events)
+    fun `around advice can proceed and transform the result of a suspending member function`() = runTest {
+        val result = Greeter().greet("sam")
+        assertEquals("HI SAM", result)
+        assertTrue(AroundMemberAspect.proceeded)
+    }
+
+    // 4. @Around on a top-level suspend function: proceed(vararg) substitutes an argument.
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class AroundTopLevelTarget
+
+    @Aspect
+    object AroundTopLevelAspect {
+        @Around(AroundTopLevelTarget::class)
+        suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+            assertEquals(null, pjp.target)
+            return pjp.proceed("replaced")
+        }
+    }
+
+    @Test
+    fun `around advice on a top-level suspending function can substitute an argument`() = runTest {
+        assertEquals("got=replaced", topLevelEcho("original"))
+    }
+
+    // 5. @Around that never calls proceed(): the suspending body is skipped entirely.
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class AroundSkipTarget
+
+    @Aspect
+    object AroundSkipAspect {
+        @Around(AroundSkipTarget::class)
+        suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? = "stubbed"
+    }
+
+    class Loader {
+        var bodyRan = false
+
+        @AroundSkipTarget
+        suspend fun load(): String {
+            delay(1)
+            bodyRan = true
+            return "real"
+        }
+    }
+
+    @Test
+    fun `around advice that skips proceed never runs the suspending body`() = runTest {
+        val loader = Loader()
+        assertEquals("stubbed", loader.load())
+        assertFalse(loader.bodyRan)
     }
 }
 
-@CombinedTarget
-private suspend fun topLevelSuspendingWork(tag: String): String {
+@AroundTopLevelTarget
+private suspend fun topLevelEcho(value: String): String {
     delay(1)
-    SuspendBodyAdviceTest.CombinedAspect.events += "body"
-    return "done-$tag"
+    return "got=$value"
 }
