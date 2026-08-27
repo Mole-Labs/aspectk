@@ -30,6 +30,7 @@ kotlin {
             implementation(project(":core"))
         }
         commonTest.dependencies {
+            implementation(project(":core"))
             implementation(kotlin("test"))
         }
     }

@@ -27,14 +27,12 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // Target annotations (LogExecution/RequirePermission/Trace) and the aspects that
-            // weave them (LoggingAspect/PermissionAspect/TracingAspect) both live upstream in
-            // :core -- this module never imports the aspect objects themselves, only the
-            // annotations, yet the advice still fires (cross-module weaving).
             implementation(project(":core"))
             implementation(project(":data"))
         }
         commonTest.dependencies {
+            implementation(project(":core"))
+            implementation(project(":data"))
             implementation(kotlin("test"))
             implementation(libs.kotlinx.coroutines.test)
         }

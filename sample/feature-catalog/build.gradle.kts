@@ -27,13 +27,10 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            // OrderViewModel/ProductViewModel override BaseViewModel's methods without
-            // re-annotating them with @AuditAction -- AuditAspect's inherits=true recovers the
-            // annotation through the override chain even though BaseViewModel and its aspect are
-            // both declared in a different module (:core).
             implementation(project(":core"))
         }
         commonTest.dependencies {
+            implementation(project(":core"))
             implementation(kotlin("test"))
         }
     }
