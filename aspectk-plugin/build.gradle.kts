@@ -90,11 +90,6 @@ val functionalTest by tasks.registering(Test::class) {
     )
     systemProperty("aspectk.version", project.property("PUBLISH_VERSION") as String)
     systemProperty("aspectk.kotlinVersion", libs.versions.kotlin.get())
-    // A stable, shared GradleRunner TestKit home instead of a fresh one per test: a fresh one
-    // downloads/generates Gradle's own internal jars from scratch every time (~350MB each) and,
-    // since it must NOT be JUnit-@TempDir-cleaned (a lingering TestKit daemon can still hold
-    // locks right after the build finishes, racing JUnit's own cleanup), that used to just pile
-    // up on disk across runs.
     systemProperty(
         "aspectk.testKitHome",
         rootProject.layout.buildDirectory.dir("functionalTestGradleHome").get().asFile.absolutePath,

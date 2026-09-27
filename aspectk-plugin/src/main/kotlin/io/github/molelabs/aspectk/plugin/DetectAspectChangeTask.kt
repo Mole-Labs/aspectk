@@ -23,18 +23,14 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
-import org.gradle.work.ChangeType
 import org.gradle.work.Incremental
 import org.gradle.work.InputChanges
+import java.io.File
 
-// Decides whether THIS round needs a full (non-incremental) recompile, based only on the files
-// that actually changed since this task's own last successful run -- not "does the compilation
-// contain an @Aspect/@Before/@After/@Around anywhere" (that would force a full recompile on every
-// edit, forever, once a module uses AspectK at all), but "did one of the files that changed just
-// now mention one" (docs/design-decision/cross-module-weaving.md). The result is written to
-// resultFile rather than communicated via a live reference to this task, so the consuming compile
-// task (AspectKGradleSubPlugin.registerAspectChangeDetection) can read the decision from disk in
-// its own doFirst without holding a Task reference across a configuration-cache boundary.
+// Decides whether THIS round needs a full recompile
+// For single-module setups, triggers a recompilation
+// when changes to AspectK Runtime annotations are detected.
+// TODO migrate to PredicateBasedProvider
 internal abstract class DetectAspectChangeTask : DefaultTask() {
     @get:Incremental
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -54,14 +50,25 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
                     if (change.file.extension != "kt") {
                         false
                     } else {
-                        when (change.changeType) {
-                            ChangeType.MODIFIED, ChangeType.ADDED -> change.file.isFile && fileHasAspectMarker(change.file)
-                            ChangeType.REMOVED -> true
-                        }
+                        change.file.isFile && fileHasAspectMarker(change.file)
                     }
                 }
         val file = resultFile.get().asFile
         file.parentFile?.mkdirs()
         file.writeText(relevant.toString())
+    }
+
+    private fun fileHasAspectMarker(file: File): Boolean {
+        val text = file.readText()
+            .replace(BLOCK_COMMENT, "")
+            .replace(LINE_COMMENT, "")
+        return ASPECT_RELEVANT_MARKERS.any { marker -> marker in text }
+    }
+
+    companion object {
+        private val ASPECT_RELEVANT_MARKERS = listOf("@Aspect", "@Before", "@After", "@Around")
+
+        private val LINE_COMMENT = Regex("//.*")
+        private val BLOCK_COMMENT = Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL)
     }
 }

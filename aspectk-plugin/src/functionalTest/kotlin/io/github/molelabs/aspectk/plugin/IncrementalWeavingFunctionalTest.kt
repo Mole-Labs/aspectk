@@ -195,25 +195,6 @@ class IncrementalWeavingFunctionalTest {
         // when: round 2, only Aspect.kt edited (adds @Before)
         writeFile(
             projectDir,
-            "src/main/kotlin/Aspect.kt",
-            """
-            import io.github.molelabs.aspectk.runtime.Aspect
-            import io.github.molelabs.aspectk.runtime.Before
-            import io.github.molelabs.aspectk.runtime.JoinPoint
-
-            @Aspect
-            object LoggingAspect {
-                var executionCount: Int = 0
-
-                @Before(LogCall::class)
-                fun log(joinPoint: JoinPoint) {
-                    executionCount++
-                }
-            }
-            """.trimIndent(),
-        )
-        writeFile(
-            projectDir,
             "src/test/kotlin/WeavingTest.kt",
             """
             import org.junit.jupiter.api.Assertions.assertEquals
@@ -227,6 +208,13 @@ class IncrementalWeavingFunctionalTest {
                     assertEquals(1, LoggingAspect.executionCount)
                 }
             }
+            """.trimIndent(),
+        )
+        writeFile(
+            projectDir,
+            "src/main/kotlin/Unrelated.kt",
+            """
+            val a = 1
             """.trimIndent(),
         )
 
