@@ -38,6 +38,13 @@ internal fun writeFile(
     }
 }
 
+internal fun removeFile(
+    projectDir: File,
+    relativePath: String,
+) {
+    File(projectDir, relativePath).delete()
+}
+
 internal fun runGradle(
     projectDir: File,
     testKitDir: File,

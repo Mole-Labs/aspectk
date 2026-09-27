@@ -22,23 +22,9 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
-// See docs/design-decision/cross-module-weaving.md §9.
-class CrossModuleIncrementalWeavingFunctionalTest {
+class CrossModuleIncrementalWeavingTest {
     @TempDir
     lateinit var projectDir: File
-
-    // Control: clean build only
-    @Test
-    fun `cross-module advice applies on a single clean build`() {
-        writeProjectSkeleton()
-        writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
-        writeFile(projectDir, "aspect-module/src/main/kotlin/Unrelated.kt", "val unrelated = 1\n")
-        writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
-        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile())
-
-        val result = runGradle(projectDir, testKitDir(), "test")
-        assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:test")?.outcome, result.output)
-    }
 
     @Test
     fun `cross-module advice survives an incremental rebuild of an unrelated file in the aspect module`() {
@@ -46,14 +32,14 @@ class CrossModuleIncrementalWeavingFunctionalTest {
         writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
         writeFile(projectDir, "aspect-module/src/main/kotlin/Unrelated.kt", "val unrelated = 1\n")
         writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
-        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile())
+        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 1))
 
-        // given: round 1 baseline
+        // given
         runGradle(projectDir, testKitDir(), "test").also {
             assertEquals(TaskOutcome.SUCCESS, it.task(":feature-module:test")?.outcome, it.output)
         }
 
-        // when: round 2, edit only Unrelated.kt
+        // when: edit only Unrelated.kt
         writeFile(projectDir, "aspect-module/src/main/kotlin/Unrelated.kt", "val unrelated = 2\n")
 
         val result = runGradle(projectDir, testKitDir(), "test")
@@ -65,6 +51,7 @@ class CrossModuleIncrementalWeavingFunctionalTest {
                 .walkTopDown()
                 .firstOrNull { it.name == "hints.json" }
         val hintsContent = hintsFile?.readText().orEmpty()
+        assertEquals(TaskOutcome.UP_TO_DATE, result.task(":feature-module:compileKotlin")?.outcome, result.output)
         assertTrue(
             hintsContent.contains("LoggingAspect"),
             "hints.json after the incremental rebuild did not contain LoggingAspect. " +
@@ -72,29 +59,46 @@ class CrossModuleIncrementalWeavingFunctionalTest {
         )
     }
 
-    // Downstream-only recompile consuming an unchanged upstream hints.json; doesn't exercise
-    // DetectAspectChangeTask.
     @Test
     fun `cross-module advice applies after an incremental build that only edits the feature module's target file`() {
         writeProjectSkeleton()
         writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
         writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFileWithoutAnnotation())
 
-        // given: round 1, Target unannotated
+        // given
         runGradle(projectDir, testKitDir(), "compileKotlin").also {
             assertEquals(TaskOutcome.SUCCESS, it.task(":feature-module:compileKotlin")?.outcome, it.output)
         }
 
-        // when: round 2, only Target.kt edited
+        // when: only Target.kt edited
         writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
-        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile())
+        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 1))
 
         val result = runGradle(projectDir, testKitDir(), "test")
+        assertEquals(TaskOutcome.UP_TO_DATE, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:test")?.outcome, result.output)
     }
 
-    // Complements the "no-loss" test above with the "gain" direction: a newly added advice
-    // must actually make it into hints.json during an incremental round.
+    @Test
+    fun `cross-module advice removes after an incremental build that only removes the feature module's target file`() {
+        writeProjectSkeleton()
+        writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
+        writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
+
+        // given
+        runGradle(projectDir, testKitDir(), "compileKotlin").also {
+            assertEquals(TaskOutcome.SUCCESS, it.task(":feature-module:compileKotlin")?.outcome, it.output)
+        }
+
+        // when: only Target.kt edited
+        writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFileWithoutAnnotation())
+        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 0))
+
+        val result = runGradle(projectDir, testKitDir(), "test")
+        assertEquals(TaskOutcome.UP_TO_DATE, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:test")?.outcome, result.output)
+    }
+
     @Test
     fun `cross-module hints gain a new advice after an incremental build that only edits the aspect module`() {
         writeProjectSkeleton()
@@ -102,16 +106,18 @@ class CrossModuleIncrementalWeavingFunctionalTest {
         writeFile(projectDir, "aspect-module/src/main/kotlin/Unrelated.kt", "val unrelated = 1\n")
         writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
 
-        // given: round 1, no advice yet
+        // given
         runGradle(projectDir, testKitDir(), "compileKotlin").also {
             assertEquals(TaskOutcome.SUCCESS, it.task(":aspect-module:compileKotlin")?.outcome, it.output)
         }
 
-        // when: round 2, only Aspect.kt edited (adds advice)
+        // when: only Aspect.kt edited (adds advice)
         writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
+        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 1))
 
         val result = runGradle(projectDir, testKitDir(), "compileKotlin")
         assertEquals(TaskOutcome.SUCCESS, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:compileKotlin")?.outcome, result.output)
 
         val hintsFile =
             File(projectDir, "aspect-module/build/generated/aspectk/hints")
@@ -125,61 +131,37 @@ class CrossModuleIncrementalWeavingFunctionalTest {
         )
     }
 
-    private fun aspectFile() = """
-        import io.github.molelabs.aspectk.runtime.Aspect
-        import io.github.molelabs.aspectk.runtime.Before
-        import io.github.molelabs.aspectk.runtime.JoinPoint
+    @Test
+    fun `cross-module hints gain a new advice after an incremental build that only removes the aspect module`() {
+        writeProjectSkeleton()
+        writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFile())
+        writeFile(projectDir, "aspect-module/src/main/kotlin/Unrelated.kt", "val unrelated = 1\n")
+        writeFile(projectDir, "feature-module/src/main/kotlin/Target.kt", targetFile())
 
-        annotation class LogCall
-
-        @Aspect
-        object LoggingAspect {
-            var executionCount: Int = 0
-
-            @Before(LogCall::class)
-            fun log(joinPoint: JoinPoint) {
-                executionCount++
-            }
+        // given
+        runGradle(projectDir, testKitDir(), "compileKotlin").also {
+            assertEquals(TaskOutcome.SUCCESS, it.task(":aspect-module:compileKotlin")?.outcome, it.output)
         }
-    """.trimIndent()
 
-    private fun targetFile() = """
-        class Target {
-            @LogCall
-            fun run() {}
-        }
-    """.trimIndent()
+        // when: only Aspect.kt edited (removes advice)
+        writeFile(projectDir, "aspect-module/src/main/kotlin/Aspect.kt", aspectFileWithoutAdvice())
+        writeFile(projectDir, "feature-module/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 0))
 
-    private fun targetFileWithoutAnnotation() = """
-        class Target {
-            fun run() {}
-        }
-    """.trimIndent()
+        val result = runGradle(projectDir, testKitDir(), "compileKotlin")
+        assertEquals(TaskOutcome.SUCCESS, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:compileKotlin")?.outcome, result.output)
 
-    private fun aspectFileWithoutAdvice() = """
-        import io.github.molelabs.aspectk.runtime.Aspect
-
-        annotation class LogCall
-
-        @Aspect
-        object LoggingAspect {
-            var executionCount: Int = 0
-        }
-    """.trimIndent()
-
-    private fun weavingTestFile() = """
-        import org.junit.jupiter.api.Assertions.assertEquals
-        import org.junit.jupiter.api.Test
-
-        class WeavingTest {
-            @Test
-            fun `advice fires`() {
-                LoggingAspect.executionCount = 0
-                Target().run()
-                assertEquals(1, LoggingAspect.executionCount)
-            }
-        }
-    """.trimIndent()
+        val hintsFile =
+            File(projectDir, "aspect-module/build/generated/aspectk/hints")
+                .walkTopDown()
+                .firstOrNull { it.name == "hints.json" }
+        val hintsContent = hintsFile?.readText().orEmpty()
+        assertTrue(
+            !hintsContent.contains("LoggingAspect") && !hintsContent.contains("LogCall"),
+            "hints.json after removing a real advice to aspect-module contains it. " +
+                "Content: $hintsContent\n\nBuild output:\n${result.output}",
+        )
+    }
 
     private fun writeProjectSkeleton() {
         writeFile(
