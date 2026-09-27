@@ -25,10 +25,6 @@ internal fun aspectkVersion(): String = System.getProperty("aspectk.version")
 
 internal fun kotlinVersion(): String = System.getProperty("aspectk.kotlinVersion")
 
-// Shared, stable GradleRunner TestKit home (not @TempDir, not fresh per test): a fresh one
-// downloads/generates Gradle's own internal jars from scratch every time, and a lingering TestKit
-// daemon can still hold file locks right after the build finishes, racing JUnit's own @TempDir
-// cleanup -- see aspectk-plugin/build.gradle.kts (functionalTest task).
 internal fun testKitDir(): File = File(System.getProperty("aspectk.testKitHome"))
 
 internal fun writeFile(
@@ -42,6 +38,13 @@ internal fun writeFile(
     }
 }
 
+internal fun removeFile(
+    projectDir: File,
+    relativePath: String,
+) {
+    File(projectDir, relativePath).delete()
+}
+
 internal fun runGradle(
     projectDir: File,
     testKitDir: File,
@@ -50,5 +53,6 @@ internal fun runGradle(
     .create()
     .withProjectDir(projectDir)
     .withTestKitDir(testKitDir)
+    .withDebug(true)
     .withArguments("--stacktrace", *args)
     .run()
