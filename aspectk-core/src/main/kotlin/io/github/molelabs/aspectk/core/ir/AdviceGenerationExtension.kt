@@ -70,8 +70,7 @@ internal class AdviceGenerationExtension(
                     HintsCodec.write(aspectkContext.localHints + carriedForwardHints, File(dir, "hints.json"))
                 }
 
-                mergeHints(carriedForwardHints, aspectkContext, pluginContext)
-                mergeHints(externalHints, aspectkContext, pluginContext)
+                mergeHints(carriedForwardHints + externalHints, aspectkContext, pluginContext)
 
                 moduleFragment.acceptChildren(InheritableVisitor(aspectkContext), null)
                 moduleFragment.transform(
@@ -93,8 +92,7 @@ internal class AdviceGenerationExtension(
     // never visited, by reading back this module's own previously-written hints.json. Only
     // entries whose class ISN'T in visitedAspectClassIds are trusted: an @Aspect class
     // AspectVisitor did walk this round is authoritative for itself even if it now yields zero
-    // hints (advice removed), so its old entries must never be resurrected. See
-    // docs/design-decision/cross-module-weaving.md.
+    // hints so its old entries must never be resurrected.
     private fun readCarriedForwardHints(aspectkContext: AspectKIrCompilerContext): List<HintRecord> {
         val dir = hintsOutputDir ?: return emptyList()
         val oldHints = HintsCodec.read(File(dir, "hints.json"))
@@ -104,11 +102,9 @@ internal class AdviceGenerationExtension(
         }
     }
 
-    // Resolves each hint's advice/aspect symbols against this module's plugin context (works
-    // because they were compiled declarations — see docs/design-decision/cross-module-weaving.md
-    // §2) and inserts one AspectContext per (hint, target) pair, after local advice, so discovery
-    // order stays "local first" (spec §4). A hint that fails to resolve (e.g. a stale hints.json
-    // from a partial rebuild) is silently skipped rather than crashing this module's compilation.
+    // Resolves each hint's advice/aspect symbols against this module's plugin context
+    // and inserts one AspectContext per (hint, target) pair, after local advice
+    // A hint that fails to resolve from a partial rebuild is silently skipped
     private fun mergeHints(
         hints: List<HintRecord>,
         aspectkContext: AspectKIrCompilerContext,

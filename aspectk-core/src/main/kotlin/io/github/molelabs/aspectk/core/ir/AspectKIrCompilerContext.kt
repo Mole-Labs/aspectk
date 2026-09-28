@@ -31,10 +31,6 @@ internal data class AspectKIrCompilerContext(
     val irCompat: IrCompat,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
     val localHints: MutableList<HintRecord> = Collections.synchronizedList(mutableListOf()),
-    // ClassIds of every @Aspect class AspectVisitor actually walked this round. Distinguishes
-    // "not part of this incremental round's moduleFragment" (old hints.json entry still valid,
-    // carry it forward) from "walked this round and now has fewer/no advice" (old entry is
-    // stale, must not be resurrected) -- see docs/design-decision/cross-module-weaving.md.
     val visitedAspectClassIds: MutableSet<ClassId> = Collections.synchronizedSet(mutableSetOf()),
 ) {
     val joinPointSymbol: IrClassSymbol = getSymbol(JOIN_POINT_FQ_NAME)
