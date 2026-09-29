@@ -55,7 +55,8 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
                 }
         val file = resultFile.get().asFile
         file.parentFile?.mkdirs()
-        file.writeText(relevant.toString())
+        // Unique per execution, so the compile task can tell a fresh result from one it already applied
+        file.writeText(if (relevant) "true:${System.nanoTime()}" else "false")
     }
 
     private fun fileHasAspectMarker(file: File): Boolean {

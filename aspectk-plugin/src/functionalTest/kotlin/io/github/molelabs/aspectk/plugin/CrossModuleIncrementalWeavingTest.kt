@@ -46,11 +46,7 @@ class CrossModuleIncrementalWeavingTest {
 
         // then: assert against hints.json directly -- feature-module:compileKotlin can stay
         // UP-TO-DATE and never re-read it, so its test outcome alone wouldn't catch a shrunk file.
-        val hintsFile =
-            File(projectDir, "aspect-module/build/generated/aspectk/hints")
-                .walkTopDown()
-                .firstOrNull { it.name == "hints.json" }
-        val hintsContent = hintsFile?.readText().orEmpty()
+        val hintsContent = hintsOf(projectDir, "aspect-module")
         assertEquals(TaskOutcome.UP_TO_DATE, result.task(":feature-module:compileKotlin")?.outcome, result.output)
         assertTrue(
             hintsContent.contains("LoggingAspect"),
@@ -119,11 +115,7 @@ class CrossModuleIncrementalWeavingTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:compileKotlin")?.outcome, result.output)
 
-        val hintsFile =
-            File(projectDir, "aspect-module/build/generated/aspectk/hints")
-                .walkTopDown()
-                .firstOrNull { it.name == "hints.json" }
-        val hintsContent = hintsFile?.readText().orEmpty()
+        val hintsContent = hintsOf(projectDir, "aspect-module")
         assertTrue(
             hintsContent.contains("LoggingAspect") && hintsContent.contains("LogCall"),
             "hints.json after adding a real advice to aspect-module did not contain it. " +
@@ -151,11 +143,7 @@ class CrossModuleIncrementalWeavingTest {
         assertEquals(TaskOutcome.SUCCESS, result.task(":aspect-module:compileKotlin")?.outcome, result.output)
         assertEquals(TaskOutcome.SUCCESS, result.task(":feature-module:compileKotlin")?.outcome, result.output)
 
-        val hintsFile =
-            File(projectDir, "aspect-module/build/generated/aspectk/hints")
-                .walkTopDown()
-                .firstOrNull { it.name == "hints.json" }
-        val hintsContent = hintsFile?.readText().orEmpty()
+        val hintsContent = hintsOf(projectDir, "aspect-module")
         assertTrue(
             !hintsContent.contains("LoggingAspect") && !hintsContent.contains("LogCall"),
             "hints.json after removing a real advice to aspect-module contains it. " +

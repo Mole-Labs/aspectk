@@ -21,7 +21,9 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.file.Directory
+import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.PathSensitivity
 import org.jetbrains.kotlin.buildtools.api.ExperimentalBuildToolsApi
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
@@ -62,16 +64,14 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         }
 
         val hintsConfiguration = registerHintsConfigurations(project, kotlinCompilation, hintsDir)
+        val externalHints = hintsConfiguration.incoming.artifactView { view -> view.isLenient = true }.files
 
-        // this is only for a single module project
-        registerAspectChangeDetection(project, kotlinCompilation)
+        registerAspectChangeDetection(project, kotlinCompilation, hintsDir, externalHints)
 
         return project.provider {
             buildList {
                 add(SubpluginOption("hintsOutputDir", hintsDir.get().asFile.absolutePath))
-                hintsConfiguration.incoming
-                    .artifactView { view -> view.isLenient = true }
-                    .files
+                externalHints
                     .forEach { file ->
                         add(SubpluginOption("hintsPath", file.absolutePath))
                     }
@@ -127,26 +127,44 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
     private fun registerAspectChangeDetection(
         project: Project,
         kotlinCompilation: KotlinCompilation<*>,
+        hintsDir: Provider<Directory>,
+        externalHints: FileCollection,
     ) {
         val detectTaskName = kotlinCompilation.detectTaskName()
+        val changeDir = "generated/aspectk/aspect-change/${kotlinCompilation.target.targetName}"
         val detectTask =
             project.tasks.register(detectTaskName, DetectAspectChangeTask::class.java) { task ->
                 task.sources.setFrom(kotlinCompilation.allKotlinSourceSets.map { it.kotlin })
-                task.resultFile.set(
-                    project.layout.buildDirectory.file(
-                        "generated/aspectk/aspect-change/${kotlinCompilation.target.targetName}/${kotlinCompilation.name}.txt",
-                    ),
-                )
+                task.resultFile.set(project.layout.buildDirectory.file("$changeDir/${kotlinCompilation.name}.txt"))
             }
+        // The detect result this compilation last applied.
+        val consumedFileProvider = project.layout.buildDirectory.file("$changeDir/${kotlinCompilation.name}.consumed")
 
         kotlinCompilation.compileTaskProvider.configure { task ->
             val abstractCompile = task as? AbstractKotlinCompile<*> ?: return@configure
             abstractCompile.dependsOn(detectTask)
+
+            // Declared here, a changed upstream aspect makes Gradle require a full rebuild of this compilation
+            abstractCompile.inputs
+                .files(externalHints)
+                .withPropertyName("aspectkExternalHints")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
             val resultFileProvider = detectTask.flatMap { it.resultFile }
             abstractCompile.doFirst {
-                val resultFile = resultFileProvider.get().asFile
-                if (!resultFile.exists() || resultFile.readText() != "false") {
+                val result = resultFileProvider.get().asFile.takeIf { it.exists() }?.readText()
+                val consumed = consumedFileProvider.get().asFile.takeIf { it.exists() }?.readText()
+                val firstBuild = !hintsDir.get().file("hints.json").asFile.exists()
+                // result == consumed: detect was UP-TO-DATE, so an earlier compile already applied
+                // this result and no aspect-relevant input changed since.
+                if (!firstBuild && result != "false" && result != consumed) {
                     abstractCompile.incremental = false
+                }
+            }
+            // Runs only when compilation succeeded, so a failed build re-applies the same result.
+            abstractCompile.doLast {
+                val resultFile = resultFileProvider.get().asFile
+                if (resultFile.exists()) {
+                    consumedFileProvider.get().asFile.writeText(resultFile.readText())
                 }
             }
         }
