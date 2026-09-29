@@ -40,9 +40,8 @@ internal class InheritableVisitor(
 
     override fun visitSimpleFunction(declaration: IrSimpleFunction) {
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
-        declaration
+        (declaration as IrSimpleFunction)
             .allOverridden()
-            .filterIsInstance<IrFunctionImpl>()
             .forEach { func ->
                 targetAnnotation(func).forEach { target ->
                     aspectkContext.aspectLookUp.addOverridden(declaration.attributeOwnerId, target)
