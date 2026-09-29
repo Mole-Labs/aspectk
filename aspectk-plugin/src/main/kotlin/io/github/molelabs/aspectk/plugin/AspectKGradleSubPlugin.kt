@@ -54,17 +54,21 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             )
         }
 
-        val hintsDir =
-            project.layout.buildDirectory.dir(
-                "generated/aspectk/hints/${kotlinCompilation.target.targetName}/${kotlinCompilation.name}",
-            )
+        val hintsDir = hintsDirOf(project, kotlinCompilation)
 
         kotlinCompilation.compileTaskProvider.configure { task ->
             task.outputs.dir(hintsDir).withPropertyName("aspectkHintsDir")
         }
 
         val hintsConfiguration = registerHintsConfigurations(project, kotlinCompilation, hintsDir)
-        val externalHints = hintsConfiguration.incoming.artifactView { view -> view.isLenient = true }.files
+        // An associated compilation (test -> main) sees main's declarations without a project
+        // dependency, so its hints never arrive through hintsConfiguration
+        val associatedHints =
+            project
+                .files(project.provider { kotlinCompilation.allAssociatedCompilations.map { hintsDirOf(project, it) } })
+                .builtBy(project.provider { kotlinCompilation.allAssociatedCompilations.map { it.compileTaskProvider } })
+        val externalHints =
+            hintsConfiguration.incoming.artifactView { view -> view.isLenient = true }.files + associatedHints
 
         registerAspectChangeDetection(project, kotlinCompilation, hintsDir, externalHints)
 
@@ -170,6 +174,11 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             }
         }
     }
+
+    private fun hintsDirOf(
+        project: Project,
+        compilation: KotlinCompilation<*>,
+    ): Provider<Directory> = project.layout.buildDirectory.dir("generated/aspectk/hints/${compilation.target.targetName}/${compilation.name}")
 
     private fun KotlinCompilation<*>.hintsElementsConfigurationName(): String = "aspectkHints${target.targetName.replaceFirstChar { it.uppercase() }}${name.replaceFirstChar { it.uppercase() }}Elements"
 

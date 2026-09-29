@@ -89,7 +89,10 @@ val functionalTest by tasks.registering(Test::class) {
         rootProject.layout.buildDirectory.dir("localMaven").get().asFile.absolutePath,
     )
     systemProperty("aspectk.version", project.property("PUBLISH_VERSION") as String)
-    systemProperty("aspectk.kotlinVersion", libs.versions.kotlin.get())
+    systemProperty(
+        "aspectk.kotlinVersion",
+        providers.gradleProperty("functionalTestKotlinVersion").getOrElse(libs.versions.kotlin.get()),
+    )
     systemProperty(
         "aspectk.testKitHome",
         rootProject.layout.buildDirectory.dir("functionalTestGradleHome").get().asFile.absolutePath,
