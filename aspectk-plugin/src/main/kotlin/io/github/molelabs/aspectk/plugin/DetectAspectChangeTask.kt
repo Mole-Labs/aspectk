@@ -53,10 +53,10 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
         // means there's no basis to claim "nothing aspect-relevant changed"
         val relevant =
             !inputChanges.isIncremental ||
-                    isAspectRelevant(
-                        inputChanges.getFileChanges(sources).filter { it.file.extension == "kt" },
-                        previousAspects(),
-                    )
+                isAspectRelevant(
+                    inputChanges.getFileChanges(sources).filter { it.file.extension == "kt" },
+                    previousAspects(),
+                )
         val file = resultFile.get().asFile
         file.parentFile?.mkdirs()
         file.writeText(if (relevant) "true:${System.nanoTime()}" else "false")
@@ -74,13 +74,13 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
         if (edited.any { change ->
                 val text = change.file.readSource()
                 ASPECT_RELEVANT_MARKERS.any { marker -> marker in text } ||
-                        declaredClasses(text).any { it in previousAspects }
+                    declaredClasses(text).any { it in previousAspects }
             }
         ) {
             return true
         }
         return changes.any { it.changeType == ChangeType.REMOVED } && deletedAspectStillTargeted(
-            previousAspects
+            previousAspects,
         )
     }
 
@@ -112,10 +112,10 @@ internal abstract class DetectAspectChangeTask : DefaultTask() {
             aspects.getOrPut(
                 qualify(
                     packageName,
-                    className.substringBefore('.')
-                )
+                    className.substringBefore('.'),
+                ),
             ) { mutableSetOf() }.addAll(
-                QUOTED.findAll(targets).map { it.groupValues[1] }
+                QUOTED.findAll(targets).map { it.groupValues[1] },
             )
         }
         return aspects
