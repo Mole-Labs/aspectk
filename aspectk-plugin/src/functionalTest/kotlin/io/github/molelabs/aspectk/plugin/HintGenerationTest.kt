@@ -175,16 +175,65 @@ class HintGenerationTest {
         // given
         writeProject(projectDir, "app" to "")
         writeFile(projectDir, "app/src/main/kotlin/AspectA.kt", aspectFile("A"))
-        writeFile(projectDir, "app/src/main/kotlin/AspectB.kt", aspectFile("B"))
-        runGradle(projectDir, testKitDir(), "compileKotlin")
+        // LogCallB lives apart from AspectB so Target still compiles once AspectB.kt is gone
+        writeFile(projectDir, "app/src/main/kotlin/LogCallB.kt", "annotation class LogCallB\n")
+        writeFile(projectDir, "app/src/main/kotlin/AspectB.kt", aspectFile("B", declaresAnnotation = false))
+        writeFile(projectDir, "app/src/main/kotlin/Target.kt", targetFile("B"))
+        writeFile(projectDir, "app/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 1, postFix = "B"))
+        runGradle(projectDir, testKitDir(), "test")
         val hintsBefore = hintsOf(projectDir, "app")
         assertTrue(hintsBefore.hasAspect("LoggingAspectB"), hintsBefore)
 
-        // when: a removed file is never marker-checked, so this round stays incremental
+        // when: a removed file is never marker-checked, so this round stays incremental; Target.kt
+        // is untouched and does not reference LoggingAspectB in source, so IC won't recompile it
         removeFile(projectDir, "app/src/main/kotlin/AspectB.kt")
+        removeFile(projectDir, "app/src/test/kotlin/WeavingTest.kt")
+        writeFile(projectDir, "app/src/test/kotlin/TargetRunsTest.kt", targetRunsTestFile("B"))
+        val result = runGradle(projectDir, testKitDir(), "test")
+
+        // then: the hint is gone and Target no longer calls the deleted aspect
+        val hints = hintsOf(projectDir, "app")
+        assertTrue(hints.hasAspect("LoggingAspectA"), hints)
+        assertFalse(hints.hasAspect("LoggingAspectB"), hints)
+        assertEquals(TaskOutcome.SUCCESS, result.task(":app:test")?.outcome, result.output)
+    }
+
+    @Test
+    fun `deleting an unrelated file keeps the round incremental`() {
+        // given
+        writeProject(projectDir, "app" to "")
+        writeFile(projectDir, "app/src/main/kotlin/AspectA.kt", aspectFile("A"))
+        writeFile(projectDir, "app/src/main/kotlin/Target.kt", targetFile("A"))
+        writeFile(projectDir, "app/src/main/kotlin/Unrelated.kt", "val unrelated = 1\n")
+        runGradle(projectDir, testKitDir(), "compileKotlin")
+
+        // when
+        removeFile(projectDir, "app/src/main/kotlin/Unrelated.kt")
+        runGradle(projectDir, testKitDir(), "compileKotlin")
+
+        // then: no aspect disappeared, so detect must not force a full recompile
+        assertEquals("false", aspectChangeResult("app"))
+        val hints = hintsOf(projectDir, "app")
+        assertTrue(hints.hasAspect("LoggingAspectA"), hints)
+    }
+
+    @Test
+    fun `deleting an aspect together with its targets keeps the round incremental`() {
+        // given
+        writeProject(projectDir, "app" to "")
+        writeFile(projectDir, "app/src/main/kotlin/AspectA.kt", aspectFile("A"))
+        writeFile(projectDir, "app/src/main/kotlin/LogCallB.kt", "annotation class LogCallB\n")
+        writeFile(projectDir, "app/src/main/kotlin/AspectB.kt", aspectFile("B", declaresAnnotation = false))
+        writeFile(projectDir, "app/src/main/kotlin/TargetB.kt", targetFile("B"))
+        runGradle(projectDir, testKitDir(), "compileKotlin")
+
+        // when: nothing left uses @LogCallB, so no stale woven call can survive
+        removeFile(projectDir, "app/src/main/kotlin/AspectB.kt")
+        removeFile(projectDir, "app/src/main/kotlin/TargetB.kt")
         runGradle(projectDir, testKitDir(), "compileKotlin")
 
         // then
+        assertEquals("false", aspectChangeResult("app"))
         val hints = hintsOf(projectDir, "app")
         assertTrue(hints.hasAspect("LoggingAspectA"), hints)
         assertFalse(hints.hasAspect("LoggingAspectB"), hints)
@@ -536,6 +585,12 @@ class HintGenerationTest {
         .readLines()
         .filter { it.isNotBlank() }
         .associate { it.substringBefore("/build/") to it.substringAfter("\t") }
+
+    // DetectAspectChangeTask's verdict for [module]'s main compilation: "false" or "true:<nanoTime>"
+    private fun aspectChangeResult(module: String): String = File(projectDir, "$module/build/generated/aspectk/aspect-change")
+        .walkTopDown()
+        .first { it.name == "main.txt" }
+        .readText()
 
     private fun String.hasAspect(className: String) = contains("\"class\":\"$className\"")
 

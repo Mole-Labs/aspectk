@@ -15,12 +15,17 @@
  */
 package io.github.molelabs.aspectk.plugin
 
-fun aspectFile(postFix: String = "") = """
+// declaresAnnotation = false leaves LogCall<postFix> to another file, so deleting this aspect file
+// keeps its targets compiling
+fun aspectFile(
+    postFix: String = "",
+    declaresAnnotation: Boolean = true,
+) = """
         import io.github.molelabs.aspectk.runtime.Aspect
         import io.github.molelabs.aspectk.runtime.Before
         import io.github.molelabs.aspectk.runtime.JoinPoint
 
-        annotation class LogCall$postFix
+        ${if (declaresAnnotation) "annotation class LogCall$postFix" else ""}
 
         @Aspect
         object LoggingAspect$postFix {
@@ -54,6 +59,19 @@ fun aspectFileWithoutAdvice(postFix: String = "") = """
         @Aspect
         object LoggingAspect$postFix {
             var executionCount: Int = 0
+        }
+""".trimIndent()
+
+// Only calls the target: for when the aspect it was woven against no longer exists and cannot be
+// referenced, passing means the stale woven call is gone
+fun targetRunsTestFile(postFix: String = "") = """
+        import org.junit.jupiter.api.Test
+
+        class TargetRunsTest$postFix {
+            @Test
+            fun `target runs`() {
+                Target$postFix().run()
+            }
         }
 """.trimIndent()
 

@@ -135,6 +135,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         val detectTask =
             project.tasks.register(detectTaskName, DetectAspectChangeTask::class.java) { task ->
                 task.sources.setFrom(kotlinCompilation.allKotlinSourceSets.map { it.kotlin })
+                task.previousHints.set(hintsDir.map { it.file("hints.json") })
                 task.resultFile.set(project.layout.buildDirectory.file("$changeDir/${kotlinCompilation.name}.txt"))
             }
         // The detect result this compilation last applied.

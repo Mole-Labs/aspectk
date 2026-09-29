@@ -31,7 +31,7 @@ internal data class AspectKIrCompilerContext(
     val irCompat: IrCompat,
     val aspectLookUp: AspectLookUp = AspectLookUp(),
     val localHints: MutableList<HintRecord> = Collections.synchronizedList(mutableListOf()),
-    val visitedAspectClassIds: MutableSet<ClassId> = Collections.synchronizedSet(mutableSetOf()),
+    val visitedClassIds: MutableSet<ClassId> = Collections.synchronizedSet(mutableSetOf()),
 ) {
     val joinPointSymbol: IrClassSymbol = getSymbol(JOIN_POINT_FQ_NAME)
     val proceedingJoinPointSymbol: IrClassSymbol = getSymbol(PROCEEDING_JOIN_POINT_FQ_NAME)
