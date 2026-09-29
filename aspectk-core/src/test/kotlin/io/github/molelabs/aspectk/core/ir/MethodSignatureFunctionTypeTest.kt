@@ -158,7 +158,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = $$$"$MethodSignatures$0_aspectk-testkt",
+                className = $$$"$MethodSignatures$main$0_aspectk-testkt",
                 fieldName = $$"ajc$tjp_0",
             )
 
@@ -307,7 +307,7 @@ class MethodSignatureFunctionTypeTest {
         // when
         val actual =
             loader.assertAndGetField(
-                className = $$$"$MethodSignatures$0_Testkt",
+                className = $$$"$MethodSignatures$main$0_Testkt",
                 fieldName = $$"ajc$tjp_0",
             )
 

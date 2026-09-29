@@ -178,9 +178,13 @@ internal class AspectTransformer(
         .firstOrNull { it.name.asString() == name }
         ?: factory(this).also { declarations.add(it) }
 
-    private fun IrDeclarationContainer.toNormalizedName(basename: String) = "$basename${
-        (this as? IrFile)?.name.orEmpty().let {
-            if (it.isNotEmpty()) "$$it" else ""
-        }.replace(".", "")
-    }"
+    private fun IrDeclarationContainer.toNormalizedName(basename: String): String {
+        val file = this as? IrFile ?: return basename
+        val module = file.module.name.asStringStripSpecialMarkers().replace(NON_IDENTIFIER, "_")
+        return "$basename$$module$${file.name.replace(".", "")}"
+    }
+
+    private companion object {
+        val NON_IDENTIFIER = Regex("[^A-Za-z0-9_]")
+    }
 }
