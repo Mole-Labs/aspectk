@@ -16,7 +16,7 @@
 package io.github.molelabs.aspectk.core.hints
 
 // One row per advice method — mirrors AspectContext plus the identity fields needed
-// to resolve it from a downstream module (see docs/design-decision/cross-module-weaving.md §4).
+// to resolve it from a downstream module
 internal data class HintRecord(
     val packageName: String,
     val className: String,

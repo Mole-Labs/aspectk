@@ -38,14 +38,21 @@ class AroundLocalFunctionGenerationTest {
                 @Target(AnnotationTarget.FUNCTION)
                 annotation class Intercepted
 
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class Intercepted2
+
                 @Aspect
                 object PassThroughAspect {
                     @Around(Intercepted::class)
                     fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
+
+                    @Around(Intercepted2::class)
+                    fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
                 }
 
                 class Test {
                     @Intercepted
+                    @Intercepted2
                     fun work() { }
                 }
                 """,

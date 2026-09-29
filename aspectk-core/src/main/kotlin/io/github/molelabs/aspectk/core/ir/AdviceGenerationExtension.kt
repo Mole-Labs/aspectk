@@ -29,6 +29,8 @@ import io.github.molelabs.aspectk.core.tracer
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
+import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
@@ -65,13 +67,15 @@ internal class AdviceGenerationExtension(
             ).trace {
                 moduleFragment.acceptChildren(AspectVisitor(aspectkContext), null)
 
-                val carriedForwardHints = readCarriedForwardHints(aspectkContext)
+                // Resolve before writing: a class whose source file was deleted has no symbol any
+                // more, and writing its hint anyway would keep it alive in hints.json forever.
+                val carriedForwardHints =
+                    readCarriedForwardHints(aspectkContext).filter { resolve(it, pluginContext) != null }
                 hintsOutputDir?.let { dir ->
                     HintsCodec.write(aspectkContext.localHints + carriedForwardHints, File(dir, "hints.json"))
                 }
 
-                mergeHints(carriedForwardHints, aspectkContext, pluginContext)
-                mergeHints(externalHints, aspectkContext, pluginContext)
+                mergeHints(carriedForwardHints + externalHints, aspectkContext, pluginContext)
 
                 moduleFragment.acceptChildren(InheritableVisitor(aspectkContext), null)
                 moduleFragment.transform(
@@ -91,34 +95,40 @@ internal class AdviceGenerationExtension(
 
     // Recovers advice from @Aspect classes this round's (possibly partial, incremental) IR walk
     // never visited, by reading back this module's own previously-written hints.json. Only
-    // entries whose class ISN'T in visitedAspectClassIds are trusted: an @Aspect class
-    // AspectVisitor did walk this round is authoritative for itself even if it now yields zero
-    // hints (advice removed), so its old entries must never be resurrected. See
-    // docs/design-decision/cross-module-weaving.md.
+    // entries whose class ISN'T in visitedClassIds are trusted: any class AspectVisitor walked
+    // this round is authoritative for itself, even if it now yields zero hints or lost @Aspect,
+    // so its old entries must never be resurrected.
     private fun readCarriedForwardHints(aspectkContext: AspectKIrCompilerContext): List<HintRecord> {
         val dir = hintsOutputDir ?: return emptyList()
         val oldHints = HintsCodec.read(File(dir, "hints.json"))
         return oldHints.filter { hint ->
             val classId = ClassId(FqName(hint.packageName), FqName(hint.className), false)
-            classId !in aspectkContext.visitedAspectClassIds
+            classId !in aspectkContext.visitedClassIds
         }
     }
 
-    // Resolves each hint's advice/aspect symbols against this module's plugin context (works
-    // because they were compiled declarations — see docs/design-decision/cross-module-weaving.md
-    // §2) and inserts one AspectContext per (hint, target) pair, after local advice, so discovery
-    // order stays "local first" (spec §4). A hint that fails to resolve (e.g. a stale hints.json
-    // from a partial rebuild) is silently skipped rather than crashing this module's compilation.
+    // The aspect and advice symbols a hint names, or null when either no longer exists
+    private fun resolve(
+        hint: HintRecord,
+        pluginContext: IrPluginContext,
+    ): Pair<IrClassSymbol, IrSimpleFunctionSymbol>? {
+        val classId = ClassId(FqName(hint.packageName), FqName(hint.className), false)
+        val aspectSymbol = irCompat.referenceClass(pluginContext, classId) ?: return null
+        val callableId = CallableId(classId, Name.identifier(hint.functionName))
+        val adviceSymbol = irCompat.referenceFunctions(pluginContext, callableId).firstOrNull() ?: return null
+        return aspectSymbol to adviceSymbol
+    }
+
+    // Resolves each hint's advice/aspect symbols against this module's plugin context
+    // and inserts one AspectContext per (hint, target) pair, after local advice
+    // A hint that fails to resolve from a partial rebuild is silently skipped
     private fun mergeHints(
         hints: List<HintRecord>,
         aspectkContext: AspectKIrCompilerContext,
         pluginContext: IrPluginContext,
     ) {
         hints.forEach { hint ->
-            val classId = ClassId(FqName(hint.packageName), FqName(hint.className), false)
-            val aspectSymbol = irCompat.referenceClass(pluginContext, classId) ?: return@forEach
-            val callableId = CallableId(classId, Name.identifier(hint.functionName))
-            val adviceSymbol = irCompat.referenceFunctions(pluginContext, callableId).firstOrNull() ?: return@forEach
+            val (aspectSymbol, adviceSymbol) = resolve(hint, pluginContext) ?: return@forEach
             val kind = AspectContext.Kind.valueOf(hint.kind)
 
             hint.targets.forEach { targetFqName ->

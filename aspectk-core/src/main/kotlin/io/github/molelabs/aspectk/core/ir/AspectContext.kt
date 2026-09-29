@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
 import org.jetbrains.kotlin.name.FqName
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 
 // Target Annotation과 AspectContext는 다대다관계

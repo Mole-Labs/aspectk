@@ -19,17 +19,14 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
-// Hand-rolled JSON codec restricted to the fixed HintRecord shape — no serialization
-// library dependency (docs/design-decision/cross-module-weaving.md §4).
+// Hand-rolled JSON codec restricted to the fixed HintRecord shape
 internal object HintsCodec {
     fun write(
         records: List<HintRecord>,
         file: File,
     ) {
         file.parentFile?.mkdirs()
-        // Write-then-rename so a killed daemon (OOM, CI timeout, cancel) can never leave a
-        // torn/truncated hints.json for a later read (same-module carry-forward or a
-        // downstream module) to trip over.
+        // Write-then-rename so a killed daemon can never leave a torn/truncated hints
         val tmp = File(file.parentFile, "${file.name}.tmp")
         tmp.writeText(encode(records))
         Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)

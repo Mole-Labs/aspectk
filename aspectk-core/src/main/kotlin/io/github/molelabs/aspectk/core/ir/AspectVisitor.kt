@@ -55,9 +55,8 @@ internal class AspectVisitor(
 
     override fun visitClass(declaration: IrClass) {
         declaration.acceptChildrenVoid(this)
+        declaration.classId?.let { aspectkContext.visitedClassIds.add(it) }
         if (canSkip(declaration)) return super.visitClass(declaration)
-
-        declaration.classId?.let { aspectkContext.visitedAspectClassIds.add(it) }
 
         declaration.functions.forEach { func ->
             func.annotations.forEach { annotation ->
