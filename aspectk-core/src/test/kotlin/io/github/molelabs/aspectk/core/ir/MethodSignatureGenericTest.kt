@@ -18,6 +18,7 @@ package io.github.molelabs.aspectk.core.ir
 import com.tschuchort.compiletesting.KotlinCompilation
 import io.github.molelabs.aspectk.core.assertAndGetField
 import io.github.molelabs.aspectk.core.compile
+import io.github.molelabs.aspectk.runtime.MethodSignature
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -474,5 +475,101 @@ class MethodSignatureGenericTest {
         // then
         val expected = complexGenericMethodSignature(loader)
         assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `type parameter return types of MethodSignature should be erased like parameter types`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.Before
+                import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample(
+                    val name:String
+                )
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample("example1")
+                    fun <T> unbounded(arg1: T): T = arg1
+
+                    @TargetExample("example1")
+                    fun <T : Number> bounded(arg1: T): T = arg1
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        // when
+        val signatures =
+            listOf($$"ajc$tjp_0", $$"ajc$tjp_1")
+                .map { result.classLoader.assertAndGetField($$$"Test$$MethodSignatures", it) as MethodSignature }
+                .associateBy { it.methodName }
+
+        // then: unbounded -> Any, bounded -> its upper bound
+        assertAll(
+            { assertEquals(Any::class, signatures.getValue("unbounded").returnType) },
+            { assertEquals("kotlin.Any", signatures.getValue("unbounded").returnTypeName) },
+            { assertEquals(Number::class, signatures.getValue("bounded").returnType) },
+            { assertEquals("kotlin.Number", signatures.getValue("bounded").returnTypeName) },
+        )
+    }
+
+    @Test
+    fun `return types should be erased by their own type parameter when bounded and unbounded ones are mixed`() {
+        // given
+        val result =
+            compile(
+                """
+                import io.github.molelabs.aspectk.runtime.Aspect
+                import io.github.molelabs.aspectk.runtime.Before
+                import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                @Target(AnnotationTarget.FUNCTION)
+                annotation class TargetExample(
+                    val name:String
+                )
+
+                @Aspect
+                object ExampleAspect {
+                    @Before(TargetExample::class)
+                    fun doBefore(joinPoint: JoinPoint) {
+                    }
+                }
+
+                class Test {
+                    @TargetExample("example1")
+                    fun <T : Number, R> returnsBounded(arg1: T, arg2: R): T = arg1
+
+                    @TargetExample("example1")
+                    fun <T : Number, R> returnsUnbounded(arg1: T, arg2: R): R = arg2
+                }
+                """,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        // when
+        val signatures =
+            listOf($$"ajc$tjp_0", $$"ajc$tjp_1")
+                .map { result.classLoader.assertAndGetField($$$"Test$$MethodSignatures", it) as MethodSignature }
+                .associateBy { it.methodName }
+
+        // then: T -> its bound Number, R -> Any, regardless of declaration order
+        assertAll(
+            { assertEquals(Number::class, signatures.getValue("returnsBounded").returnType) },
+            { assertEquals("kotlin.Number", signatures.getValue("returnsBounded").returnTypeName) },
+            { assertEquals(Any::class, signatures.getValue("returnsUnbounded").returnType) },
+            { assertEquals("kotlin.Any", signatures.getValue("returnsUnbounded").returnTypeName) },
+        )
     }
 }

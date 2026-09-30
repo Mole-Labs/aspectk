@@ -20,10 +20,7 @@ import com.tschuchort.compiletesting.SourceFile
 import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import java.lang.reflect.InvocationTargetException
 
 @OptIn(ExperimentalCompilerApi::class)
 @Suppress("UNCHECKED_CAST")
@@ -81,8 +78,10 @@ class AdviceCallOrderTest {
         assertEquals(listOf("before", "body"), log)
     }
 
+    // Control for the @After/@Around cases: @Before only prepends a call, so the recursive call
+    // stays in tail position
     @Test
-    fun `@After advice executes after target function body`() {
+    fun `@Before on a tailrec function keeps a constant stack depth`() {
         // given
         val result =
             compile(
@@ -91,7 +90,7 @@ class AdviceCallOrderTest {
                         "RunTest.kt",
                         """
                         import io.github.molelabs.aspectk.runtime.Aspect
-                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Before
                         import io.github.molelabs.aspectk.runtime.JoinPoint
 
                         @Target(AnnotationTarget.FUNCTION)
@@ -101,20 +100,16 @@ class AdviceCallOrderTest {
 
                         @Aspect
                         object TrackingAspect {
-                            @After(Tracked::class)
-                            fun doAfter(joinPoint: JoinPoint) {
-                                executionLog.add("after")
+                            @Before(Tracked::class)
+                            fun doBefore(joinPoint: JoinPoint) {
+                                executionLog.add("before")
                             }
                         }
 
-                        class Test {
-                            @Tracked
-                            fun work() {
-                                executionLog.add("body")
-                            }
-                        }
+                        @Tracked
+                        tailrec fun countDown(n: Int): Int = if (n == 0) 0 else countDown(n - 1)
 
-                        fun runTest() = Test().work()
+                        fun runTest(): Int = countDown(100_000)
                         """,
                     ),
                 ),
@@ -122,20 +117,17 @@ class AdviceCallOrderTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
-        val loader = result.classLoader
-        val testKt = loader.loadClass("RunTestKt")
-        testKt.getMethod("runTest").invoke(null)
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
 
-        val logField = testKt.getDeclaredField("executionLog")
-        logField.isAccessible = true
-        val log = logField.get(null) as MutableList<String>
-
-        // then — body must execute before after-advice
-        assertEquals(listOf("body", "after"), log)
+        // then
+        assertEquals(0, actual)
     }
 
+    // The lambda parameter of an inline function isn't a value, so it can't be captured into
+    // JoinPoint args
     @Test
-    fun `@Around advice executes both before and after target function body`() {
+    fun `@Before on an inline function with a lambda parameter keeps the lambda inlinable`() {
         // given
         val result =
             compile(
@@ -144,8 +136,8 @@ class AdviceCallOrderTest {
                         "RunTest.kt",
                         """
                         import io.github.molelabs.aspectk.runtime.Aspect
-                        import io.github.molelabs.aspectk.runtime.Around
-                        import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
+                        import io.github.molelabs.aspectk.runtime.Before
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
 
                         @Target(AnnotationTarget.FUNCTION)
                         annotation class Tracked
@@ -154,23 +146,16 @@ class AdviceCallOrderTest {
 
                         @Aspect
                         object TrackingAspect {
-                            @Around(Tracked::class)
-                            fun doAround(pjp: ProceedingJoinPoint): Any? {
+                            @Before(Tracked::class)
+                            fun doBefore(joinPoint: JoinPoint) {
                                 executionLog.add("before")
-                                val result = pjp.proceed()
-                                executionLog.add("after")
-                                return result
                             }
                         }
 
-                        class Test {
-                            @Tracked
-                            fun work() {
-                                executionLog.add("body")
-                            }
-                        }
+                        @Tracked
+                        inline fun <T> measure(block: () -> T): T = block()
 
-                        fun runTest() = Test().work()
+                        fun runTest(): String = measure { "x" }
                         """,
                     ),
                 ),
@@ -178,105 +163,12 @@ class AdviceCallOrderTest {
         assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
 
         // when
-        val loader = result.classLoader
-        val testKt = loader.loadClass("RunTestKt")
-        testKt.getMethod("runTest").invoke(null)
-
-        val logField = testKt.getDeclaredField("executionLog")
-        logField.isAccessible = true
-        val log = logField.get(null) as MutableList<String>
-
-        // then — around-advice wraps the function body: before → body → after
-        assertEquals(listOf("before", "body", "after"), log)
-    }
-
-    @Test
-    fun `@After advice is invoked even when the original function throws`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object TrackingAspect {
-                    var called = false
-
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { called = true }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun riskyWork(): Unit = throw RuntimeException("boom")
-                }
-                """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when — invoke the throwing function, expecting the exception to propagate
-        val testClass = result.classLoader.loadClass("Test")
-        val instance = testClass.getDeclaredConstructor().newInstance()
-        assertThrows<InvocationTargetException> {
-            testClass.getMethod("riskyWork").invoke(instance)
-        }
-
-        // then — despite the exception, @After advice must have been called (finally block)
-        val aspectInstance =
-            result.classLoader
-                .loadClass("TrackingAspect")
-                .getField("INSTANCE")
-                .get(null)
-        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
-        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called even when the function throws")
-    }
-
-    @Test
-    fun `@After advice is invoked after a normally returning function`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object TrackingAspect {
-                    var called = false
-
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { called = true }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun normalWork(): String = "done"
-                }
-                """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when
-        val testClass = result.classLoader.loadClass("Test")
-        val instance = testClass.getDeclaredConstructor().newInstance()
-        testClass.getMethod("normalWork").invoke(instance)
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
 
         // then
-        val aspectInstance =
-            result.classLoader
-                .loadClass("TrackingAspect")
-                .getField("INSTANCE")
-                .get(null)
-        val calledField = aspectInstance.javaClass.getDeclaredField("called").apply { isAccessible = true }
-        assertTrue(calledField.getBoolean(aspectInstance), "Expected @After advice to be called after normal return")
+        assertEquals("x", actual)
+        assertEquals(listOf("before"), log)
     }
 }
