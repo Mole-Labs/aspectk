@@ -26,10 +26,8 @@ import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGetObject
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.declarations.IrFunction
-import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrTry
 import org.jetbrains.kotlin.ir.expressions.impl.IrTryImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
@@ -66,43 +64,19 @@ internal class AdviceCallGenerator(
         }
     }
 
-    /** Appends @After advice calls to the function body (before any trailing return). */
+    /**
+     * Wraps the function body in `try { <body> } finally { <after> }` where it stands. A return
+     * inside the try still returns from the function, running the finally first, and an inline
+     * function keeps its reified type arguments, inlined lambda parameters and non-local returns.
+     */
     fun generateAfterAdviceCalls(
         declaration: IrFunction,
         context: AspectContext,
         joinPoint: IrExpression,
-        tryCatchWrapper: IrTry,
-        localFunction: IrSimpleFunction,
         checkInherits: Boolean = false,
     ) {
-        val finalExpression =
-            buildAfterCallBlock(declaration, context, joinPoint, checkInherits)
-        if (declaration.isInline) {
-            wrapInPlace(declaration, finalExpression)
-            return
-        }
-        tryCatchWrapper.finallyExpression = finalExpression
-        val returnStatement =
-            aspectKContext.withIrBuilder(declaration.symbol) {
-                irReturn(tryCatchWrapper)
-            }
-
-        (declaration.body as? IrBlockBody)?.statements?.let { statement ->
-            statement.clear()
-            statement.add(localFunction)
-            statement.add(returnStatement)
-        }
-    }
-
-    // Wraps an inline function's body in `try { <body> } finally { <after> }` where it stands.
-    // Moved into a local function, the body would lose what only exists inlined at the call site:
-    // reified type arguments, inlined lambda parameters and non-local returns from them. A return
-    // inside the try still returns from the function, running the finally first.
-    private fun wrapInPlace(
-        declaration: IrFunction,
-        finallyExpression: IrExpression,
-    ) {
         val statements = (declaration.body as? IrBlockBody)?.statements ?: return
+        val finallyExpression = buildAfterCallBlock(declaration, context, joinPoint, checkInherits)
         val unitType = aspectKContext.pluginContext.irBuiltIns.unitType
         val body =
             aspectKContext.withIrBuilder(declaration.symbol) {
@@ -122,14 +96,12 @@ internal class AdviceCallGenerator(
     }
 
     /**
-     * Replaces the function body with:
-     *   1. [localFunction] declaration (the `$<name>` local function holding the original body)
-     *   2. @Around advice calls, each receiving the provided [proceedingJoinPoint] expression.
+     * Replaces the function body with the @Around advice call, which receives
+     * [proceedingJoinPoint] (whose listener already holds the original body).
      */
     fun generateAroundAdviceCalls(
         declaration: IrFunction,
         context: AspectContext,
-        localFunction: IrSimpleFunction,
         proceedingJoinPoint: IrExpression,
         checkInherits: Boolean = false,
     ) {
@@ -142,7 +114,6 @@ internal class AdviceCallGenerator(
             )
         (declaration.body as? IrBlockBody)?.statements?.let { statement ->
             statement.clear()
-            if (!declaration.isInline) statement.add(localFunction)
             statement.add(aroundCallback)
         }
     }

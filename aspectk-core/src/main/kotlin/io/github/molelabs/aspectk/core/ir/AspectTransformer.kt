@@ -18,10 +18,8 @@ package io.github.molelabs.aspectk.core.ir
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
-import io.github.molelabs.aspectk.core.ir.generator.LocalFunctionGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
 import io.github.molelabs.aspectk.core.ir.generator.ProceedingJoinPointGenerator
-import io.github.molelabs.aspectk.core.ir.generator.TryCatchWrapperGenerator
 import org.jetbrains.kotlin.backend.common.IrElementTransformerVoidWithContext
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -43,8 +41,6 @@ internal class AspectTransformer(
     private val methodSignatureGenerator: MethodSignatureGenerator,
     private val adviceCallGenerator: AdviceCallGenerator,
     private val proceedingJoinPointGenerator: ProceedingJoinPointGenerator,
-    private val tryCatchWrapperGenerator: TryCatchWrapperGenerator,
-    private val localFunctionGenerator: LocalFunctionGenerator,
     private val aspectKContext: AspectKIrCompilerContext,
 ) : IrElementTransformerVoidWithContext() {
     private val targets = aspectKContext.aspectLookUp.targets
@@ -106,10 +102,9 @@ internal class AspectTransformer(
         val contexts = aspectKContext.aspectLookUp[target]
         val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
-        val localFunc = localFunctionGenerator.generateLocalFunction(declaration)
 
-        // This ordering ensures statement.clear() inside @After/@Around generators never
-        // wipes out @Before calls that were already inserted.
+        // @After and @Around wrap whatever the body holds so far, so @Before is added last
+        // to stay outside of them.
 
         contexts.forEach { context ->
             when (context.kind) {
@@ -117,27 +112,21 @@ internal class AspectTransformer(
                     val proceedingJoinPoint =
                         proceedingJoinPointGenerator.generateProceedingJoinPoint(
                             declaration,
-                            localFunc,
                             signatureProperty,
                         )
                     adviceCallGenerator.generateAroundAdviceCalls(
                         declaration,
                         context,
-                        localFunc,
                         proceedingJoinPoint,
                         checkInherits,
                     )
                 }
 
                 Kind.AFTER -> {
-                    val tryCatchWrapper =
-                        tryCatchWrapperGenerator.generateTryCatchWrapper(declaration, localFunc)
                     adviceCallGenerator.generateAfterAdviceCalls(
                         declaration,
                         context,
                         joinPoint,
-                        tryCatchWrapper,
-                        localFunc,
                         checkInherits,
                     )
                 }

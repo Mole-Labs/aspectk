@@ -37,7 +37,6 @@ import org.jetbrains.kotlin.ir.builders.irInt
 import org.jetbrains.kotlin.ir.builders.irNull
 import org.jetbrains.kotlin.ir.builders.irReturn
 import org.jetbrains.kotlin.ir.declarations.IrClass
-import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
@@ -47,9 +46,12 @@ import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
+import org.jetbrains.kotlin.ir.expressions.IrGetValue
+import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
 import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
+import org.jetbrains.kotlin.ir.expressions.impl.IrGetValueImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.transformStatement
@@ -57,6 +59,7 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.patchDeclarationParents
+import org.jetbrains.kotlin.ir.visitors.IrElementTransformerVoid
 import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
@@ -71,26 +74,20 @@ internal class ProceedingJoinPointGenerator(
 
     /**
      * Builds a [DefaultProceedingJoinPoint] constructor call whose `onProceedListener` is
-     * `{ args -> localFunc(args[0] as T0, args[1] as T1, ...) }` wrapped as a SAM conversion.
+     * `{ args -> val p0 = args[0] as T0; ...; <original body> }` wrapped as a SAM conversion.
      *
      * When [declaration] is `suspend`, builds a `DefaultSuspendProceedingJoinPoint` instead:
-     * the wrapper lambda and its SAM interface are `suspend` so the copied body can resume.
+     * the listener lambda and its SAM interface are `suspend` so the moved body can resume.
      *
-     * [localFunc] must be the value returned by [generateLocalFunction] for the same [declaration].
+     * The body is moved out of [declaration]; the caller must replace it right after.
      */
     fun generateProceedingJoinPoint(
         declaration: IrFunction,
-        localFunc: IrSimpleFunction,
         signatureProperty: IrProperty,
     ): IrExpression {
         val isSuspend = (declaration as? IrSimpleFunction)?.isSuspend == true
         val valueParams = declaration.parameters.filter { it.kind == IrParameterKind.Regular }
-        val wrapperLambda =
-            if (declaration.isInline) {
-                buildBodyLambda(declaration, valueParams, isSuspend)
-            } else {
-                buildWrapperLambda(declaration, localFunc, valueParams, isSuspend)
-            }
+        val wrapperLambda = buildBodyLambda(declaration, valueParams, isSuspend)
         val constructor = if (isSuspend) suspendProceedingJoinPointConstructor else proceedingJoinPointConstructor
         val listenerType =
             if (isSuspend) {
@@ -124,42 +121,11 @@ internal class ProceedingJoinPointGenerator(
     }
 
     /**
-     * Builds `{ args: List<Any?> -> $<name>(args[0] as T0, args[1] as T1, ...) }`.
-     * Casting happens only at the call site, keeping the local function body clean.
-     */
-    private fun buildWrapperLambda(
-        declaration: IrFunction,
-        localFunc: IrSimpleFunction,
-        valueParams: List<IrValueDeclaration>,
-        isSuspend: Boolean,
-    ): IrFunctionExpression {
-        val lambdaFun = buildListenerFunction(declaration, isSuspend)
-        val argsParam = lambdaFun.parameters.single()
-        val receiverOffset = receiverOffsetOf(declaration)
-
-        lambdaFun.body =
-            aspectKCompilerContext.withIrBuilder(lambdaFun.symbol) {
-                irBlockBody {
-                    +irReturn(
-                        irCall(localFunc.symbol).apply {
-                            // $doSomething(args[receiverOffset] as T0, args[receiverOffset+1] as T1, ...)
-                            valueParams.forEachIndexed { index, param ->
-                                arguments[index] = argAt(argsParam, index + receiverOffset, param.type)
-                            }
-                        },
-                    )
-                }
-            }
-
-        return toListenerExpression(lambdaFun, isSuspend)
-    }
-
-    /**
-     * Builds `{ args: List<Any?> -> val p0 = args[0] as T0; ...; <original body> }` for an inline
-     * [declaration], moving its body into the listener instead of a local function. A local
-     * function is compiled once as a plain method, so it can't see the reified type arguments that
-     * only exist where the inline function is inlined; the listener is regenerated at each such
-     * call site. Parameters are read back from args, so proceed(args) can still replace them.
+     * Builds `{ args: List<Any?> -> val p0 = args[0] as T0; ...; <original body> }`, moving the
+     * body of [declaration] into the listener. Moved rather than copied into a local function, the
+     * body keeps what only exists where an inline function is inlined (reified type arguments), and
+     * whatever an earlier @After or @Around already wrapped around it. Parameters are read back
+     * from args, so proceed(args) can still replace them.
      */
     private fun buildBodyLambda(
         declaration: IrFunction,
@@ -189,9 +155,9 @@ internal class ProceedingJoinPointGenerator(
                             +variable
                             param to variable
                         }.toMap()
-                    val transformer = LocalFunctionGenerator.BodyTransformer(lambdaFun, declaration, substitutions)
+                    val transformer = BodyTransformer(lambdaFun, declaration, substitutions)
                     statements.forEach { +it.transformStatement(transformer) }
-                    // A Unit body may end without a return, but the listener returns Any?
+                    // if it does not exists, JS returns undefined
                     if (declaration.returnType.isUnit()) +irReturn(irGetObject(context.irBuiltIns.unitClass))
                 }
             }
@@ -265,4 +231,37 @@ internal class ProceedingJoinPointGenerator(
         function = lambdaFun,
         origin = IrStatementOrigin.LAMBDA,
     )
+
+    /**
+     * Rewrites the body of [declaration] once it runs inside [listener]:
+     * 1. Returns that target [declaration] now target [listener]. Returns of nested lambdas and
+     *    local functions keep their own targets, or they would cut the enclosing body short.
+     * 2. Reads of [declaration]'s parameters read [paramSubstitutions] instead, so that
+     *    `proceed(vararg args)` argument substitution takes effect.
+     */
+    private class BodyTransformer(
+        private val listener: IrSimpleFunction,
+        private val declaration: IrFunction,
+        private val paramSubstitutions: Map<IrValueParameter, IrValueDeclaration>,
+    ) : IrElementTransformerVoid() {
+        override fun visitReturn(expression: IrReturn): IrExpression {
+            if (expression.returnTargetSymbol == declaration.symbol) {
+                expression.returnTargetSymbol = listener.symbol
+            }
+            return super.visitReturn(expression)
+        }
+
+        override fun visitGetValue(expression: IrGetValue): IrExpression {
+            val replacement =
+                paramSubstitutions[expression.symbol.owner]
+                    ?: return super.visitGetValue(expression)
+            return IrGetValueImpl(
+                startOffset = expression.startOffset,
+                endOffset = expression.endOffset,
+                type = replacement.type,
+                symbol = replacement.symbol,
+                origin = expression.origin,
+            )
+        }
+    }
 }

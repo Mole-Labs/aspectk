@@ -20,164 +20,10 @@ import com.tschuchort.compiletesting.SourceFile
 import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertAll
 
 @OptIn(ExperimentalCompilerApi::class)
-class AfterLocalFunctionGenerationTest {
-    @Test
-    fun `@After generates a private local function named after the original function`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object LogAspect {
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun work() { }
-                }
-                """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when - on JVM level, local function is compiled to a static method with mangled name
-        val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.firstOrNull { it.name == $$$"work$_work" }
-
-        // then — $$work must exist as a private method on Test (try-catch body wrapper)
-        assertNotNull(localFn, "Expected local function '\$\$work' to be generated on class Test")
-    }
-
-    @Test
-    fun `@After local function mirrors the value parameters of the original function`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object LogAspect {
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun compute(x: Int, label: String) { }
-                }
-                """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when
-        val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.first { it.name == "compute\$_compute" }
-
-        // then — $$compute(x: Int, label: String) mirrors the value parameters of compute()
-        assertAll(
-            { assertEquals(2, localFn.parameterCount) },
-            { assertEquals(Int::class.javaPrimitiveType, localFn.parameterTypes[0]) },
-            { assertEquals(String::class.java, localFn.parameterTypes[1]) },
-        )
-    }
-
-    @Test
-    fun `@After local function preserves the return type of the original function`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.JoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted
-
-                @Aspect
-                object LogAspect {
-                    @After(Intercepted::class)
-                    fun doAfter(jp: JoinPoint) { }
-                }
-
-                class Test {
-                    @Intercepted
-                    fun greet(): String = "hello"
-                }
-                """,
-            )
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when
-        val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.first { it.name == "greet\$_greet" }
-
-        // then — $$greet() must return String, matching the original function's return type
-        assertEquals(String::class.java, localFn.returnType)
-    }
-
-    @Test
-    fun `local function is created only once when multiple @After annotations are present`() {
-        // given
-        val result =
-            compile(
-                """
-                import io.github.molelabs.aspectk.runtime.Aspect
-                import io.github.molelabs.aspectk.runtime.After
-                import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
-
-                @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted1
-
-                 @Target(AnnotationTarget.FUNCTION)
-                annotation class Intercepted2
-
-                @Aspect
-                object PassThroughAspect {
-                    @After(Intercepted1::class)
-                    fun doAround1(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
-
-                    @After(Intercepted2::class)
-                    fun doAround2(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
-                }
-
-                class Test {
-                    @Intercepted1
-                    @Intercepted2
-                    fun greet(): String = "hello"
-                }
-                """.trimIndent(),
-            )
-
-        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
-
-        // when
-        val testClass = result.classLoader.loadClass("Test")
-        val localFn = testClass.declaredMethods.filter { it.name == "greet\$_greet" }
-
-        // then — $greet() is created only once
-        assertEquals(1, localFn.size)
-    }
-
+class AfterAdviceWeavingTest {
     @Test
     fun `@After on a reified inline function keeps it inlinable`() {
         // given
@@ -414,5 +260,221 @@ class AfterLocalFunctionGenerationTest {
         // then
         assertEquals(2, actual)
         assertEquals(listOf("after"), log)
+    }
+
+    @Test
+    fun `@After an early return in the middle of the body returns from the function`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Intercepted
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Intercepted::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Intercepted
+                        fun classify(x: Int): String {
+                            if (x < 0) return "negative"
+                            val doubled = x * 2
+                            return "positive:" + doubled
+                        }
+
+                        @Intercepted
+                        inline fun classifyInline(x: Int): String {
+                            if (x < 0) return "negative"
+                            val doubled = x * 2
+                            return "positive:" + doubled
+                        }
+
+                        fun runTest(): String = listOf(classify(-1), classify(2), classifyInline(-1), classifyInline(2)).joinToString()
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("negative, positive:4, negative, positive:4", actual)
+        assertEquals(List(4) { "after" }, log)
+    }
+
+    // The return inside forEach targets the woven function, not the lambda
+    @Test
+    fun `@After a non-local return from a lambda in the body returns from the function`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Intercepted
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Intercepted::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Intercepted
+                        fun firstAbove(values: List<Int>, limit: Int): Int {
+                            values.forEach { if (it > limit) return it }
+                            return -1
+                        }
+
+                        @Intercepted
+                        inline fun firstAboveInline(values: List<Int>, limit: Int): Int {
+                            values.forEach { if (it > limit) return it }
+                            return -1
+                        }
+
+                        fun runTest(): String =
+                            listOf(firstAbove(listOf(1, 5, 9), 3), firstAbove(listOf(1), 3), firstAboveInline(listOf(1, 5, 9), 3), firstAboveInline(listOf(1), 3)).joinToString()
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("5, -1, 5, -1", actual)
+        assertEquals(List(4) { "after" }, log)
+    }
+
+    @Test
+    fun `@After a labeled return from a lambda in the body only leaves the lambda`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Intercepted
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Intercepted::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Intercepted
+                        fun doubled(values: List<Int>): List<Int> = values.map { if (it < 0) return@map 0; it * 2 }
+
+                        @Intercepted
+                        inline fun doubledInline(values: List<Int>): List<Int> = values.map { if (it < 0) return@map 0; it * 2 }
+
+                        fun runTest(): String = (doubled(listOf(-1, 2)) + doubledInline(listOf(-1, 2))).joinToString()
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("0, 4, 0, 4", actual)
+        assertEquals(List(2) { "after" }, log)
+    }
+
+    @Test
+    fun `@After a return inside a local function in the body only leaves the local function`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Intercepted
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Intercepted::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Intercepted
+                        fun sumOfSquares(values: List<Int>): Int {
+                            fun square(x: Int): Int {
+                                return x * x
+                            }
+                            var total = 0
+                            for (value in values) total += square(value)
+                            return total
+                        }
+
+                        fun runTest(): Int = sumOfSquares(listOf(1, 2, 3))
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals(14, actual)
+        assertEquals(List(1) { "after" }, log)
     }
 }
