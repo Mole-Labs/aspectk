@@ -16,6 +16,7 @@
 package io.github.molelabs.aspectk.core.ir
 
 import com.tschuchort.compiletesting.KotlinCompilation
+import com.tschuchort.compiletesting.SourceFile
 import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -175,5 +176,241 @@ class AfterLocalFunctionGenerationTest {
 
         // then — $greet() is created only once
         assertEquals(1, localFn.size)
+    }
+
+    @Test
+    fun `@After on a reified inline function keeps it inlinable`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Logged::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Logged
+                        inline fun <reified T> typeName(): String = T::class.simpleName!!
+
+                        fun runTest(): String = typeName<String>()
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("String", actual)
+        assertEquals(listOf("after"), log)
+    }
+
+    @Test
+    fun `@After on a tailrec function keeps a constant stack depth`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Logged::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Logged
+                        tailrec fun countDown(n: Int): Int = if (n == 0) 0 else countDown(n - 1)
+
+                        fun runTest(): Int = countDown(100_000)
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+
+        // then
+        assertEquals(0, actual)
+    }
+
+    @Test
+    fun `@After on an inline function runs with the inlined body`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Logged::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Logged
+                        inline fun twice(x: Int): Int = x * 2
+
+                        fun runTest(): Int = twice(3)
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals(6, actual)
+        assertEquals(listOf("after"), log)
+    }
+
+    @Test
+    fun `@After on an inline function with a lambda parameter keeps the lambda inlinable`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Logged::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Logged
+                        inline fun <T> measure(block: () -> T): T = block()
+
+                        fun runTest(): String = measure { "x" }
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("x", actual)
+        assertEquals(listOf("after"), log)
+    }
+
+    // Returning from findFirstAbove() inside the lambda only works while the lambda is inlined into it
+    @Test
+    fun `@After on an inline function keeps non-local returns from its lambda`() {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        import io.github.molelabs.aspectk.runtime.After
+                        import io.github.molelabs.aspectk.runtime.Aspect
+                        import io.github.molelabs.aspectk.runtime.JoinPoint
+
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        @Aspect
+                        object LoggingAspect {
+                            @After(Logged::class)
+                            fun doAfter(joinPoint: JoinPoint) {
+                                executionLog.add("after")
+                            }
+                        }
+
+                        @Logged
+                        inline fun forEachOf(values: List<Int>, block: (Int) -> Unit) {
+                            for (value in values) block(value)
+                        }
+
+                        fun findFirstAbove(values: List<Int>, limit: Int): Int {
+                            forEachOf(values) { if (it > limit) return it }
+                            return -1
+                        }
+
+                        fun runTest(): Int = findFirstAbove(listOf(1, 2, 3), 1)
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals(2, actual)
+        assertEquals(listOf("after"), log)
     }
 }

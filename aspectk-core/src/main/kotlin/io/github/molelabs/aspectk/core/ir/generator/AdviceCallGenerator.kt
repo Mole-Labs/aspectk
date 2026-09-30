@@ -30,6 +30,7 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrTry
+import org.jetbrains.kotlin.ir.expressions.impl.IrTryImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
 import org.jetbrains.kotlin.name.FqName
@@ -76,6 +77,10 @@ internal class AdviceCallGenerator(
     ) {
         val finalExpression =
             buildAfterCallBlock(declaration, context, joinPoint, checkInherits)
+        if (declaration.isInline) {
+            wrapInPlace(declaration, finalExpression)
+            return
+        }
         tryCatchWrapper.finallyExpression = finalExpression
         val returnStatement =
             aspectKContext.withIrBuilder(declaration.symbol) {
@@ -87,6 +92,33 @@ internal class AdviceCallGenerator(
             statement.add(localFunction)
             statement.add(returnStatement)
         }
+    }
+
+    // Wraps an inline function's body in `try { <body> } finally { <after> }` where it stands.
+    // Moved into a local function, the body would lose what only exists inlined at the call site:
+    // reified type arguments, inlined lambda parameters and non-local returns from them. A return
+    // inside the try still returns from the function, running the finally first.
+    private fun wrapInPlace(
+        declaration: IrFunction,
+        finallyExpression: IrExpression,
+    ) {
+        val statements = (declaration.body as? IrBlockBody)?.statements ?: return
+        val unitType = aspectKContext.pluginContext.irBuiltIns.unitType
+        val body =
+            aspectKContext.withIrBuilder(declaration.symbol) {
+                irBlock(resultType = unitType) { statements.forEach { +it } }
+            }
+        statements.clear()
+        statements.add(
+            IrTryImpl(
+                startOffset = -1,
+                endOffset = -1,
+                type = unitType,
+                tryResult = body,
+                catches = emptyList(),
+                finallyExpression = finallyExpression,
+            ),
+        )
     }
 
     /**

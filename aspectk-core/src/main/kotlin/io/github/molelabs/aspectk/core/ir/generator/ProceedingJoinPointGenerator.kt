@@ -16,7 +16,7 @@
 package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
-import io.github.molelabs.aspectk.core.ir.createIrListOf
+import io.github.molelabs.aspectk.core.ir.createArgsListOf
 import io.github.molelabs.aspectk.core.ir.function1Type
 import io.github.molelabs.aspectk.core.ir.listAnyNType
 import io.github.molelabs.aspectk.core.ir.listGetFun
@@ -86,14 +86,7 @@ internal class ProceedingJoinPointGenerator(
                 aspectKCompilerContext.onProceedListenerType
             }
 
-        val argsExpression =
-            aspectKCompilerContext.createIrListOf(
-                scope = declaration.symbol,
-                elements =
-                declaration.parameters.map { param ->
-                    aspectKCompilerContext.withIrBuilder(declaration.symbol) { irGet(param) }
-                },
-            )
+        val argsExpression = aspectKCompilerContext.createArgsListOf(declaration)
 
         return aspectKCompilerContext.withIrBuilder(declaration.symbol) {
             irCall(constructor).apply {

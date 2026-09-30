@@ -16,7 +16,7 @@
 package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
-import io.github.molelabs.aspectk.core.ir.createIrListOf
+import io.github.molelabs.aspectk.core.ir.createArgsListOf
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.ir.builders.irCall
 import org.jetbrains.kotlin.ir.builders.irGet
@@ -50,14 +50,7 @@ internal class JoinPointGenerator(
                 irCall(methodSignatureProperty.getter!!).apply {
                     dispatchReceiver = irGetObject((methodSignatureProperty.parent as IrClass).symbol)
                 }
-            arguments[2] =
-                aspectKContext.createIrListOf(
-                    scope = declaration.symbol,
-                    elements =
-                    declaration.parameters.map {
-                        irGet(it)
-                    },
-                )
+            arguments[2] = aspectKContext.createArgsListOf(declaration)
         }
     }
 }

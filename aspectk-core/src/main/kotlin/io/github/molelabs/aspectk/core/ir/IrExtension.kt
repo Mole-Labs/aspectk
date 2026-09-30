@@ -21,6 +21,8 @@ import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
+import org.jetbrains.kotlin.ir.builders.irGet
+import org.jetbrains.kotlin.ir.builders.irNull
 import org.jetbrains.kotlin.ir.builders.irVararg
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
@@ -40,6 +42,7 @@ import org.jetbrains.kotlin.ir.types.classFqName
 import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.types.typeWith
+import org.jetbrains.kotlin.ir.util.isInlineParameter
 import org.jetbrains.kotlin.ir.util.render
 import org.jetbrains.kotlin.name.CallableId
 import org.jetbrains.kotlin.name.ClassId
@@ -99,6 +102,16 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
 
 internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = irCompat.referenceClass(pluginContext, ClassId.topLevel(FqName(fqName)))
     ?: reportCompilerBug("Cannot find symbol for $fqName")
+
+internal fun AspectKIrCompilerContext.createArgsListOf(declaration: IrFunction): IrExpression = createIrListOf(
+    scope = declaration.symbol,
+    elements =
+    declaration.parameters.map { param ->
+        withIrBuilder(declaration.symbol) {
+            if (declaration.isInline && param.isInlineParameter()) irNull(pluginContext.irBuiltIns.anyNType) else irGet(param)
+        }
+    },
+)
 
 internal fun <T> AspectKIrCompilerContext.withIrBuilder(
     symbol: IrSymbol,
