@@ -23,9 +23,11 @@ import io.github.molelabs.aspectk.core.ir.listGetFun
 import io.github.molelabs.aspectk.core.ir.suspendFunction1Type
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.descriptors.DescriptorVisibilities
+import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.declarations.IrValueParameterBuilder
 import org.jetbrains.kotlin.ir.builders.declarations.buildFun
 import org.jetbrains.kotlin.ir.builders.declarations.buildValueParameter
+import org.jetbrains.kotlin.ir.builders.declarations.buildVariable
 import org.jetbrains.kotlin.ir.builders.irAs
 import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.builders.irCall
@@ -41,6 +43,8 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
+import org.jetbrains.kotlin.ir.declarations.IrValueParameter
+import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.IrFunctionExpression
 import org.jetbrains.kotlin.ir.expressions.IrStatementOrigin
@@ -48,7 +52,11 @@ import org.jetbrains.kotlin.ir.expressions.IrTypeOperator
 import org.jetbrains.kotlin.ir.expressions.impl.IrFunctionExpressionImpl
 import org.jetbrains.kotlin.ir.expressions.impl.IrTypeOperatorCallImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
+import org.jetbrains.kotlin.ir.transformStatement
+import org.jetbrains.kotlin.ir.types.IrType
+import org.jetbrains.kotlin.ir.types.isUnit
 import org.jetbrains.kotlin.ir.util.constructors
+import org.jetbrains.kotlin.ir.util.patchDeclarationParents
 import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
@@ -77,7 +85,12 @@ internal class ProceedingJoinPointGenerator(
     ): IrExpression {
         val isSuspend = (declaration as? IrSimpleFunction)?.isSuspend == true
         val valueParams = declaration.parameters.filter { it.kind == IrParameterKind.Regular }
-        val wrapperLambda = buildWrapperLambda(declaration, localFunc, valueParams, isSuspend)
+        val wrapperLambda =
+            if (declaration.isInline) {
+                buildBodyLambda(declaration, valueParams, isSuspend)
+            } else {
+                buildWrapperLambda(declaration, localFunc, valueParams, isSuspend)
+            }
         val constructor = if (isSuspend) suspendProceedingJoinPointConstructor else proceedingJoinPointConstructor
         val listenerType =
             if (isSuspend) {
@@ -120,6 +133,78 @@ internal class ProceedingJoinPointGenerator(
         valueParams: List<IrValueDeclaration>,
         isSuspend: Boolean,
     ): IrFunctionExpression {
+        val lambdaFun = buildListenerFunction(declaration, isSuspend)
+        val argsParam = lambdaFun.parameters.single()
+        val receiverOffset = receiverOffsetOf(declaration)
+
+        lambdaFun.body =
+            aspectKCompilerContext.withIrBuilder(lambdaFun.symbol) {
+                irBlockBody {
+                    +irReturn(
+                        irCall(localFunc.symbol).apply {
+                            // $doSomething(args[receiverOffset] as T0, args[receiverOffset+1] as T1, ...)
+                            valueParams.forEachIndexed { index, param ->
+                                arguments[index] = argAt(argsParam, index + receiverOffset, param.type)
+                            }
+                        },
+                    )
+                }
+            }
+
+        return toListenerExpression(lambdaFun, isSuspend)
+    }
+
+    /**
+     * Builds `{ args: List<Any?> -> val p0 = args[0] as T0; ...; <original body> }` for an inline
+     * [declaration], moving its body into the listener instead of a local function. A local
+     * function is compiled once as a plain method, so it can't see the reified type arguments that
+     * only exist where the inline function is inlined; the listener is regenerated at each such
+     * call site. Parameters are read back from args, so proceed(args) can still replace them.
+     */
+    private fun buildBodyLambda(
+        declaration: IrFunction,
+        valueParams: List<IrValueParameter>,
+        isSuspend: Boolean,
+    ): IrFunctionExpression {
+        val lambdaFun = buildListenerFunction(declaration, isSuspend)
+        val argsParam = lambdaFun.parameters.single()
+        val receiverOffset = receiverOffsetOf(declaration)
+        // Moved, not copied: the caller replaces the declaration's body right after
+        val statements = (declaration.body as? IrBlockBody)?.statements?.toList().orEmpty()
+
+        lambdaFun.body =
+            aspectKCompilerContext.withIrBuilder(lambdaFun.symbol) {
+                irBlockBody {
+                    val substitutions =
+                        valueParams.mapIndexed { index, param ->
+                            val variable =
+                                buildVariable(
+                                    parent = lambdaFun,
+                                    startOffset = -1,
+                                    endOffset = -1,
+                                    origin = aspectKCompilerContext.irCompat.valueParameterOrigin(),
+                                    name = param.name,
+                                    type = param.type,
+                                ).apply { initializer = argAt(argsParam, index + receiverOffset, param.type) }
+                            +variable
+                            param to variable
+                        }.toMap()
+                    val transformer = LocalFunctionGenerator.BodyTransformer(lambdaFun, declaration, substitutions)
+                    statements.forEach { +it.transformStatement(transformer) }
+                    // A Unit body may end without a return, but the listener returns Any?
+                    if (declaration.returnType.isUnit()) +irReturn(irGetObject(context.irBuiltIns.unitClass))
+                }
+            }
+        // Declarations in the moved body still name the inline function as their parent
+        lambdaFun.body?.patchDeclarationParents(lambdaFun)
+
+        return toListenerExpression(lambdaFun, isSuspend)
+    }
+
+    private fun buildListenerFunction(
+        declaration: IrFunction,
+        isSuspend: Boolean,
+    ): IrSimpleFunction {
         val lambdaFun =
             aspectKCompilerContext.pluginContext.irFactory
                 .buildFun {
@@ -132,56 +217,52 @@ internal class ProceedingJoinPointGenerator(
                     parent = declaration
                 }
 
-        val argsParam =
-            aspectKCompilerContext.pluginContext.irFactory.buildValueParameter(
-                parent = lambdaFun,
-                builder =
-                IrValueParameterBuilder().apply {
-                    name = Name.identifier("__args")
-                    type = aspectKCompilerContext.listAnyNType
-                    kind = IrParameterKind.Regular
-                    origin = aspectKCompilerContext.irCompat.valueParameterOrigin()
-                },
+        lambdaFun.parameters =
+            listOf(
+                aspectKCompilerContext.pluginContext.irFactory.buildValueParameter(
+                    parent = lambdaFun,
+                    builder =
+                    IrValueParameterBuilder().apply {
+                        name = Name.identifier("__args")
+                        type = aspectKCompilerContext.listAnyNType
+                        kind = IrParameterKind.Regular
+                        origin = aspectKCompilerContext.irCompat.valueParameterOrigin()
+                    },
+                ),
             )
-        lambdaFun.parameters = listOf(argsParam)
-
-        // Number of non-regular (receiver) parameters that sit before the regular params
-        // in the args list: 1 for member/extension functions, 0 for top-level functions.
-        val receiverOffset = declaration.parameters.count { it.kind != IrParameterKind.Regular }
-
-        lambdaFun.body =
-            aspectKCompilerContext.withIrBuilder(lambdaFun.symbol) {
-                irBlockBody {
-                    +irReturn(
-                        irCall(localFunc.symbol).apply {
-                            // $doSomething(args[receiverOffset] as T0, args[receiverOffset+1] as T1, ...)
-                            valueParams.forEachIndexed { index, param ->
-                                val castedArg =
-                                    irAs(
-                                        irCall(aspectKCompilerContext.listGetFun).apply {
-                                            dispatchReceiver = irGet(argsParam)
-                                            arguments[1] = irInt(index + receiverOffset)
-                                        },
-                                        param.type,
-                                    )
-                                arguments[index] = castedArg
-                            }
-                        },
-                    )
-                }
-            }
-
-        return IrFunctionExpressionImpl(
-            startOffset = -1,
-            endOffset = -1,
-            type =
-            if (isSuspend) {
-                aspectKCompilerContext.suspendFunction1Type
-            } else {
-                aspectKCompilerContext.function1Type
-            },
-            function = lambdaFun,
-            origin = IrStatementOrigin.LAMBDA,
-        )
+        return lambdaFun
     }
+
+    // Number of non-regular (receiver) parameters that sit before the regular params
+    // in the args list: 1 for member/extension functions, 0 for top-level functions.
+    private fun receiverOffsetOf(declaration: IrFunction) = declaration.parameters.count { it.kind != IrParameterKind.Regular }
+
+    // args[index] as type
+    private fun IrBuilderWithScope.argAt(
+        argsParam: IrValueParameter,
+        index: Int,
+        type: IrType,
+    ): IrExpression = irAs(
+        irCall(aspectKCompilerContext.listGetFun).apply {
+            dispatchReceiver = irGet(argsParam)
+            arguments[1] = irInt(index)
+        },
+        type,
+    )
+
+    private fun toListenerExpression(
+        lambdaFun: IrSimpleFunction,
+        isSuspend: Boolean,
+    ): IrFunctionExpression = IrFunctionExpressionImpl(
+        startOffset = -1,
+        endOffset = -1,
+        type =
+        if (isSuspend) {
+            aspectKCompilerContext.suspendFunction1Type
+        } else {
+            aspectKCompilerContext.function1Type
+        },
+        function = lambdaFun,
+        origin = IrStatementOrigin.LAMBDA,
+    )
 }

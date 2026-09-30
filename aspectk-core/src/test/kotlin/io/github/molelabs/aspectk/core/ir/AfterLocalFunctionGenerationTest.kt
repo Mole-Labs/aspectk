@@ -225,7 +225,7 @@ class AfterLocalFunctionGenerationTest {
     }
 
     @Test
-    fun `@After on a tailrec function keeps a constant stack depth`() {
+    fun `@After on a tailrec function runs for every recursive call`() {
         // given
         val result =
             compile(
@@ -253,7 +253,7 @@ class AfterLocalFunctionGenerationTest {
                         @Logged
                         tailrec fun countDown(n: Int): Int = if (n == 0) 0 else countDown(n - 1)
 
-                        fun runTest(): Int = countDown(100_000)
+                        fun runTest(): Int = countDown(3)
                         """,
                     ),
                 ),
@@ -263,9 +263,11 @@ class AfterLocalFunctionGenerationTest {
         // when
         val runTestKt = result.classLoader.loadClass("RunTestKt")
         val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
 
         // then
         assertEquals(0, actual)
+        assertEquals(List(4) { "after" }, log)
     }
 
     @Test

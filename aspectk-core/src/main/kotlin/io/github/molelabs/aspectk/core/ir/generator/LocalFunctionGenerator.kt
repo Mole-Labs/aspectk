@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.ir.builders.irBlockBody
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.IrValueDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrValueParameter
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -127,17 +128,17 @@ internal class LocalFunctionGenerator(
     }
 
     /**
-     * Transforms the deep-copied body of a local function by:
+     * Transforms the body of [declaration] once it runs inside [localFunc] (a local function or
+     * the proceed listener) by:
      * 1. Fixing return targets to point to [localFunc] instead of the outer function.
-     * 2. Substituting `IrGetValue` references to outer parameters with references to the
-     *    local function's own parameters, so that `proceed(vararg args)` argument
-     *    substitution takes effect correctly.
+     * 2. Substituting `IrGetValue` references to outer parameters with [paramSubstitutions], so
+     *    that `proceed(vararg args)` argument substitution takes effect correctly.
      */
     @OptIn(UnsafeDuringIrConstructionAPI::class)
-    private class BodyTransformer(
+    internal class BodyTransformer(
         private val localFunc: IrSimpleFunction,
         private val declaration: IrFunction,
-        private val paramSubstitutions: Map<IrValueParameter, IrValueParameter>,
+        private val paramSubstitutions: Map<IrValueParameter, IrValueDeclaration>,
     ) : IrElementTransformerVoid() {
         override fun visitReturn(expression: IrReturn): IrExpression {
             // Only remap returns that target the outer function. After deepCopyWithSymbols,

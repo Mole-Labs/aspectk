@@ -142,7 +142,7 @@ internal class AdviceCallGenerator(
             )
         (declaration.body as? IrBlockBody)?.statements?.let { statement ->
             statement.clear()
-            statement.add(localFunction)
+            if (!declaration.isInline) statement.add(localFunction)
             statement.add(aroundCallback)
         }
     }
