@@ -173,7 +173,7 @@ internal class MethodSignatureGenerator(
             )
         arguments[4] =
             irString(
-                declaration.returnType.classFqName?.asString()
+                declaration.returnType.getUpperBoundClassName()
                     ?: reportCompilerBug("function return type should not be null"),
             )
     }
