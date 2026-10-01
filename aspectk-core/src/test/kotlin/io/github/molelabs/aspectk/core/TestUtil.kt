@@ -24,9 +24,11 @@ import org.intellij.lang.annotations.Language
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.JvmDefaultMode
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import java.io.File
 import java.net.URLClassLoader
+import kotlin.io.path.createTempDirectory
 
 @OptIn(ExperimentalCompilerApi::class)
 fun compile(
@@ -61,8 +63,10 @@ fun compileWithHints(
     hintsOutputDir: File? = null,
     hintsPaths: List<File> = emptyList(),
     extraClasspath: List<File> = emptyList(),
+    moduleName: String? = null,
 ): JvmCompilationResult = KotlinCompilation()
     .apply {
+        moduleName?.let { this.moduleName = it }
         jvmDefault = JvmDefaultMode.DISABLE.description
         jvmTarget = "17"
         languageVersion = "2.3"
@@ -82,6 +86,67 @@ fun compileWithHints(
         inheritClassPath = true
         classpaths = classpaths + extraClasspath
     }.compile()
+
+/**
+ * Compiles [modules] in order, each one against the classes and hints of every module before it,
+ * as if each depended on all earlier ones through `api`, and loads all of them in one class loader.
+ */
+@OptIn(ExperimentalCompilerApi::class)
+fun compileModules(vararg modules: Pair<String, List<SourceFile>>): ClassLoader {
+    val outputs = mutableListOf<File>()
+    val hintsDirs = mutableListOf<File>()
+    modules.forEach { (name, sources) ->
+        val hintsDir = createTempDirectory("aspectk-hints-$name").toFile()
+        val result =
+            compileWithHints(
+                sourceFiles = sources,
+                hintsOutputDir = hintsDir,
+                hintsPaths = hintsDirs.toList(),
+                extraClasspath = outputs.toList(),
+                moduleName = name,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, "module $name: ${result.messages}")
+        outputs += result.outputDirectory
+        hintsDirs += hintsDir
+    }
+    return URLClassLoader(outputs.map { it.toURI().toURL() }.toTypedArray(), AdviceKind::class.java.classLoader)
+}
+
+/** The advice types a weaving test can run under. */
+enum class AdviceKind(
+    private val annotation: String,
+    private val joinPoint: String,
+) {
+    BEFORE("Before", "JoinPoint"),
+    AFTER("After", "JoinPoint"),
+    AROUND("Around", "ProceedingJoinPoint"),
+    ;
+
+    /**
+     * An `@Aspect object [name]` whose single advice of this kind on [targets] runs [record] and,
+     * for @Around, then proceeds with the original arguments. The advice's parameter is `joinPoint`.
+     */
+    fun aspect(
+        name: String,
+        targets: String,
+        record: String,
+        inherits: Boolean = false,
+    ): String {
+        val proceed = if (this == AROUND) "return joinPoint.proceed()" else ""
+        val returnType = if (this == AROUND) ": Any?" else ""
+        return """
+            @io.github.molelabs.aspectk.runtime.Aspect
+            
+            object $name {
+                @io.github.molelabs.aspectk.runtime.$annotation($targets, inherits = $inherits)
+                fun advice(joinPoint: io.github.molelabs.aspectk.runtime.$joinPoint)$returnType {
+                    $record
+                    $proceed
+                }
+            }
+        """
+    }
+}
 
 fun URLClassLoader.assertAndGetField(
     className: String,
