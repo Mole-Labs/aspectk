@@ -103,16 +103,14 @@ AspectK transforms it into (pseudocode):
 
 ```kotlin
 fun fetch(id: String): String {
-    fun `$fetch`(id: String): String {
-        return "result-$id"
-    }
     return CachingAspect.doAround(
         DefaultProceedingJoinPoint(
             target    = this,
             signature = $MethodSignatures.ajc$tjp_0,
             args      = listOf(id),
             onProceedListener = { __args ->
-                `$fetch`(__args[1] as String)   // [1] because this is a member function; [0] for top-level
+                val id = __args[1] as String   // [1] because this is a member function; [0] for top-level
+                "result-$id"                   // the original body, moved here
             }
         )
     ) as String
@@ -121,11 +119,16 @@ fun fetch(id: String): String {
 
 Key points:
 
-- The original body is extracted into a **local function** (`$fetch`).
-- The function body is **replaced** with a single call to the `@Around` advice.
-- `proceed()` delegates to the local function via the `onProceedListener` lambda.
+- The original body is moved into the `onProceedListener` lambda, and the function body becomes
+  a single call to the `@Around` advice.
+- Each regular parameter is re-declared at the top of the lambda from `__args`, so
+  `proceed(newArgs)` changes what the body sees.
+- A `return` from the function body returns from the lambda instead, and its value becomes the
+  result of `proceed()`. Returns from nested lambdas and local functions keep their targets.
 - The lambda receives the **full args list** (receiver + regular params) in the same order
   as `pjp.args`.
+- The lambda is regenerated wherever an `inline` target is inlined, so the body can still use
+  the target's reified type parameters.
 
 ### Top-level functions
 
@@ -137,8 +140,44 @@ first regular parameter instead of `1`:
 fun fetch(id: String): String { ... }
 
 // generated lambda:
-{ __args -> `$fetch`(__args[0] as String) }
+{ __args ->
+    val id = __args[0] as String
+    ...                              // the original body
+}
 ```
+
+### Up to 0.3.1: local function (deprecated)
+
+AspectK 0.3.1 and earlier copied the body into a local function and called it from the listener:
+
+```kotlin
+fun fetch(id: String): String {
+    fun `$fetch`(id: String): String {
+        return "result-$id"
+    }
+    return CachingAspect.doAround(
+        DefaultProceedingJoinPoint(
+            ...
+            onProceedListener = { __args -> `$fetch`(__args[1] as String) }
+        )
+    ) as String
+}
+```
+
+This transformation is deprecated and was replaced by moving the body into the listener, for these
+reasons:
+
+- **Inline functions.** Kotlin doesn't allow local functions inside inline functions; the plugin
+  bypassed that check, and the backend compiled the local function as a plain method. That method
+  can't see the reified type arguments, which only exist where the function is inlined, so
+  `@Around` on a reified inline function failed to compile. The listener lambda, by contrast, is
+  regenerated at every call site along with the inlined body. A public inline function also
+  inlined a call to a synthetic accessor (`access$<name>$_<name>`) into its callers.
+- **Implementation complexity.** The copy needed its own symbol remapping on top of the parameter
+  substitution and `return` rewriting that moving the body still needs. Two bugs fixed in 0.2.2
+  came from the copy step (see the [changelog](../reference/changelog.md#022)).
+- **Combining advice.** Each `@After` and `@Around` cleared the body and rebuilt it around the
+  same local function, so only the last one processed ran.
 
 ## `proceed()` — Invoke the Original Body
 
@@ -268,26 +307,12 @@ doWork()  // works — no ClassCastException
 
 ## Execution Order with `@Before` and `@After`
 
-When multiple advice types target the same function, they execute in this order:
-
-```
-@Before fires
-   ↓
-@Around advice starts
-   ↓  (only if pjp.proceed() is called)
-      Original body executes
-      ↓ (finally)
-      @After fires
-   ↓  (control returns to @Around after proceed())
-@Around post-proceed logic
-   ↓
-Return value delivered to caller
-```
-
-`@After` is **innermost** and wraps only the original body — not the `@Around` call.
-This means `@After` fires if and only if `pjp.proceed()` was called and the original body ran.
-
-See [`@After` Advice](after-advice.md) for details on this design decision.
+!!! warning "Advice ordering"
+    Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
+    before the body and any other advice. Any other combination on the same function is not
+    supported yet. This includes `@After` together with `@Around` and more than one `@After`
+    or `@Around`. AspectK still weaves every advice, but the order in which they run may not
+    be what you expect.
 
 ## `@Around` on `suspend` functions
 
@@ -324,28 +349,6 @@ target is `suspend`; a non-suspending target still uses `ProceedingJoinPoint`.
 
 `@Before` and `@After` need no special handling — they work on `suspend` functions with
 the ordinary `JoinPoint`.
-
-## Current Limitation — One `@Around` Per Target Annotation
-
-At most **one** `@Around` advice can be applied per target annotation. If multiple `@Around`
-methods target the same annotation, only the first one found in the `AspectLookUp` is applied.
-
-Support for chained (nested) `@Around` advices is planned in a future release.
-
-```kotlin
-// ⚠️ Only one of these will fire — do not define multiple @Around for the same target
-@Aspect
-object AspectA {
-    @Around(target = [MyAnn::class])
-    fun first(pjp: ProceedingJoinPoint): Any? = pjp.proceed()
-}
-
-@Aspect
-object AspectB {
-    @Around(target = [MyAnn::class])
-    fun second(pjp: ProceedingJoinPoint): Any? = pjp.proceed()  // ⚠️ may not fire
-}
-```
 
 ## `@Around` on Extension and Top-Level Functions
 

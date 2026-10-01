@@ -68,10 +68,10 @@ Visits every `IrSimpleFunction` as an `IrElementTransformerVoidWithContext` (`as
 The order inside `generateInner()` matters:
 
 1. Generate (once per module/file) the `MethodSignature` as a static property — cached in a `$MethodSignatures` inner object.
-2. `contexts.forEach` handles AROUND/AFTER — this **completely replaces the body** (`statement.clear()` then rebuild).
-3. **`@Before` is always prepended last.** As the comment states: "the body structure is finalized first, so it appears first in the executed statement list when prepended last."
+2. `contexts.forEach` handles AROUND/AFTER, and each one wraps the body as woven so far. `@After` wraps it in place in `try { ... } finally { after }`; `@Around` moves it into the `proceed` listener lambda and replaces it with the advice call.
+3. **`@Before` is always prepended last**, so it stays outside everything `@After`/`@Around` wrapped.
 
-Because of this ordering dependency, **when a single function has 2+ `@Around` advices, each one after the first calls `statement.clear()` on statements the previous one had just written, wiping them out — so effectively only the last-processed one survives.** Chaining multiple `@Around` advices is not currently supported — a known limitation. See [Multi-`@Around` and the Ordering Engine](multi-around-and-ordering.md) for details and the proposed future design.
+Ordering is only supported for multiple `@Before` advices. Combining `@After` with `@Around`, or applying more than one `@After` or `@Around` to a function, is not supported yet and may run in an unexpected order.
 
 ## Generators (`ir/generator/`)
 
@@ -79,10 +79,8 @@ Because of this ordering dependency, **when a single function has 2+ `@Around` a
 |---|---|
 | `MethodSignatureGenerator` | Generates a function's signature as a `MethodSignature` IR expression, cached as a static property |
 | `JoinPointGenerator` | Generates the `DefaultJoinPoint` constructor call IR used by `@Before`/`@After` |
-| `ProceedingJoinPointGenerator` | Generates the `DefaultProceedingJoinPoint` for `@Around` — builds the lambda that `proceed()` uses to call back into the original function (`localFunc`) |
-| `LocalFunctionGenerator` | Copies the original function body into a local function named `$<name>` — a precondition for `@Around`/`@After` to be able to wrap the original logic |
-| `TryCatchWrapperGenerator` | Generates the try/finally wrapper used by `@After` |
-| `AdviceCallGenerator` | Assembles the pieces above into the final `irCall(context.advice.symbol)` call site |
+| `ProceedingJoinPointGenerator` | Generates the `DefaultProceedingJoinPoint` for `@Around`. Moves the function body into the `proceed` listener lambda, reading parameters back from `args` and retargeting returns to the lambda |
+| `AdviceCallGenerator` | Assembles the pieces above into the final `irCall(context.advice.symbol)` call site; wraps the body in `try/finally` for `@After` |
 
 **Important**: `AdviceCallGenerator` uses `context.advice` **only via `.symbol`** (`aspectk-core/.../generator/AdviceCallGenerator.kt:59,126,211`), and builds the `irGetObject` dispatch receiver from `context.aspect` (already an `IrClassSymbol`). In other words, nothing about the advice function's body — or anywhere else it might come from — is needed: as long as a symbol is resolvable, it works identically regardless of where that symbol came from. This property is the central premise of the [cross-module weaving design](cross-module-weaving.md).
 
@@ -103,7 +101,7 @@ IrGenerationExtension.generate(moduleFragment)
   └─ AspectTransformer       : visit every IrSimpleFunction
        └─ has target annotation? -> generateInner()
             ├─ generate/cache MethodSignature
-            ├─ process AROUND/AFTER contexts (body replacement)
+            ├─ process AROUND/AFTER contexts (each wraps the body so far)
             └─ process BEFORE contexts (prepended last)
 ```
 

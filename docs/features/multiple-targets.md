@@ -66,6 +66,9 @@ fun processCheckout(cart: Cart, userId: String) {
 
 This is a natural composition — AspectK applies all matching advice in compiler-discovery order.
 
+Ordering is only supported for `@Before`. Combining several `@After` or `@Around` advices on one
+function is not supported yet and may run in an unexpected order
+
 ## Identifying the Trigger Annotation
 
 Inside advice, use `JoinPoint.signature.annotations` to determine which annotations are

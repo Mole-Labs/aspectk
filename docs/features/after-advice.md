@@ -84,14 +84,9 @@ AspectK transforms it into (pseudocode):
 
 ```kotlin
 fun processPayment(amount: Double): Boolean {
-    fun `$processPayment`(amount: Double): Boolean {
+    try {
         charge(amount)
         return true
-    }
-    return try {
-        `$processPayment`(amount)
-    } catch (e: Throwable) {
-        throw e
     } finally {
         AuditAspect.doAfter(
             DefaultJoinPoint(
@@ -106,29 +101,61 @@ fun processPayment(amount: Double): Boolean {
 
 Key points:
 
-- The original function body is extracted into a **local function** (`$processPayment`).
-- The local function is called inside a `try-catch-finally` block.
+- The original body stays where it is and is wrapped in `try { ... } finally { ... }`.
 - `@After` advice fires in the `finally` block — always, whether the body succeeds or throws.
-- The `catch` block re-throws the exception so normal exception propagation is preserved.
+  There is no `catch`, so exceptions propagate unchanged.
+- A `return` anywhere in the body, including a non-local `return` from an inlined lambda such
+  as `forEach`, returns from the function after running the `finally`.
+- The body stays inside the target function, so an `inline` function keeps its reified type
+  parameters, inlined lambda parameters and non-local returns.
+
+### Up to 0.3.1: local function (deprecated)
+
+AspectK 0.3.1 and earlier copied the body into a local function and called it from a
+`try-catch-finally`:
+
+```kotlin
+fun processPayment(amount: Double): Boolean {
+    fun `$processPayment`(amount: Double): Boolean {
+        charge(amount)
+        return true
+    }
+    return try {
+        `$processPayment`(amount)
+    } catch (e: Throwable) {
+        throw e
+    } finally {
+        AuditAspect.doAfter(DefaultJoinPoint(...))
+    }
+}
+```
+
+This transformation is deprecated and was replaced by the in-place `try/finally` above, for these
+reasons:
+
+- **Inline functions.** Kotlin doesn't allow local functions inside inline functions; the plugin
+  bypassed that check, and the backend compiled the local function as a plain method. That method
+  can't see the reified type arguments, which only exist where the function is inlined, and it
+  can't refer to the function's inline lambda parameters, which aren't values. Both failed at
+  compile time. Non-local returns from those lambdas were lost for the same reason. A public
+  inline function also inlined a call to a synthetic accessor (`access$<name>$_<name>`) into its
+  callers.
+- **Implementation complexity.** The copy needed its own symbol remapping, a substitution of every
+  parameter read and a rewrite of every `return` that targeted the original function. Two bugs
+  fixed in 0.2.2 came from this copy step (see the [changelog](../reference/changelog.md#022)).
+  Wrapping the body in place needs none of it.
+- **Combining advice.** Each `@After` and `@Around` cleared the body and rebuilt it around the
+  same local function, so only the last one processed ran.
+- The `catch` that only rethrew added nothing over `finally`.
 
 ## Execution Order with Other Advice Types
 
-When `@Before`, `@After`, and `@Around` all target the same function, the execution order is:
-
-```
-@Before fires
-   ↓
-(@Around starts)
-   ↓
-   [Original body]
-   ↓ (finally)
-   @After fires
-   ↓
-(@Around post-proceed logic)
-```
-
-`@After` is placed **innermost** — it wraps only the original function body, not the `@Around`
-advice call. See [Design Rationale](#design-rationale--after-placement) for why.
+!!! warning "Advice ordering"
+    Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
+    before the body and any other advice. Any other combination on the same function is not
+    supported yet. This includes `@After` together with `@Around` and more than one `@After`
+    or `@Around`. AspectK still weaves every advice, but the order in which they run may not
+    be what you expect.
 
 ## Exception Behaviour
 
@@ -174,20 +201,3 @@ fun doWork(x: String) { ... }
 ```
 
 See [Join Points](join-points.md) for the full reference on `target` and `args`.
-
-## Design Rationale — `@After` Placement
-
-`@After` is placed in the `finally` block that wraps **only the original function body** (`$doSomething`),
-not the entire `@Around` chain. This is intentional:
-
-1. **`@After`'s contract is "execute after the target function"**, not "execute after all aspects".
-   If an `@Around` advice throws before calling `pjp.proceed()`, the original function never ran,
-   so `@After` should not fire in that case.
-
-2. **`@Around` is responsible for handling its own exceptions internally.** Wrapping the outer
-   `@Around` call with the `finally` block would mean `@After` fires even when `@Around` itself
-   fails — which conflates two unrelated concerns.
-
-3. **Predictable execution order**: `@After` fires first (innermost `finally`), then `@Around`'s
-   post-`proceed()` logic runs outward. The order is deterministic and mirrors the lexical
-   nesting of the generated IR.
