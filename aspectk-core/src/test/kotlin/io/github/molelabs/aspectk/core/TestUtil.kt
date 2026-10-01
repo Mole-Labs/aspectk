@@ -125,21 +125,26 @@ enum class AdviceKind(
     /**
      * An `@Aspect object [name]` whose single advice of this kind on [targets] runs [record] and,
      * for @Around, then proceeds with the original arguments. The advice's parameter is `joinPoint`.
+     * For a [suspendTarget], @Around takes a SuspendProceedingJoinPoint and suspends itself.
      */
     fun aspect(
         name: String,
         targets: String,
         record: String,
         inherits: Boolean = false,
+        suspendTarget: Boolean = false,
     ): String {
+        val suspendAround = this == AROUND && suspendTarget
+        val joinPoint = if (suspendAround) "SuspendProceedingJoinPoint" else joinPoint
+        val modifier = if (suspendAround) "suspend " else ""
         val proceed = if (this == AROUND) "return joinPoint.proceed()" else ""
         val returnType = if (this == AROUND) ": Any?" else ""
         return """
             @io.github.molelabs.aspectk.runtime.Aspect
-            
+
             object $name {
                 @io.github.molelabs.aspectk.runtime.$annotation($targets, inherits = $inherits)
-                fun advice(joinPoint: io.github.molelabs.aspectk.runtime.$joinPoint)$returnType {
+                ${modifier}fun advice(joinPoint: io.github.molelabs.aspectk.runtime.$joinPoint)$returnType {
                     $record
                     $proceed
                 }

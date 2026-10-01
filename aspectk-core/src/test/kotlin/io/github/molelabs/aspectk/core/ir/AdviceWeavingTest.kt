@@ -410,6 +410,93 @@ class AdviceWeavingTest {
         assertEquals(List(1) { "advice" }, log)
     }
 
+    // A suspend body becomes a state machine, and under @Around it runs in a suspend listener, so
+    // the retargeted returns go through a different lowering than in a regular function
+    @ParameterizedTest(name = "{displayName} [{0}]")
+    @EnumSource(AdviceKind::class, names = ["AFTER", "AROUND"])
+    fun `an early return in the middle of a suspend body returns from the function`(kind: AdviceKind) {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        ${kind.aspect("LoggingAspect", "Logged::class", "executionLog.add(\"advice\")", suspendTarget = true)}
+
+                        @Logged
+                        suspend fun classify(x: Int): String {
+                            kotlinx.coroutines.yield()
+                            if (x < 0) return "negative"
+                            return "positive"
+                        }
+
+                        fun runTest(): String = kotlinx.coroutines.runBlocking { classify(-1) + "," + classify(1) }
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("negative,positive", actual)
+        assertEquals(List(2) { "advice" }, log)
+    }
+
+    // The lambda suspends before returning, so the return crosses a suspension point
+    @ParameterizedTest(name = "{displayName} [{0}]")
+    @EnumSource(AdviceKind::class, names = ["AFTER", "AROUND"])
+    fun `a non-local return from a lambda in a suspend body returns from the function`(kind: AdviceKind) {
+        // given
+        val result =
+            compile(
+                listOf(
+                    SourceFile.kotlin(
+                        "RunTest.kt",
+                        """
+                        @Target(AnnotationTarget.FUNCTION)
+                        annotation class Logged
+
+                        val executionLog = mutableListOf<String>()
+
+                        ${kind.aspect("LoggingAspect", "Logged::class", "executionLog.add(\"advice\")", suspendTarget = true)}
+
+                        @Logged
+                        suspend fun firstAbove(values: List<Int>, limit: Int): Int {
+                            values.forEach {
+                                kotlinx.coroutines.yield()
+                                if (it > limit) return it
+                            }
+                            return -1
+                        }
+
+                        fun runTest(): String = kotlinx.coroutines.runBlocking { "" + firstAbove(listOf(1, 5, 9), 3) + "," + firstAbove(listOf(1), 3) }
+                        """,
+                    ),
+                ),
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        // when
+        val runTestKt = result.classLoader.loadClass("RunTestKt")
+        val actual = runTestKt.getMethod("runTest").invoke(null)
+        val log = runTestKt.getDeclaredField("executionLog").apply { isAccessible = true }.get(null) as List<*>
+
+        // then
+        assertEquals("5,-1", actual)
+        assertEquals(List(2) { "advice" }, log)
+    }
+
     @Test
     fun `@Around replaces a noinline lambda parameter of an inline function through proceed`() {
         // given

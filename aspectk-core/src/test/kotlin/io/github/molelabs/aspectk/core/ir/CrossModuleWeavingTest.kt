@@ -42,9 +42,9 @@ class CrossModuleWeavingTest {
                         kind.aspect(
                             "AspectA",
                             "shared.LogCall::class",
-                            "shared.CallLog.calls += \"A\""
-                        )
-                    )
+                            "shared.CallLog.calls += \"A\"",
+                        ),
+                    ),
                 ),
                 "aspect-b" to listOf(
                     SourceFile.kotlin(
@@ -52,13 +52,13 @@ class CrossModuleWeavingTest {
                         kind.aspect(
                             "AspectB",
                             "shared.LogCall::class",
-                            "shared.CallLog.calls += \"B\""
-                        )
-                    )
+                            "shared.CallLog.calls += \"B\"",
+                        ),
+                    ),
                 ),
                 "feature" to listOf(
                     SourceFile.kotlin("Target.kt", callLogTarget()),
-                    runnerFile("Target().run()")
+                    runnerFile("Target().run()"),
                 ),
             )
 
@@ -80,29 +80,29 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "ExternalAspect.kt",
-                                kind.aspect(
-                                    "ExternalAspect",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"external\""
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "ExternalAspect.kt",
+                            kind.aspect(
+                                "ExternalAspect",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"external\"",
                             ),
                         ),
+                    ),
                 "feature" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "LocalAspect.kt",
-                                kind.aspect(
-                                    "LocalAspect",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"local\""
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "LocalAspect.kt",
+                            kind.aspect(
+                                "LocalAspect",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"local\"",
                             ),
-                            SourceFile.kotlin("Target.kt", callLogTarget()),
-                            runnerFile("Target().run()"),
                         ),
+                        SourceFile.kotlin("Target.kt", callLogTarget()),
+                        runnerFile("Target().run()"),
+                    ),
             )
 
         // when
@@ -124,30 +124,30 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect-a" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "LoggingAspect.kt",
-                                "package a\n" + kind.aspect(
-                                    "LoggingAspect",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"a\""
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "LoggingAspect.kt",
+                            "package a\n" + kind.aspect(
+                                "LoggingAspect",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"a\"",
                             ),
                         ),
+                    ),
                 "aspect-b" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "LoggingAspect.kt",
-                                "package b\n" + kind.aspect(
-                                    "LoggingAspect",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"b\""
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "LoggingAspect.kt",
+                            "package b\n" + kind.aspect(
+                                "LoggingAspect",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"b\"",
                             ),
                         ),
+                    ),
                 "feature" to listOf(
                     SourceFile.kotlin("Target.kt", callLogTarget()),
-                    runnerFile("Target().run()")
+                    runnerFile("Target().run()"),
                 ),
             )
 
@@ -169,25 +169,25 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "AspectA.kt",
-                                kind.aspect(
-                                    "AspectA",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"A\""
-                                )
-                            ),
-                            SourceFile.kotlin(
-                                "AspectModuleTarget.kt",
-                                callLogTarget("AspectModuleTarget")
+                    listOf(
+                        SourceFile.kotlin(
+                            "AspectA.kt",
+                            kind.aspect(
+                                "AspectA",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"A\"",
                             ),
                         ),
+                        SourceFile.kotlin(
+                            "AspectModuleTarget.kt",
+                            callLogTarget("AspectModuleTarget"),
+                        ),
+                    ),
                 "feature" to
-                        listOf(
-                            SourceFile.kotlin("Target.kt", callLogTarget()),
-                            runnerFile("AspectModuleTarget().run()", "Target().run()"),
-                        ),
+                    listOf(
+                        SourceFile.kotlin("Target.kt", callLogTarget()),
+                        runnerFile("AspectModuleTarget().run()", "Target().run()"),
+                    ),
             )
 
         // when
@@ -212,31 +212,31 @@ class CrossModuleWeavingTest {
                 "mod1" to listOf(
                     SourceFile.kotlin(
                         "First.kt",
-                        "package m1\n\nannotation class First\n"
-                    )
+                        "package m1\n\nannotation class First\n",
+                    ),
                 ),
                 "mod2" to listOf(
                     SourceFile.kotlin(
                         "Second.kt",
-                        "package m2\n\nannotation class Second\n"
-                    )
+                        "package m2\n\nannotation class Second\n",
+                    ),
                 ),
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "AspectA.kt",
-                                kind.aspect(
-                                    "AspectA",
-                                    "m1.First::class, m2.Second::class",
-                                    "shared.CallLog.calls += \"A\""
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "AspectA.kt",
+                            kind.aspect(
+                                "AspectA",
+                                "m1.First::class, m2.Second::class",
+                                "shared.CallLog.calls += \"A\"",
                             ),
                         ),
+                    ),
                 "feature" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "Target.kt",
-                                """
+                    listOf(
+                        SourceFile.kotlin(
+                            "Target.kt",
+                            """
                             class Target {
                                 @m1.First
                                 fun first() {}
@@ -245,9 +245,9 @@ class CrossModuleWeavingTest {
                                 fun second() {}
                             }
                             """.trimIndent(),
-                            ),
-                            runnerFile("Target().first()", "Target().second()"),
                         ),
+                        runnerFile("Target().first()", "Target().second()"),
+                    ),
             )
 
         // when
@@ -277,27 +277,27 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "AspectA.kt",
-                                kind.aspect(
-                                    "AspectA",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"A:\" + joinPoint.signature.methodName"
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "AspectA.kt",
+                            kind.aspect(
+                                "AspectA",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"A:\" + joinPoint.signature.methodName",
                             ),
                         ),
+                    ),
                 "feature-a" to listOf(
                     SourceFile.kotlin(
                         "Targets.kt",
-                        "@file:JvmName(\"FeatureA\")\n\n@shared.LogCall\nfun runA() {}\n"
-                    )
+                        "@file:JvmName(\"FeatureA\")\n\n@shared.LogCall\nfun runA() {}\n",
+                    ),
                 ),
                 "feature-b" to listOf(
                     SourceFile.kotlin(
                         "Targets.kt",
-                        "@file:JvmName(\"FeatureB\")\n\n@shared.LogCall\nfun runB(value: Int) {}\n"
-                    )
+                        "@file:JvmName(\"FeatureB\")\n\n@shared.LogCall\nfun runB(value: Int) {}\n",
+                    ),
                 ),
                 "app" to listOf(runnerFile("runA()", "runB(1)")),
             )
@@ -323,26 +323,27 @@ class CrossModuleWeavingTest {
                 "base" to listOf(
                     SourceFile.kotlin(
                         "Base.kt",
-                        callLogClass("Base", annotated = true)
-                    )
+                        callLogClass("Base", annotated = true),
+                    ),
                 ),
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "AspectA.kt",
-                                kind.aspect(
-                                    "AspectA",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"A\"",
-                                    inherits = true
-                                ),
+                    listOf(
+                        SourceFile.kotlin(
+                            "AspectA.kt",
+                            kind.aspect(
+                                "AspectA",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"A\"",
+                                inherits = true,
                             ),
                         ),
+                    ),
                 "feature" to listOf(
                     SourceFile.kotlin(
                         "Child.kt",
-                        callLogClass("Child", parent = "Base")
-                    ), runnerFile("Child().run()")
+                        callLogClass("Child", parent = "Base"),
+                    ),
+                    runnerFile("Child().run()"),
                 ),
             )
 
@@ -367,20 +368,20 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "lib" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "AspectA.kt",
-                                kind.aspect(
-                                    "AspectA",
-                                    "shared.LogCall::class",
-                                    "shared.CallLog.calls += \"A\""
-                                )
-                            ),
-                            SourceFile.kotlin(
-                                "TypeName.kt",
-                                "@shared.LogCall\ninline fun <reified T> typeName(): String = T::class.simpleName!!\n",
+                    listOf(
+                        SourceFile.kotlin(
+                            "AspectA.kt",
+                            kind.aspect(
+                                "AspectA",
+                                "shared.LogCall::class",
+                                "shared.CallLog.calls += \"A\"",
                             ),
                         ),
+                        SourceFile.kotlin(
+                            "TypeName.kt",
+                            "@shared.LogCall\ninline fun <reified T> typeName(): String = T::class.simpleName!!\n",
+                        ),
+                    ),
                 "app" to listOf(runnerFile("shared.CallLog.calls += typeName<String>()")),
             )
 
@@ -401,10 +402,10 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "ReplacingAspect.kt",
-                                """
+                    listOf(
+                        SourceFile.kotlin(
+                            "ReplacingAspect.kt",
+                            """
                             import io.github.molelabs.aspectk.runtime.Around
                             import io.github.molelabs.aspectk.runtime.Aspect
                             import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
@@ -415,16 +416,16 @@ class CrossModuleWeavingTest {
                                 fun advice(joinPoint: ProceedingJoinPoint): Any? = joinPoint.proceed("replaced")
                             }
                             """.trimIndent(),
-                            ),
                         ),
+                    ),
                 "feature" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "Target.kt",
-                                "class Target {\n    @shared.LogCall\n    fun echo(value: String): String = value\n}\n"
-                            ),
-                            runnerFile("shared.CallLog.calls += Target().echo(\"original\")"),
+                    listOf(
+                        SourceFile.kotlin(
+                            "Target.kt",
+                            "class Target {\n    @shared.LogCall\n    fun echo(value: String): String = value\n}\n",
                         ),
+                        runnerFile("shared.CallLog.calls += Target().echo(\"original\")"),
+                    ),
             )
 
         // when
@@ -444,10 +445,10 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "SuspendAspect.kt",
-                                """
+                    listOf(
+                        SourceFile.kotlin(
+                            "SuspendAspect.kt",
+                            """
                             import io.github.molelabs.aspectk.runtime.Around
                             import io.github.molelabs.aspectk.runtime.Aspect
                             import io.github.molelabs.aspectk.runtime.SuspendProceedingJoinPoint
@@ -461,13 +462,13 @@ class CrossModuleWeavingTest {
                                 }
                             }
                             """.trimIndent(),
-                            ),
                         ),
+                    ),
                 "feature" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "Target.kt",
-                                """
+                    listOf(
+                        SourceFile.kotlin(
+                            "Target.kt",
+                            """
                             class Target {
                                 @shared.LogCall
                                 suspend fun run(): Int {
@@ -476,9 +477,9 @@ class CrossModuleWeavingTest {
                                 }
                             }
                             """.trimIndent(),
-                            ),
-                            runnerFile("shared.CallLog.calls += kotlinx.coroutines.runBlocking { Target().run() }.toString()"),
                         ),
+                        runnerFile("shared.CallLog.calls += kotlinx.coroutines.runBlocking { Target().run() }.toString()"),
+                    ),
             )
 
         // when
@@ -501,10 +502,10 @@ class CrossModuleWeavingTest {
             compileModules(
                 sharedModule,
                 "aspect" to
-                        listOf(
-                            SourceFile.kotlin(
-                                "InternalAspect.kt",
-                                """
+                    listOf(
+                        SourceFile.kotlin(
+                            "InternalAspect.kt",
+                            """
                             import io.github.molelabs.aspectk.runtime.Aspect
                             import io.github.molelabs.aspectk.runtime.Before
                             import io.github.molelabs.aspectk.runtime.JoinPoint
@@ -517,11 +518,11 @@ class CrossModuleWeavingTest {
                                 }
                             }
                             """.trimIndent(),
-                            ),
                         ),
+                    ),
                 "feature" to listOf(
                     SourceFile.kotlin("Target.kt", callLogTarget()),
-                    runnerFile("Target().run()")
+                    runnerFile("Target().run()"),
                 ),
             )
 
