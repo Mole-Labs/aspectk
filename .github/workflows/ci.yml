@@ -30,6 +30,9 @@ jobs:
       - name: Check binary API compatibility
         run: ./gradlew apiCheck
 
+      - name: Check dependency licenses
+        run: ./gradlew licensee
+
       - name: Run aspectk-core tests
         run: ./gradlew :aspectk-core:test
 

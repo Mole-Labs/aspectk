@@ -2,10 +2,18 @@ plugins {
     alias(libs.plugins.jetbrains.dokka) apply false
     alias(libs.plugins.kotlinx.binaryCompatibilityValidator) apply false
     alias(libs.plugins.diffplug.spotless) apply false
+    alias(libs.plugins.licensee) apply false
 }
 
 subprojects {
     apply(plugin = "com.diffplug.spotless")
+
+    plugins.withId("io.github.mole-labs.aspectk.build") {
+        apply(plugin = "app.cash.licensee")
+        configure<app.cash.licensee.LicenseeExtension> {
+            allow("Apache-2.0")
+        }
+    }
 
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         kotlin {
