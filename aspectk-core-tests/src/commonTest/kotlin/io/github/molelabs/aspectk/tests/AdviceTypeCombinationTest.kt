@@ -30,8 +30,7 @@ import kotlin.test.assertTrue
  * Verifies execution order and correctness when multiple advice types
  * (@Before, @After, @Around) target the same annotation on the same function.
  *
- * Combinations that depend on how several @After/@Around nest (last-wins until now) are left out
- * until the advice ordering rules are reworked.
+ * How several @After/@Around nest is covered by [AdviceOrderingTest].
  *
  * Expected execution orders:
  *   @Before only:           @Before → body

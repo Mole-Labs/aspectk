@@ -16,10 +16,10 @@
 package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectContext
-import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
 import io.github.molelabs.aspectk.core.ir.add
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
+import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.irAs
 import org.jetbrains.kotlin.ir.builders.irBlock
 import org.jetbrains.kotlin.ir.builders.irCall
@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.expressions.impl.IrTryImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.deepCopyWithSymbols
-import org.jetbrains.kotlin.name.FqName
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AdviceCallGenerator(
@@ -40,28 +39,19 @@ internal class AdviceCallGenerator(
     /** Prepends @Before advice calls to the function body. */
     fun generateAdviceCalls(
         declaration: IrFunction,
-        target: FqName,
+        contexts: List<AspectContext>,
         joinPoint: IrExpression,
-        checkInherits: Boolean = false,
-    ) = buildCallBlock(declaration, target, joinPoint, checkInherits)
-        .also { declaration.body?.add(it) }
+    ) = aspectKContext
+        .withIrBuilder(declaration.symbol) {
+            irBlock { contexts.forEach { +adviceCall(it, joinPoint) } }
+        }.also { declaration.body?.add(it) }
 
-    private fun buildCallBlock(
-        declaration: IrFunction,
-        target: FqName,
+    private fun IrBuilderWithScope.adviceCall(
+        context: AspectContext,
         joinPointExpr: IrExpression,
-        checkInherits: Boolean,
-    ) = aspectKContext.withIrBuilder(declaration.symbol) {
-        irBlock {
-            aspectKContext.aspectLookUp[target].forEach { context ->
-                if (context.canInsertAdvice(checkInherits, Kind.BEFORE)) {
-                    +irCall(context.advice).apply {
-                        dispatchReceiver = irGetObject(context.aspect)
-                        arguments[1] = joinPointExpr.deepCopyWithSymbols()
-                    }
-                }
-            }
-        }
+    ) = irCall(context.advice).apply {
+        dispatchReceiver = irGetObject(context.aspect)
+        arguments[1] = joinPointExpr.deepCopyWithSymbols()
     }
 
     /**
@@ -73,10 +63,10 @@ internal class AdviceCallGenerator(
         declaration: IrFunction,
         context: AspectContext,
         joinPoint: IrExpression,
-        checkInherits: Boolean = false,
     ) {
         val statements = (declaration.body as? IrBlockBody)?.statements ?: return
-        val finallyExpression = buildAfterCallBlock(declaration, context, joinPoint, checkInherits)
+        val finallyExpression =
+            aspectKContext.withIrBuilder(declaration.symbol) { irBlock { +adviceCall(context, joinPoint) } }
         val unitType = aspectKContext.pluginContext.irBuiltIns.unitType
         val body =
             aspectKContext.withIrBuilder(declaration.symbol) {
@@ -103,137 +93,29 @@ internal class AdviceCallGenerator(
         declaration: IrFunction,
         context: AspectContext,
         proceedingJoinPoint: IrExpression,
-        checkInherits: Boolean = false,
     ) {
-        val aroundCallback =
-            buildAroundCallBlock(
-                declaration,
-                context,
-                proceedingJoinPoint,
-                checkInherits,
-            )
+        val aroundCallback = buildAroundCallBlock(declaration, context, proceedingJoinPoint)
         (declaration.body as? IrBlockBody)?.statements?.let { statement ->
             statement.clear()
             statement.add(aroundCallback)
         }
     }
 
-    private fun buildAfterCallBlock(
-        declaration: IrFunction,
-        context: AspectContext,
-        joinPointExpr: IrExpression,
-        checkInherits: Boolean,
-    ) = aspectKContext.withIrBuilder(declaration.symbol) {
-        irBlock {
-            if (context.canInsertAdvice(checkInherits, Kind.AFTER)) {
-                +irCall(context.advice).apply {
-                    dispatchReceiver = irGetObject(context.aspect)
-                    arguments[1] = joinPointExpr.deepCopyWithSymbols()
-                }
-            }
-        }
-    }
-
-    /**
-     * Returns an [IrExpression] that calls the first applicable @Around advice for [target],
-     * suitable for use as the try-body in a try-finally wrapper.
-     *
-     * Only one @Around advice is invoked per target annotation.
-     * Supporting multiple chained @Around advices requires an ordering engine (TODO).
-     */
-    fun buildAroundCallExpression(
-        declaration: IrFunction,
-        context: AspectContext,
-        proceedingJoinPoint: IrExpression,
-        checkInherits: Boolean = false,
-    ): IrExpression = buildAroundCallBlock(declaration, context, proceedingJoinPoint, checkInherits)
-
     private fun buildAroundCallBlock(
         declaration: IrFunction,
         context: AspectContext,
         joinPointExpr: IrExpression,
-        checkInherits: Boolean = false,
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
-        /*
-        TODO support multiple @Around advices,
-        ProceedingJoinPointGenerator.generateProceedingJoinPoint may be called
-        in each iteration of aspectKContext.aspectLookUp[target],
-
-        generateProceedingJoinPoint method parameter should be added 'innerProceed'
-        which contains advice body of around, after annotation.
-
-        if innerProceed parameter exists, the result of generateProceedingJoinPoint
-        may be added to input innerProceed such as.
-
-        @Target
-        fun doSomething(arg1:String):String {
-            fun $doSomething(arg1:String = arg1):String {
-                   println("hello aspectk")
-                   return ""
-            }
-            return SomeAspect.doAround1(
-                ProceedingJoinPoint(...) { args:List<Any?> ->
-                    SomeAspect.doAround2(
-                        ProceedingJoinPoint(...) { args:List<Any?> ->
-                            try {
-                                $doSomething(args[0] as String)
-                            } catch (e:Exception) {
-                                throw e
-                            } finally {
-                                SomeAspect.doAfter1(JoinPoint(...))
-                            }
-                       }
-                   )
-                }
+        irBlock {
+            +irReturn(
+                irAs(
+                    irCall(context.advice).apply {
+                        dispatchReceiver = irGetObject(context.aspect)
+                        arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
+                    },
+                    declaration.returnType,
+                ),
             )
         }
-
-        this is only raw draft. so it may not be correct.
-
-        Design rationale — @After placement (innermost):
-        @After is placed in the finally block that wraps only $doSomething (the original function
-        body), not the entire @Around chain. This is intentional:
-
-        1. @After's contract is "execute after the target function", not "execute after all aspects".
-           If an @Around advice throws before calling pjp.proceed(), the original function never
-           ran, so @After should not fire in that case.
-
-        2. @Around advice is responsible for handling its own exceptions internally.
-           Wrapping the outer @Around call with the finally block would mean @After fires even
-           when @Around itself fails — which conflates two unrelated concerns.
-
-        3. This design gives predictable execution order control after the original code runs:
-           @After fires first (innermost finally), then @Around's post-proceed logic runs
-           outward. The order is deterministic and mirrors the lexical nesting of the generated IR.
-         */
-
-        irBlock {
-            if (context.canInsertAdvice(checkInherits, Kind.AROUND)) {
-                +irReturn(
-                    irAs(
-                        irCall(context.advice).apply {
-                            dispatchReceiver = irGetObject(context.aspect)
-                            arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
-                        },
-                        declaration.returnType,
-                    ),
-                )
-            }
-        }
     }
-
-    // Returns true when this context's advice should be injected into the target function.
-    //
-    // Condition 1 — kind matches: only inject advice of the requested kind (@Before / @After / @Around).
-    //
-    // Condition 2 — inheritance gate:
-    //   checkInherits = false  → the function is directly annotated, so all matching advice applies.
-    //   checkInherits = true   → the function is an *override* of an annotated function, so only
-    //                            advice declared with `inherits = true` should fire.
-    //   In short: (!checkInherits || inherits) passes when we are NOT in an inherited context,
-    //   or when the advice explicitly opted in to inherited targets.
-    private fun AspectContext.canInsertAdvice(
-        checkInherits: Boolean,
-        kind: Kind,
-    ) = this.kind == kind && (!checkInherits || inherits)
 }
