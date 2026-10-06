@@ -32,11 +32,7 @@ class IrCompatImpl2310 : IrCompat {
 
     override fun propertyBackingFieldOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.PROPERTY_BACKING_FIELD
 
-    override fun localFunctionOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.LOCAL_FUNCTION
-
     override fun localFunctionForLambdaOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.LOCAL_FUNCTION_FOR_LAMBDA
-
-    override fun catchParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.CATCH_PARAMETER
 
     override fun valueParameterOrigin(): IrDeclarationOrigin = IrDeclarationOrigin.DEFINED
 

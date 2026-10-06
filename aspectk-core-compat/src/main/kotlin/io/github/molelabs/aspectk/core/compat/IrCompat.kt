@@ -33,11 +33,7 @@ interface IrCompat {
 
     fun propertyBackingFieldOrigin(): IrDeclarationOrigin
 
-    fun localFunctionOrigin(): IrDeclarationOrigin
-
     fun localFunctionForLambdaOrigin(): IrDeclarationOrigin
-
-    fun catchParameterOrigin(): IrDeclarationOrigin
 
     fun valueParameterOrigin(): IrDeclarationOrigin
 

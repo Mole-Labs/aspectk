@@ -34,9 +34,7 @@ Wraps the IR API calls that differ across Kotlin versions:
 |--------|-------------|
 | `instanceReceiverOrigin()` | `IrDeclarationOrigin` for instance receivers |
 | `propertyBackingFieldOrigin()` | `IrDeclarationOrigin` for property backing fields |
-| `localFunctionOrigin()` | `IrDeclarationOrigin` for local functions |
 | `localFunctionForLambdaOrigin()` | `IrDeclarationOrigin` for lambda local functions |
-| `catchParameterOrigin()` | `IrDeclarationOrigin` for catch block parameters |
 | `valueParameterOrigin()` | `IrDeclarationOrigin` for value parameters |
 | `referenceFunctions()` | Resolves IR function symbols by `CallableId` |
 | `referenceClass()` | Resolves an IR class symbol by `ClassId` |
