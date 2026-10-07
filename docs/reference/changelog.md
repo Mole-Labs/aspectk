@@ -5,6 +5,34 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2]
+
+### Changed
+
+- **`@After` and `@Around` now wrap the target body in place.** `@After` wraps the body in
+  `try { ... } finally { ... }` where it stands, and `@Around` moves it into the `proceed`
+  listener lambda. The generated `$<name>` local function is gone. See
+  [`@After`](../features/after-advice.md#what-gets-compiled) and
+  [`@Around`](../features/around-advice.md#what-gets-compiled) for the generated shape.
+- `@After` and `@Around` on a `tailrec` function now run once per recursive call.
+
+### Fixed
+
+- **`@After` and `@Around` on `inline` functions.** Reified type parameters, inline lambda
+  parameters and non-local returns used to fail at compile time or get lost. An inline lambda
+  parameter is not a value, so it shows up as `null` in `JoinPoint.args`.
+- **Generic return types in `MethodSignature`.** A return type that is a type parameter now
+  resolves to its upper bound (`Any` for an unbounded `T`), the same way parameter types do.
+- **`inherits = true` across interfaces and modules.** Overrides of an annotated interface
+  function, or of a function declared in another module, were skipped.
+- **Aspects in `main` now reach `test`.** Hints from associated compilations were not passed
+  along, so an aspect declared in a module's main source set was not injected into its tests.
+- **Stale hints.** Removing `@Aspect` from a class, or deleting an advice function, left the old
+  entry in `hints.json` and it kept being applied on later builds.
+- **Incremental builds across modules.** A changed aspect in an upstream module now recompiles
+  the downstream modules that depend on it. Deleting an unrelated file, or removing an aspect
+  together with its targets, no longer forces a full recompile.
+
 ## [0.3.1]
 
 ### Fixed

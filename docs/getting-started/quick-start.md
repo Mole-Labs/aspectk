@@ -1,10 +1,10 @@
 # Quick Start
 
-This guide walks you through creating your first aspect in under 5 minutes.
+This guide builds a logging aspect and applies it to two functions.
 
 ## Step 1: Define a Target Annotation
 
-Aspects intercept functions by matching annotations. Create a marker annotation:
+AspectK picks the functions to intercept by annotation. Create a marker annotation:
 
 ```kotlin
 // Marks functions whose execution should be logged
@@ -14,13 +14,13 @@ annotation class Logged
 ```
 
 !!! tip
-    Use `AnnotationRetention.BINARY` — AspectK reads annotations at compile time only,
-    so RUNTIME retention is not required.
+    `AnnotationRetention.BINARY` is enough. AspectK reads annotations at compile time, so
+    `RUNTIME` retention is not required.
 
 ## Step 2: Create an Aspect
 
-An aspect is a class or object annotated with `@Aspect`. Inside it, define one or more
-advice methods annotated with `@Before`:
+An aspect is an `object` annotated with `@Aspect`. Inside it, define one or more advice
+methods annotated with `@Before`:
 
 ```kotlin
 import io.github.molelabs.aspectk.runtime.Aspect
@@ -38,10 +38,11 @@ object LoggingAspect {
 }
 ```
 
-**Rules:**
-- The advice function must have exactly **one parameter** of type `JoinPoint`.
-- The return type must be `Unit`.
-- Use `object` to avoid per-call instantiation (recommended).
+Rules for `@Before` advice:
+
+- It takes exactly one parameter, of type `JoinPoint`.
+- It returns `Unit`.
+- The aspect must be an `object`, not a `class`.
 
 ## Step 3: Annotate Your Functions
 
@@ -66,7 +67,7 @@ fun cancelOrder(orderId: String) {
 ./gradlew build
 ```
 
-AspectK injects the advice during compilation. The output when calling `placeOrder` would be:
+AspectK injects the advice during compilation. Calling `placeOrder("user42", 1001)` prints:
 
 ```
 [placeOrder] called with: user42, 1001
@@ -75,7 +76,7 @@ Order placed by user42 for product 1001
 
 ## Inspecting the JoinPoint
 
-`JoinPoint` gives you full context about the intercepted call:
+`JoinPoint` describes the intercepted call:
 
 ```kotlin
 @Aspect

@@ -45,7 +45,7 @@ dependencies {
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
 }
 
-// commonMain KSP가 먼저 실행된 후 각 플랫폼 컴파일이 실행되도록 보장
+// Run commonMain KSP before any platform compilation.
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name != "kspCommonMainKotlinMetadata") {
         dependsOn("kspCommonMainKotlinMetadata")

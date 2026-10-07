@@ -4,11 +4,11 @@
 
 ## Requirements
 
-- Kotlin **2.2.20** or later
+- Kotlin 2.2.20 through 2.4.10
 
 ## Gradle Setup
 
-Applying the plugin is all that's needed. `aspectk-runtime` is added to your project automatically.
+Apply the plugin. It adds `aspectk-runtime` to your project.
 
 ### Using Version Catalog (recommended)
 
@@ -28,20 +28,18 @@ Then in your `build.gradle.kts`:
 plugins {
     alias(libs.plugins.aspectk)
 }
-
 ```
 
 !!! note
-    The plugin automatically adds `aspectk-runtime` as an `implementation` dependency.
-    You do not need to declare it manually in any source set.
+    `aspectk-runtime` is added as an `implementation` dependency. You don't need to declare
+    it in any source set.
 
 ## Kotlin Version Compatibility
 
 | AspectK Version | Supported Kotlin Range |
 |-----------------|----------------------|
-| 0.3.0 ~ 0.3.1 | 2.2.20 ~ 2.4.10 |
+| 0.3.0 ~ 0.3.2 | 2.2.20 ~ 2.4.10 |
 
 !!! note
-    AspectK uses the K2 compiler IR API. Each release is tied to a specific Kotlin range —
-    check the [compatibility table](../reference/compatibility.md) for the full version history
-    before upgrading either dependency.
+    AspectK uses the K2 compiler IR API, so each release supports a fixed Kotlin range. Check
+    the [compatibility table](../reference/compatibility.md) before upgrading either one.

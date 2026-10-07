@@ -1,7 +1,7 @@
 # Kotlin Multiplatform Support
 
-AspectK is built for Kotlin Multiplatform from the ground up. The compiler plugin and runtime
-library support all major Kotlin targets.
+The compiler plugin works at the IR level, before any platform backend runs, and the runtime
+library is published for every target below.
 
 ## Supported Platforms
 
@@ -39,12 +39,12 @@ kotlin {
 }
 ```
 
-The AspectK Gradle plugin automatically activates the compiler plugin for all configured
-targets and adds `aspectk-runtime` as a dependency. No per-target configuration is required.
+The Gradle plugin enables the compiler plugin for every configured target and adds
+`aspectk-runtime` as a dependency. There is nothing to configure per target.
 
 ## Shared Aspects Across Platforms
 
-Define your aspects in `commonMain` as a regular `object` — they compile and run on every platform:
+Define an aspect in `commonMain` as a regular `object` and it applies on every platform:
 
 ```kotlin
 // commonMain
@@ -59,19 +59,19 @@ object CommonLoggingAspect {
 
 ## Platform-Specific Advice
 
-Use `expect`/`actual` for platform-specific behavior. Annotate the `expect` declaration —
-the annotation propagates to all `actual` implementations and AspectK intercepts each of them:
+Use `expect`/`actual` for platform-specific behavior. Annotate the `expect` declaration. The
+annotation carries over to every `actual` implementation, and AspectK intercepts each one:
 
 ```kotlin
 // commonMain
 @Target(AnnotationTarget.FUNCTION)
 annotation class Traced
 
-// Target function — @Traced on the expect declaration propagates to all actuals
+// @Traced on the expect declaration carries over to every actual
 @Traced
 expect fun fetchData(endpoint: String): String
 
-// commonMain — aspect intercepts @Traced on all platforms
+// commonMain: the aspect intercepts @Traced on all platforms
 @Aspect
 object TracingAspect {
     @Before(target = [Traced::class])
@@ -95,4 +95,4 @@ actual fun platformLog(methodName: String) { OSLog.log(methodName) }
 |-----------|---------|
 | Reflection (`KClass`) | Available on all platforms; generic erasure applies everywhere |
 | `JoinPoint.target` | Always available; `null` for top-level functions on all platforms |
-| Aspect discovery | Works across module boundaries, not just within one compilation unit — see [Cross-Module Weaving](cross-module-weaving.md) |
+| Aspect discovery | Works across the modules of one Gradle build. See [Cross-Module Injection](cross-module-weaving.md) |

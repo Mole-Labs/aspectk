@@ -1,10 +1,11 @@
 # Multiple Targets
 
-AspectK supports **many-to-many** relationships between advice and target annotations.
+Advice and target annotations are many-to-many: one advice can name several annotations, and
+one annotation can be named by several advices.
 
 ## One Advice, Multiple Targets
 
-A single `@Before` method can target multiple annotation classes:
+One `@Before` method can target several annotation classes:
 
 ```kotlin
 @Target(AnnotationTarget.FUNCTION)
@@ -24,11 +25,11 @@ object ObservabilityAspect {
 }
 ```
 
-Functions annotated with either `@Logged` or `@Traced` (or both) will trigger this advice.
+The advice runs for any function annotated with `@Logged`, `@Traced` or both.
 
 ## Multiple Advice, One Target
 
-Multiple `@Before` methods (from the same or different aspects) can all target the same annotation:
+Several `@Before` methods, in the same aspect or in different ones, can target the same annotation:
 
 ```kotlin
 @Aspect
@@ -55,7 +56,7 @@ fun deleteAccount(userId: String) {
 
 ## Combining Multiple Annotations on a Function
 
-A function can carry multiple target annotations, triggering all matching advice:
+A function can carry several target annotations, and every matching advice applies:
 
 ```kotlin
 @Logged @Traced @Metered
@@ -64,15 +65,15 @@ fun processCheckout(cart: Cart, userId: String) {
 }
 ```
 
-This is a natural composition — AspectK applies all matching advice in compiler-discovery order.
+AspectK applies the matching advice in the order the compiler discovers it.
 
 Ordering is only supported for `@Before`. Combining several `@After` or `@Around` advices on one
-function is not supported yet and may run in an unexpected order
+function is not supported yet and may run in an unexpected order.
 
 ## Identifying the Trigger Annotation
 
-Inside advice, use `JoinPoint.signature.annotations` to determine which annotations are
-present on the intercepted function:
+Inside advice, `JoinPoint.signature.annotations` lists the annotations on the intercepted
+function:
 
 ```kotlin
 @Aspect
