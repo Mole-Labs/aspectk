@@ -1,11 +1,9 @@
 # Aspects
 
-An **aspect** is the central organizational unit in AspectK. It is an `object`
-annotated with `@Aspect` that groups related advice methods.
+An aspect is an `object` annotated with `@Aspect` that groups related advice methods.
 
 !!! warning
-    Aspects must be declared as `object`, not `class`. Using `class` is not supported and
-    will result in a compilation error.
+    Declare aspects as `object`, not `class`. A `class` aspect is a compilation error.
 
 ## Declaring an Aspect
 
@@ -27,8 +25,8 @@ object SecurityAspect {
 
 ## Multiple Aspects
 
-Multiple aspect objects can each provide advice for the same target annotation.
-AspectK applies all matching advice in the order aspects are discovered by the compiler.
+Several aspects can provide advice for the same target annotation. AspectK applies all of
+them, in the order the compiler discovers the aspects.
 
 ```kotlin
 @Aspect
@@ -48,12 +46,12 @@ fun deleteUser(userId: String) { /* both log and audit run first */ }
 ```
 
 !!! warning "Advice Order"
-    The order of advice application across multiple aspect objects is determined by
-    the compiler's IR traversal order and is not guaranteed to be stable across
-    compiler versions. Design aspects to be order-independent when possible.
+    The order across aspects follows the compiler's IR traversal and can change between
+    compiler versions. Write aspects that don't depend on it.
 
 ## Aspect Discovery
 
-AspectK's compiler plugin scans all IR files in the compilation unit for `@Aspect`-annotated
-objects. Only aspects defined within the same compilation classpath are discovered — aspects
-in external libraries are currently not supported.
+The compiler plugin scans the module being compiled for `@Aspect` objects, and also picks up
+aspects from the other modules of the same Gradle build that it depends on (see
+[Cross-Module Injection](../features/cross-module-weaving.md)). Aspects in pre-compiled external
+libraries are not discovered.

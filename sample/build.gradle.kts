@@ -1,4 +1,4 @@
-// Root build file - submodule configuration은 각 모듈의 build.gradle.kts에서 처리
+// Root build file. Each module configures itself in its own build.gradle.kts.
 //
 // Every Kotlin/Android/Compose plugin used by ANY subproject is declared here with `apply
 // false`, so it's resolved and loaded exactly once via one shared classloader scope. Without

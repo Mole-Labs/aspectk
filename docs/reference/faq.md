@@ -4,14 +4,15 @@
 
 ### What is the difference between AspectK and AspectJ?
 
-AspectK is annotation-driven and works exclusively through the Kotlin K2 compiler IR API.
-It supports Kotlin Multiplatform (JVM, JS, WASM, Native), while AspectJ only targets JVM.
-AspectJ offers richer pointcut expressions; AspectK uses simpler annotation-based targeting.
+AspectK picks targets by annotation and works through the Kotlin K2 compiler IR API, so it
+runs on every Kotlin Multiplatform target (JVM, JS, WASM, Native). AspectJ is JVM only.
+AspectJ's pointcut expressions can match more than AspectK's annotation-based targeting can.
 
-### Can I use AspectK with Kotlin versions other than 2.2.x?
+### Which Kotlin versions can I use?
 
-No. AspectK targets the K2 IR transformation API and is tested against the **2.2.x** series only.
-Using a different Kotlin version may cause compilation errors due to K2 IR API changes.
+2.2.20 through 2.4.10 with AspectK 0.3.x. The plugin fails the build at configuration time if
+the project's Kotlin version is outside the supported range. See the
+[compatibility table](compatibility.md) for older releases and for the stricter rule on iOS.
 
 ## Setup
 
@@ -19,42 +20,49 @@ Using a different Kotlin version may cause compilation errors due to K2 IR API c
 
 Check the following:
 
-1. **Plugin is applied**: Ensure `id("io.github.mole-labs.aspectk")` is in your `plugins {}` block.
-2. **Aspect in same compilation unit**: AspectK only discovers aspects compiled in the same unit. Aspects from external JARs are not currently supported.
-3. **Advice signature**: The advice method must accept exactly one `JoinPoint` parameter and return `Unit`.
+1. The plugin is applied. `id("io.github.mole-labs.aspectk")` has to be in the `plugins {}`
+   block of every module that declares an `@Aspect` or annotates a function with a target
+   annotation.
+2. The aspect is in the same Gradle build. Aspects in a pre-compiled library, such as one
+   pulled from Maven Central, are not picked up. See
+   [Cross-Module Injection](../features/cross-module-weaving.md#4-limitations).
+3. The aspect is an `object`, not a `class`.
+4. The advice signature is right. `@Before` and `@After` take one `JoinPoint` and return
+   `Unit`. `@Around` takes one `ProceedingJoinPoint` (`SuspendProceedingJoinPoint` for a
+   `suspend` target) and returns `Any?`.
 
 ### Does the order of advice execution matter?
 
-Advice is applied in the order aspects are discovered during IR traversal. This order
-is not guaranteed across compiler versions. Design your aspects to be order-independent.
+Several `@Before` advices on one function all run before the body, in the order the compiler
+discovers their aspects. That order can change between compiler versions, so don't rely on it.
+Combining `@After` with `@Around`, or using more than one `@After` or `@Around` on a function,
+is not supported yet and may run in an unexpected order.
 
 ## Runtime Behavior
 
 ### What is `JoinPoint.target` for extension functions?
 
-For extension functions, `target` is the receiver of the extension, i.e., the `this` object
-inside the extension function body.
+`null`. The extension receiver is the first element of `args` instead. See
+[Join Points](../features/join-points.md#extension-function).
 
 ### Why does `MethodSignature.returnType` show `Any` for a generic function?
 
-Generic type parameters are erased at compile time. For a function `fun <T> box(value: T): T`,
-the `returnType` is `Any::class` (the upper bound of the unconstrained type parameter `T`).
-Use `returnTypeName` if you need the source-level type name.
+A type parameter is resolved to its upper bound at compile time. For `fun <T> box(value: T): T`
+the `returnType` is `Any::class`, and `returnTypeName` is `"kotlin.Any"`. With a bound such as
+`<T : Number>` you get `Number` instead.
 
 ### Does AspectK support Kotlin Reflection?
 
-No. For performance reasons, AspectK does not depend on `kotlin-reflect`. Type information
-such as `MethodSignature.returnType` is exposed as `KClass<*>` only — full `KType` or
-`KCallable` reflection is not available.
+No. AspectK does not depend on `kotlin-reflect`. Types such as `MethodSignature.returnType`
+are exposed as `KClass<*>`, and `KType` or `KCallable` reflection is not available.
 
 ### Are annotation default values available in `AnnotationInfo.args`?
 
-No. Only arguments **explicitly provided** at the annotation use site appear in `args`.
-Default values are not captured.
+No. `args` holds only the arguments written at the annotation use site.
 
 ## Contributing
 
 ### How do I add a new advice type?
 
-See the [Contributing guide](../contributing.md) for the IR transformation pipeline
-and how to add new advice injection strategies.
+The [Contributing guide](../contributing.md) describes the IR transformation pipeline and
+where a new advice type plugs in.

@@ -1,8 +1,8 @@
 # Inheritance
 
-By default, AspectK only intercepts functions that are **directly annotated** with a target
-annotation. With `inherits = true`, advice also applies to functions that **override**
-an annotated function, even if the override itself is not annotated.
+By default, AspectK only intercepts functions that carry a target annotation themselves. With
+`inherits = true`, advice also applies to functions that override an annotated function, even
+when the override is not annotated.
 
 ## Default Behavior (`inherits = false`)
 
@@ -24,8 +24,8 @@ object CacheAspect {
 }
 ```
 
-With default settings, `cache()` runs for `BaseRepository.findById` declarations but
-**not** for `SqlRepository.findById` calls (since the override is not annotated).
+With the default, `cache()` does not run for `SqlRepository.findById`, because the override
+is not annotated.
 
 ## Enabling Inheritance
 
@@ -37,8 +37,8 @@ object CacheAspect {
 }
 ```
 
-Now `cache()` runs for **any** override of a `@Cached`-annotated function, regardless
-of whether the override itself carries the annotation.
+Now `cache()` runs for every override of a `@Cached` function, annotated or not. This also
+works when the annotated function is declared in another module.
 
 ## Use Cases
 
@@ -54,7 +54,7 @@ interface AuthService {
 }
 
 class AuthServiceImpl : AuthService {
-    // Both overrides are protected automatically with inherits = true
+    // inherits = true covers both overrides
     override fun deleteUser(userId: String) { ... }
     override fun resetPassword(userId: String) { ... }
 }
@@ -70,11 +70,11 @@ object AdminAspect {
 
 ### Abstract Base Classes
 
-Use `inherits = true` when you annotate template methods in abstract classes and want
-all concrete implementations to be intercepted automatically.
+Annotate the template methods of an abstract class and set `inherits = true` to intercept
+every concrete implementation.
 
 ## How It Works
 
-When `inherits = true`, AspectK's `InheritableVisitor` tracks all IR functions that
-override a function annotated with a target annotation. These overriding functions are
-added to the transform targets, even without the direct annotation.
+`InheritableVisitor` walks each function's overridden declarations. If any of them carries a
+target annotation whose advice has `inherits = true`, the overriding function is added to the
+set of functions that receive advice.

@@ -4,14 +4,13 @@ Compatibility layer that abstracts breaking changes in the Kotlin compiler's IR 
 
 ## Overview
 
-The Kotlin compiler's internal IR API is not stable — method signatures and return types can change
-even in minor patch releases. For example, `IrDeclarationOrigin` property accessors changed their
-return type from `IrDeclarationOriginImpl` to `IrDeclarationOrigin` between 2.3.10 and 2.3.20,
-causing `NoSuchMethodError` at runtime when the plugin was compiled against one version but run
-with another.
+The Kotlin compiler's internal IR API is not stable. Method signatures and return types can change
+even in patch releases. For example, the `IrDeclarationOrigin` property accessors changed their
+return type from `IrDeclarationOriginImpl` to `IrDeclarationOrigin` between 2.3.10 and 2.3.20, so
+a plugin compiled against one version threw `NoSuchMethodError` when run with the other.
 
-`aspectk-core-compat` solves this by providing a stable interface (`IrCompat`) that `aspectk-core`
-calls at runtime, with each implementation compiled against its specific Kotlin compiler version.
+`aspectk-core-compat` puts a stable interface (`IrCompat`) in front of those calls. `aspectk-core`
+calls the interface, and each implementation is compiled against its own Kotlin compiler version.
 
 ## Architecture
 
@@ -22,8 +21,10 @@ aspectk-core
          │    └── IrCompatImpl2220    ← compiled with Kotlin 2.2.20 compiler
          ├── compat-2310/
          │    └── IrCompatImpl2310    ← compiled with Kotlin 2.3.10 compiler
-         └── compat-2320/
-              └── IrCompatImpl2320    ← compiled with Kotlin 2.3.20 compiler
+         ├── compat-2320/
+         │    └── IrCompatImpl2320    ← compiled with Kotlin 2.3.20 compiler
+         └── compat-2400/
+              └── IrCompatImpl2400    ← compiled with Kotlin 2.4.0 compiler
 ```
 
 ### IrCompat interface
@@ -55,7 +56,7 @@ fun create(version: KotlinVersion): IrCompat = ServiceLoader
 
 ### Why separate submodules?
 
-Each `compat-XXXX` submodule is compiled against its corresponding Kotlin compiler version.
-This ensures that API calls which only exist in that version (e.g., `finderForBuiltins()` added
-in 2.3.20) compile correctly without breaking older implementations.
+Each `compat-XXXX` submodule is compiled against its own Kotlin compiler version. A call that
+only exists from one version on, such as `finderForBuiltins()` (added in 2.3.20), then compiles
+in that submodule without breaking the older ones.
 

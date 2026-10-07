@@ -1,9 +1,8 @@
 # `@Around` Advice
 
-`@Around` advice **wraps** the target function call entirely. Unlike `@Before` and `@After`,
-an `@Around` advice controls *whether* the original body runs and *what* is returned to the
-caller. The original body is invoked by calling `pjp.proceed()` on the injected
-`ProceedingJoinPoint`.
+`@Around` advice wraps the whole target function. Unlike `@Before` and `@After`, it decides
+whether the original body runs and what the caller gets back. The advice runs the original
+body by calling `pjp.proceed()` on the `ProceedingJoinPoint` it receives.
 
 ## Basic Usage
 
@@ -34,15 +33,15 @@ class DataService {
 ```kotlin
 val svc = DataService()
 svc.fetch("42")   // prints "fetching 42 from DB"
-svc.fetch("42")   // cached — prints nothing
+svc.fetch("42")   // cached, prints nothing
 ```
 
 ## Function Signature Rules
 
-An `@Around` advice method **must**:
+An `@Around` advice method must:
 
-1. Be declared inside an `@Aspect`-annotated class or object
-2. Accept exactly **one parameter** of type `ProceedingJoinPoint`
+1. Be declared inside an `@Aspect` object
+2. Take exactly one parameter, of type `ProceedingJoinPoint`
 3. Return `Any?`
 
 ```kotlin
@@ -125,8 +124,8 @@ Key points:
   `proceed(newArgs)` changes what the body sees.
 - A `return` from the function body returns from the lambda instead, and its value becomes the
   result of `proceed()`. Returns from nested lambdas and local functions keep their targets.
-- The lambda receives the **full args list** (receiver + regular params) in the same order
-  as `pjp.args`.
+- The lambda receives the full args list (receiver, then regular parameters) in the same
+  order as `pjp.args`.
 - The lambda is regenerated wherever an `inline` target is inlined, so the body can still use
   the target's reified type parameters.
 
@@ -179,9 +178,9 @@ reasons:
 - **Combining advice.** Each `@After` and `@Around` cleared the body and rebuilt it around the
   same local function, so only the last one processed ran.
 
-## `proceed()` — Invoke the Original Body
+## `proceed()`: Invoke the Original Body
 
-Calling `pjp.proceed()` runs the original function body with the **original arguments**:
+Calling `pjp.proceed()` runs the original function body with the original arguments:
 
 ```kotlin
 @Around(target = [Logged::class])
@@ -195,7 +194,7 @@ fun doAround(pjp: ProceedingJoinPoint): Any? {
 
 ### Calling `proceed()` Multiple Times
 
-`proceed()` can be called any number of times. Each call executes the original body once:
+You can call `proceed()` more than once. Each call runs the original body again:
 
 ```kotlin
 @Around(target = [Retryable::class])
@@ -209,8 +208,8 @@ fun retry(pjp: ProceedingJoinPoint): Any? {
 
 ### Not Calling `proceed()`
 
-If you never call `pjp.proceed()`, the original body is **never executed**. The return value
-of the advice method becomes the result of the intercepted function call:
+If the advice never calls `pjp.proceed()`, the original body does not run, and the advice's
+return value becomes the result of the intercepted call:
 
 ```kotlin
 @Around(target = [FeatureFlag::class])
@@ -225,10 +224,10 @@ fun realWork(): String {
 realWork()  // → "stubbed", println not called
 ```
 
-## `proceed(vararg args)` — Argument Substitution
+## `proceed(vararg args)`: Argument Substitution
 
-Pass modified arguments to `proceed()` to override what the original body sees. The varargs
-correspond to the **regular parameters** only (the receiver, if any, is kept from `pjp.args`):
+Pass arguments to `proceed()` to replace what the original body sees. They stand for the
+regular parameters only. The receiver, if there is one, is kept from `pjp.args`:
 
 ```kotlin
 @Aspect
@@ -249,8 +248,8 @@ UserService().save("  alice  ")  // → "alice"
 ```
 
 !!! note "Arg ordering in `proceed(vararg)`"
-    Pass **only the regular parameters** — do not include the receiver. AspectK reconstructs
-    the full args list (prepending the receiver from `pjp.args`) internally.
+    Pass only the regular parameters and leave the receiver out. AspectK prepends the
+    receiver from `pjp.args` itself.
 
     ```kotlin
     // member function: pjp.args = [receiver, param0, param1]
@@ -287,8 +286,8 @@ fun rethrow(pjp: ProceedingJoinPoint): Any? =
 
 ## `@Around` on Unit-Returning Functions
 
-When the target function returns `Unit`, the advice return value is ignored. You can safely
-return `pjp.proceed()` or `null` — no `ClassCastException` is thrown:
+When the target function returns `Unit`, the advice's return value is ignored. Returning
+`pjp.proceed()` or `null` both work, and neither throws a `ClassCastException`:
 
 ```kotlin
 @Aspect
@@ -302,7 +301,7 @@ fun doWork() {   // returns Unit
     println("working")
 }
 
-doWork()  // works — no ClassCastException
+doWork()  // no ClassCastException
 ```
 
 ## Execution Order with `@Before` and `@After`
@@ -311,7 +310,7 @@ doWork()  // works — no ClassCastException
     Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
     before the body and any other advice. Any other combination on the same function is not
     supported yet. This includes `@After` together with `@Around` and more than one `@After`
-    or `@Around`. AspectK still weaves every advice, but the order in which they run may not
+    or `@Around`. AspectK still injects every advice, but the order in which they run may not
     be what you expect.
 
 ## `@Around` on `suspend` functions
@@ -342,13 +341,13 @@ class Repo {
 }
 ```
 
-`SuspendProceedingJoinPoint` has the same surface as `ProceedingJoinPoint`
-(`target`, `signature`, `args`, `proceed()`, `proceed(vararg args)`) — only `proceed`
-is `suspend`. The AspectK plugin picks the join-point type automatically from whether the
-target is `suspend`; a non-suspending target still uses `ProceedingJoinPoint`.
+`SuspendProceedingJoinPoint` has the same members as `ProceedingJoinPoint` (`target`,
+`signature`, `args`, `proceed()`, `proceed(vararg args)`), except that `proceed` is `suspend`.
+The plugin picks the join-point type from whether the target is `suspend`. A non-suspending
+target still uses `ProceedingJoinPoint`.
 
-`@Before` and `@After` need no special handling — they work on `suspend` functions with
-the ordinary `JoinPoint`.
+`@Before` and `@After` need nothing special. They work on `suspend` functions with the
+ordinary `JoinPoint`.
 
 ## `@Around` on Extension and Top-Level Functions
 

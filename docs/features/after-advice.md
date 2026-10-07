@@ -1,7 +1,7 @@
 # `@After` Advice
 
-`@After` advice runs **after** the target function body completes, regardless of whether it
-returned normally or threw an exception. It is the AspectK equivalent of a `finally` block.
+`@After` advice runs after the target function body, whether the body returned normally or
+threw. It behaves like a `finally` block.
 
 ## Basic Usage
 
@@ -34,10 +34,10 @@ finished
 
 ## Function Signature Rules
 
-An `@After` advice method **must**:
+An `@After` advice method must:
 
-1. Be declared inside an `@Aspect`-annotated class or object
-2. Accept exactly **one parameter** of type `JoinPoint`
+1. Be declared inside an `@Aspect` object
+2. Take exactly one parameter, of type `JoinPoint`
 3. Return `Unit`
 
 ```kotlin
@@ -92,7 +92,7 @@ fun processPayment(amount: Double): Boolean {
             DefaultJoinPoint(
                 target = this,
                 signature = $MethodSignatures.ajc$tjp_0,
-                args = listOf(amount),
+                args = listOf(this, amount),
             )
         )
     }
@@ -102,7 +102,7 @@ fun processPayment(amount: Double): Boolean {
 Key points:
 
 - The original body stays where it is and is wrapped in `try { ... } finally { ... }`.
-- `@After` advice fires in the `finally` block — always, whether the body succeeds or throws.
+- The advice runs in the `finally` block, so it runs whether the body succeeds or throws.
   There is no `catch`, so exceptions propagate unchanged.
 - A `return` anywhere in the body, including a non-local `return` from an inlined lambda such
   as `forEach`, returns from the function after running the `finally`.
@@ -154,19 +154,19 @@ reasons:
     Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
     before the body and any other advice. Any other combination on the same function is not
     supported yet. This includes `@After` together with `@Around` and more than one `@After`
-    or `@Around`. AspectK still weaves every advice, but the order in which they run may not
+    or `@Around`. AspectK still injects every advice, but the order in which they run may not
     be what you expect.
 
 ## Exception Behaviour
 
-`@After` fires regardless of whether the original body threw:
+`@After` runs even when the original body throws:
 
 ```kotlin
 @Aspect
 object CleanupAspect {
     @After(target = [Transactional::class])
     fun cleanup(joinPoint: JoinPoint) {
-        // Always runs — even if the body threw
+        // Runs even if the body threw
         releaseResources()
     }
 }
@@ -174,13 +174,12 @@ object CleanupAspect {
 @Transactional
 fun riskyOp() = throw RuntimeException("oops")
 
-// cleanup() still fires; the exception propagates to the caller afterwards
+// cleanup() runs, then the exception propagates to the caller
 ```
 
 !!! warning
-    `@After` **cannot suppress** exceptions. The original exception always propagates after
-    the `finally` block completes. If you need to catch or replace exceptions, use
-    [`@Around`](around-advice.md) instead.
+    `@After` cannot suppress exceptions. The original exception propagates once the `finally`
+    block completes. To catch or replace exceptions, use [`@Around`](around-advice.md).
 
 ## `@After` on Extension and Top-Level Functions
 

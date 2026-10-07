@@ -1,7 +1,7 @@
 # Join Points
 
-A `JoinPoint` represents the context of an intercepted function call. AspectK generates a
-`JoinPoint` instance at each call site and passes it to the matching advice functions.
+A `JoinPoint` describes one call of an intercepted function. AspectK creates one each time
+the function runs and passes it to the matching advice.
 
 ## JoinPoint Interface
 
@@ -42,7 +42,7 @@ fun topLevelFunction() { ... }  // jp.target == null
 
 ## `signature` — Method Metadata
 
-`MethodSignature` provides compile-time metadata about the intercepted function:
+`MethodSignature` holds metadata about the intercepted function, fixed at compile time:
 
 ```kotlin
 data class MethodSignature(
@@ -69,19 +69,24 @@ fun inspect(jp: JoinPoint) {
 
 ### Generic Type Erasure
 
-When the return type is a generic type parameter (e.g., `T`), `returnType` and
-`returnTypeName` are resolved to the **upper bound** at compile time:
+When the return type is a type parameter such as `T`, `returnType` and `returnTypeName`
+resolve to its upper bound:
 
 ```kotlin
 fun <T> identity(value: T): T = value
 // sig.returnType     == Any::class
 // sig.returnTypeName == "kotlin.Any"
+
+fun <T : Number> double(value: T): T = value
+// sig.returnType     == Number::class
+// sig.returnTypeName == "kotlin.Number"
 ```
 
 ## `args` — Runtime Arguments
 
-`args` is a `List<Any?>` of the arguments passed to the intercepted function,
-in declaration order:
+`args` is a `List<Any?>` of the arguments passed to the intercepted function, in declaration
+order. A dispatch or extension receiver, when there is one, comes first (see
+[Supported Function Types](#supported-function-types)). For a top-level function:
 
 ```kotlin
 @Logged
@@ -97,14 +102,14 @@ fun log(jp: JoinPoint) {
 
 ### Nullable Arguments
 
-When a parameter is declared as nullable, the corresponding `args` element may be `null`:
+For a nullable parameter, the matching `args` element may be `null`:
 
 ```kotlin
 @Logged
 fun process(data: String?) { ... }  // jp.args[0] may be null
 ```
 
-Check `MethodParameter.isNullable` to determine if `null` is expected:
+`MethodParameter.isNullable` tells you whether `null` is expected:
 
 ```kotlin
 jp.signature.parameter.zip(jp.args).forEach { (param, value) ->
@@ -137,13 +142,13 @@ jp.signature.annotations.forEach { info ->
 ```
 
 !!! note
-    Only arguments **explicitly provided** in source appear in `args`. Arguments using
-    default values are omitted. Use `parameterNames` to identify which arguments are present.
+    `args` holds only the arguments written in source. Arguments left at their default
+    value are omitted, and `parameterNames` tells you which ones are present.
 
 ## Supported Function Types
 
-AspectK can intercept all of the following function kinds. The `target` and `args` layout
-varies by function type:
+AspectK can intercept the function kinds below. The layout of `target` and `args` depends on
+the kind:
 
 ### Class member function
 
@@ -153,8 +158,10 @@ class UserService {
     fun getUser(id: String): User { ... }
 }
 // jp.target  → UserService instance
-// jp.args    → [id]
+// jp.args    → [UserService instance, id]
 ```
+
+The dispatch receiver is also the first element of `args`.
 
 ### Top-level function
 
@@ -178,7 +185,7 @@ fun String.process(suffix: String) { ... }
 
 ### `suspend` function
 
-Suspension machinery is transparent — `args` contains only the declared parameters.
+`args` contains only the declared parameters. The continuation is not included.
 
 ```kotlin
 @Logged
@@ -187,36 +194,47 @@ suspend fun fetchData(url: String): String { ... }
 // jp.args    → [url]
 ```
 
+### `inline` function
+
+An inline lambda parameter is not a value, so its slot in `args` is `null`.
+
+```kotlin
+@Logged
+inline fun <reified T> measure(label: String, block: () -> T): T = block()
+// jp.target  → null
+// jp.args    → [label, null]
+```
+
 ### Property getter
 
-The receiver object is passed as `args[0]`; `target` is `null`.
+Same layout as a member function with no parameters.
 
 ```kotlin
 class Config {
     val name: String
         @Logged get() = "aspectk"
 }
-// jp.target  → null
+// jp.target  → Config instance
 // jp.args    → [Config instance]
 ```
 
 ### Property setter
 
-The receiver is `args[0]` and the incoming value is `args[1]`; `target` is `null`.
+The receiver is `args[0]` and the incoming value is `args[1]`.
 
 ```kotlin
 class Config {
     var name: String = ""
         @Logged set(value) { field = value }
 }
-// jp.target  → null
+// jp.target  → Config instance
 // jp.args    → [Config instance, newValue]
 ```
 
 ### `expect`/`actual` function
 
-Advice is woven into the `actual` declaration on each platform; behaviour mirrors a
-top-level function.
+Advice is injected into the `actual` declaration on each platform. The layout is the same as
+for a top-level function.
 
 ```kotlin
 // commonMain
@@ -228,8 +246,8 @@ expect fun platformGreet(name: String)
 
 ## Extension Functions
 
-AspectK ships a set of inline extension functions on `JoinPoint`, `MethodSignature`, and
-`AnnotationInfo` to reduce boilerplate when reading intercept context at runtime.
+`aspectk-runtime` includes inline extension functions on `JoinPoint`, `MethodSignature` and
+`AnnotationInfo` for the common lookups and casts.
 
 ### `JoinPoint` extensions
 
@@ -261,9 +279,8 @@ fun doBefore(jp: JoinPoint) {
 
 #### `getTarget<T>(): T`
 
-Returns `JoinPoint.target` cast to `T`. Useful when advice code needs to interact with
-the receiver beyond the generic `Any?` type.
-Throws `ClassCastException` if the cast fails, or `NullPointerException` if `target`
+Returns `JoinPoint.target` cast to `T`, for advice that needs to call the receiver's own
+members. Throws `ClassCastException` if the cast fails, or `NullPointerException` if `target`
 is `null` (top-level or companion-object function).
 
 ```kotlin

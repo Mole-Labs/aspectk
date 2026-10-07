@@ -2,9 +2,10 @@
 
 **Compile-time Aspect-Oriented Programming for Kotlin Multiplatform.**
 
-AspectK is a Kotlin compiler plugin that injects advice code at **compile time** via K2 IR transformation —
-no runtime reflection, no proxies, zero overhead. Declare an `@Aspect`, annotate your advice with `@Before`,
-and AspectK weaves the call directly into the intercepted functions during compilation.
+AspectK is a Kotlin compiler plugin that injects advice into your functions at compile time, using
+the K2 IR transformation API. There is no runtime reflection and no proxy. Declare an `@Aspect`,
+mark its advice with `@Before`, `@After` or `@Around`, and the calls are compiled into every function
+that carries the target annotation.
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.mole-labs.aspectk/io.github.mole-labs.aspectk.gradle.plugin)](https://central.sonatype.com/artifact/io.github.mole-labs/aspectk.gradle.plugin)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -72,25 +73,25 @@ fun processOrder(orderId: String, amount: Double) {
 
 | Feature | Details |
 |---------|---------|
-| **Zero runtime overhead** | Advice is woven at compile time — the generated code calls the advice function directly |
+| **Compile-time injection** | The generated code calls the advice function directly, with no reflection or proxy at runtime |
 | **Kotlin Multiplatform** | JVM, Android, JS (IR), WASM/JS, Native Tier 1–3 |
-| **K2 IR powered** | Built on the Kotlin 2.x IR transformation API |
-| **Many-to-many targeting** | One `@Before` can list multiple target annotations; one function can match multiple aspects |
-| **Cross-module weaving** | An `@Aspect` in one module weaves into targets in a different, downstream module — no configuration beyond applying the plugin to both |
-| **Inheritance support** | `@Before(inherits = true)` intercepts overriding functions automatically |
-| **Rich join point metadata** | `JoinPoint` exposes receiver, method signature, parameters, annotations, and arguments |
+| **K2 IR** | Built on the Kotlin 2.x IR transformation API |
+| **`@Before`, `@After`, `@Around`** | Run code before a function, after it (like `finally`), or around it with control over the result |
+| **Many-to-many targeting** | One advice can list several target annotations, and one function can match several aspects |
+| **Cross-module injection** | An `@Aspect` in one module is injected into targets in a downstream module. Apply the plugin to both and nothing else is needed |
+| **Inheritance** | `inherits = true` also intercepts functions that override an annotated one |
+| **Join point metadata** | `JoinPoint` exposes the receiver, method signature, parameters, annotations and arguments |
 
 ## Supported Function Types
 
-AspectK works with the full range of Kotlin function kinds — including those that other AOP
-solutions struggle with. Because advice is injected during the **IR transformation phase**,
-before platform-specific lowering, AspectK intercepts functions exactly as Kotlin defines them:
+Advice is injected during IR transformation, before any platform-specific lowering, so AspectK
+sees functions the way you wrote them:
 
 - Class member functions
 - Top-level functions
 - Extension functions
-- **`suspend` functions** — interception happens before coroutine lowering, so the advice sees the function in its original, unsuspended form
-- **`inline` functions** — intercepted at the call site before the inliner runs
+- `suspend` functions. Injection happens before coroutine lowering, so no continuation parameter shows up in `args`
+- `inline` functions. The advice is part of the body, so it is inlined along with it
 - Property getters and setters
 - `expect`/`actual` functions across all platforms
 

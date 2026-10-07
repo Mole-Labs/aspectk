@@ -1,7 +1,9 @@
 # Advice
 
-**Advice** is the code that runs at an intercepted function's call site. In AspectK, advice
-is declared using the `@Before` annotation on a method inside an `@Aspect` class.
+Advice is the code AspectK injects into an intercepted function. You declare it as a method
+inside an `@Aspect` object, annotated with `@Before`, [`@After`](after-advice.md) or
+[`@Around`](around-advice.md). This page covers `@Before`, and the other two share its
+`target` and `inherits` parameters.
 
 ## `@Before` Annotation
 
@@ -22,10 +24,10 @@ fun adviceMethod(joinPoint: JoinPoint) { ... }
 
 ## Function Signature Rules
 
-An advice function **must**:
+A `@Before` advice function must:
 
-1. Be declared inside an `@Aspect`-annotated class or object
-2. Accept exactly **one parameter** of type `JoinPoint`
+1. Be declared inside an `@Aspect` object
+2. Take exactly one parameter, of type `JoinPoint`
 3. Return `Unit`
 
 ```kotlin
@@ -49,7 +51,7 @@ fun bad3(joinPoint: JoinPoint, extra: Int) { }
 
 ## Multiple Targets
 
-A single `@Before` can target multiple annotation classes simultaneously:
+One `@Before` can target several annotation classes:
 
 ```kotlin
 @Aspect
@@ -64,13 +66,12 @@ object ObservabilityAspect {
 }
 ```
 
-This is equivalent to writing separate `@Before` methods for each annotation, but
-avoids duplication.
+It behaves like one `@Before` method per annotation, without the duplication.
 
 ## Inheritance (`inherits = true`)
 
-When `inherits = true`, advice is applied not only to directly annotated functions
-but also to any function that **overrides** an annotated function:
+With `inherits = true`, advice also applies to any function that overrides an annotated
+function:
 
 ```kotlin
 abstract class BaseService {
@@ -79,7 +80,7 @@ abstract class BaseService {
 }
 
 class ConcreteService : BaseService() {
-    // No @RequiresAuth here — but will still be intercepted if inherits = true
+    // No @RequiresAuth here, but inherits = true still intercepts it
     override fun getData(): String = "data"
 }
 
@@ -90,7 +91,7 @@ object AuthAspect {
 }
 ```
 
-See [Inheritance](../features/inheritance.md) for a full guide.
+See [Inheritance](inheritance.md) for details.
 
 ## Other Advice Types
 
