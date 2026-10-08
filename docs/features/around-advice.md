@@ -306,12 +306,10 @@ doWork()  // no ClassCastException
 
 ## Execution Order with `@Before` and `@After`
 
-!!! warning "Advice ordering"
-    Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
-    before the body and any other advice. Any other combination on the same function is not
-    supported yet. This includes `@After` together with `@Around` and more than one `@After`
-    or `@Around`. AspectK still injects every advice, but the order in which they run may not
-    be what you expect.
+`@Before` runs once, outside every `@Around`. `@After` runs inside every `@Around`, once per
+`proceed()`. Several `@Around` advices on one function nest in the order their target
+annotations are written on it, the first one outermost. See
+[Advice Ordering](advice-ordering.md) for the full rules.
 
 ## `@Around` on `suspend` functions
 

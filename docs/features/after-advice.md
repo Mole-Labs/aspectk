@@ -150,12 +150,19 @@ reasons:
 
 ## Execution Order with Other Advice Types
 
-!!! warning "Advice ordering"
-    Ordering is only supported for multiple `@Before` advices: they all run, in sequence,
-    before the body and any other advice. Any other combination on the same function is not
-    supported yet. This includes `@After` together with `@Around` and more than one `@After`
-    or `@Around`. AspectK still injects every advice, but the order in which they run may not
-    be what you expect.
+`@After` runs right after the function body, every time the body runs. On its own, that is once
+per call.
+
+When the function also has `@Around` advice, the body only runs when that advice calls
+`proceed()`, and `@After` follows the body:
+
+- `proceed()` called once: `@After` runs once, before `proceed()` returns to the `@Around` advice.
+- `proceed()` never called: the body doesn't run, so `@After` doesn't either.
+- `proceed()` called twice: the body and `@After` both run twice.
+
+Several `@After` advices on one function all run, even if an earlier one throws, in the order
+their target annotations are written on the function. See [Advice Ordering](advice-ordering.md)
+for the full rules.
 
 ## Exception Behaviour
 

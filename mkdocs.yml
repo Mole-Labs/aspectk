@@ -41,6 +41,7 @@ nav:
     - '@Around Advice': features/around-advice.md
     - Join Points: features/join-points.md
     - Multiple Targets: features/multiple-targets.md
+    - Advice Ordering: features/advice-ordering.md
     - Inheritance: features/inheritance.md
     - Multiplatform: features/multiplatform.md
     - Cross-Module Injection: features/cross-module-weaving.md

@@ -33,10 +33,10 @@ Check the following:
 
 ### Does the order of advice execution matter?
 
-Several `@Before` advices on one function all run before the body, in the order the compiler
-discovers their aspects. That order can change between compiler versions, so don't rely on it.
-Combining `@After` with `@Around`, or using more than one `@After` or `@Around` on a function,
-is not supported yet and may run in an unexpected order.
+Yes. Advices are ordered by kind first (`@Before`, then `@Around`, then the body, then
+`@After`), then by the order the target annotations are written on the function. The order
+between advices of the same kind that target the same annotation is not guaranteed, whatever
+order they are declared in. See [Advice Ordering](../features/advice-ordering.md).
 
 ## Runtime Behavior
 

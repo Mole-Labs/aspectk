@@ -65,10 +65,8 @@ fun processCheckout(cart: Cart, userId: String) {
 }
 ```
 
-AspectK applies the matching advice in the order the compiler discovers it.
-
-Ordering is only supported for `@Before`. Combining several `@After` or `@Around` advices on one
-function is not supported yet and may run in an unexpected order.
+The advices of the annotation written first come first, so reordering the annotations on the
+function reorders the advices. See [Advice Ordering](advice-ordering.md).
 
 ## Identifying the Trigger Annotation
 

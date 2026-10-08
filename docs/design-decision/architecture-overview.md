@@ -49,7 +49,7 @@ internal data class AspectContext(
 )
 ```
 
-When several `AspectContext`s target the same annotation, their order is the order in which `AspectVisitor` walks the IR. Users cannot control it, and it is an implementation detail.
+When several `AspectContext`s target the same annotation, their order is the order in which `AspectVisitor` walks the IR. It is not a guarantee users can rely on. The map itself is unordered: the order between target annotations comes from the function being woven, not from here.
 
 Thread safety comes from `ConcurrentHashMap` plus `Collections.synchronizedList/Set`, which parallel compilation needs.
 
@@ -62,16 +62,17 @@ For target annotations that have at least one advice declared with `inherits = t
 Visits every `IrSimpleFunction` as an `IrElementTransformerVoidWithContext` (`aspectk-core/.../ir/AspectTransformer.kt`).
 
 - Fake overrides are skipped (`declaration !is IrFunctionImpl`).
-- Finds the target annotations present on the function (`targetAnnotations`); if any, calls `generateInner()`.
-- The inheritance case is handled separately in `generateIfOverridden()` (reuses `generateInner()` with `checkInherits = true`).
+- For each function it collects the advices that apply: those of the target annotations written on the function, then those inherited from overridden declarations (`inherits = true` only). This is `adviceFor()`.
+- A function with no applicable advice is left untouched. Otherwise its body is rewritten (`weave()`).
 
-The order inside `generateInner()` matters:
+The order of the rewrite matters:
 
 1. Generate the `MethodSignature` as a static property, once, cached in a `$MethodSignatures` inner object.
-2. `contexts.forEach` handles AROUND/AFTER, and each one wraps the body as built so far. `@After` wraps it in place in `try { ... } finally { after }`; `@Around` moves it into the `proceed` listener lambda and replaces it with the advice call.
-3. **`@Before` is always prepended last**, so it stays outside everything `@After`/`@Around` wrapped.
+2. Every `@After` wraps the body in place in `try { ... } finally { after }`, so it stays inside every `@Around`.
+3. Every `@Around`, last to first, moves the body as built so far into the `proceed` listener lambda and replaces it with the advice call, so the first one ends up outermost.
+4. **`@Before` is always prepended last**, so it stays outside everything `@After`/`@Around` wrapped.
 
-Ordering is only supported for multiple `@Before` advices. Combining `@After` with `@Around`, or applying more than one `@After` or `@Around` to a function, is not supported yet and may run in an unexpected order.
+The advices of a function are collected in the order its target annotations are written on it (`IrFunction.targetAnnotations`, which walks the function's annotation list), then in `AspectLookUp` order within each annotation. Only the first part is a documented guarantee: the order within one annotation happens to be the declaration order within a file, but depends on the order the compiler hands files and modules over. For annotations read back from another module that list is not in source order: on the JVM it puts `RUNTIME` ones ahead of `BINARY` ones. The user-facing rules are in `docs/features/advice-ordering.md`.
 
 ## Generators (`ir/generator/`)
 
@@ -99,10 +100,11 @@ IrGenerationExtension.generate(moduleFragment)
   └─ hints merge             : carry-forward (same-module, unvisited classes) + hintsPath (other modules)
   └─ InheritableVisitor      : track overrides for inherits=true targets
   └─ AspectTransformer       : visit every IrSimpleFunction
-       └─ has target annotation? -> generateInner()
+       └─ any advice applies to the function? -> rewrite its body
             ├─ generate/cache MethodSignature
-            ├─ process AROUND/AFTER contexts (each wraps the body so far)
-            └─ process BEFORE contexts (prepended last)
+            ├─ each @After wraps the body in place
+            ├─ each @Around, last to first, moves the body so far into its proceed listener
+            └─ every @Before is prepended last
 ```
 
 `AspectLookUp` still only exists for one `generate()` call. `hints.json` (see [cross-module injection](cross-module-weaving.md)) persists enough per-advice metadata across modules and builds to rebuild `AspectLookUp` for advice this round's IR never saw, whether that is a dependency's aspect or this module's own aspect in a file an incremental round didn't touch. Kotlin's incremental compilation hands `generate()` only the dirty subset of a module's files, and that is what this mechanism works around. The [incremental-compilation section](cross-module-weaving.md#6-incremental-compilation-correctness) of the cross-module design describes the failure modes behind it and how each was fixed.
