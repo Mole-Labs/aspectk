@@ -108,7 +108,13 @@ internal fun AspectKIrCompilerContext.createArgsListOf(declaration: IrFunction):
     elements =
     declaration.parameters.map { param ->
         withIrBuilder(declaration.symbol) {
-            if (declaration.isInline && param.isInlineParameter()) irNull(pluginContext.irBuiltIns.anyNType) else irGet(param)
+            if (declaration.isInline && param.isInlineParameter()) {
+                irNull(pluginContext.irBuiltIns.anyNType)
+            } else {
+                irGet(
+                    param,
+                )
+            }
         }
     },
 )
@@ -132,7 +138,10 @@ internal val AspectKIrCompilerContext.listAnyNType: IrType
 internal val AspectKIrCompilerContext.function1Type: IrType
     get() =
         irCompat
-            .referenceClass(pluginContext, ClassId(FqName("kotlin"), Name.identifier("Function1")))!!
+            .referenceClass(
+                pluginContext,
+                ClassId(FqName("kotlin"), Name.identifier("Function1")),
+            )!!
             .typeWith(listAnyNType, pluginContext.irBuiltIns.anyNType)
 
 // `suspend (List<Any?>) -> Any?` — used for the @Around wrapper lambda when the intercepted
@@ -189,3 +198,5 @@ internal fun IrType.getUpperBound(): Pair<IrType, IrClassSymbol> {
 }
 
 internal fun IrType.getUpperBoundClassName(): String? = getUpperBound().first.classFqName?.asString()
+
+internal fun IrFunction.targetAnnotations(targets: Set<FqName>): List<FqName> = annotations.mapNotNull { it.type.classFqName }.filter { it in targets }.distinct()

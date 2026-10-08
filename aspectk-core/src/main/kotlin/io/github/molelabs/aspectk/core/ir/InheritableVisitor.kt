@@ -21,7 +21,6 @@ import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.util.allOverridden
-import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 
@@ -43,13 +42,11 @@ internal class InheritableVisitor(
         (declaration as IrSimpleFunction)
             .allOverridden()
             .forEach { func ->
-                targetAnnotation(func).forEach { target ->
+                func.targetAnnotations(targetAnnotations).forEach { target ->
                     aspectkContext.aspectLookUp.addOverridden(declaration.attributeOwnerId, target)
                 }
             }
 
         return super.visitSimpleFunction(declaration)
     }
-
-    private fun targetAnnotation(declaration: IrFunction) = targetAnnotations.filter(declaration::hasAnnotation)
 }

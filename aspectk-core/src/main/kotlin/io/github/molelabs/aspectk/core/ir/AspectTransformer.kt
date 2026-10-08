@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.util.hasAnnotation
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectTransformer(
@@ -55,13 +54,15 @@ internal class AspectTransformer(
         return super.visitSimpleFunction(declaration)
     }
 
-    // 함수에 직접 붙은 타겟의 어드바이스, 그 뒤에 상속 관계로 적용되는 어드바이스 (inherits = true만)
+    // 함수에 직접 붙은 타겟의 어드바이스, 그 뒤에 상속 관계로 적용되는 어드바이스 (inherits = true만).
+    // 타겟끼리는 함수에 어노테이션을 붙인 순서를 따른다. 한 타겟 안의 어드바이스끼리는 수집된
+    // 순서(지금은 선언 순서)지만 보장하는 동작은 아니다.
     private fun adviceFor(declaration: IrFunction): List<AspectContext> {
         val lookUp = aspectKContext.aspectLookUp
         val direct =
-            if (declaration.hasBody()) targetAnnotations(declaration).flatMap { lookUp[it] } else emptyList()
-        val overridden = lookUp.getOverridden(declaration.attributeOwnerId)
-        val inherited = targets.filter { it in overridden }.flatMap { lookUp[it].filter(AspectContext::inherits) }
+            if (declaration.hasBody()) declaration.targetAnnotations(targets).flatMap { lookUp[it] } else emptyList()
+        val inherited =
+            lookUp.getOverridden(declaration.attributeOwnerId).flatMap { lookUp[it].filter(AspectContext::inherits) }
         return direct + inherited
     }
 
@@ -111,8 +112,6 @@ internal class AspectTransformer(
         }
         return current
     }
-
-    private fun targetAnnotations(declaration: IrFunction) = targets.filter(declaration::hasAnnotation)
 
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
