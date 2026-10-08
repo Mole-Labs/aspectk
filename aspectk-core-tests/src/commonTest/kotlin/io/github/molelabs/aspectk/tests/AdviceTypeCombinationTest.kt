@@ -26,30 +26,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-/**
- * Verifies execution order and correctness when multiple advice types
- * (@Before, @After, @Around) target the same annotation on the same function.
- *
- * How several @After/@Around nest is covered by [AdviceOrderingTest].
- *
- * Expected execution orders:
- *   @Before only:           @Before → body
- *   @After only:            body → @After  (via try-finally)
- *   @Around only:           @Around wraps body
- *   @Before + @After:       @Before → body → @After
- *   @Before + @Around:      @Before → (@Around start) → body → (@Around end)
- *
- * Test groups:
- *   - Same Aspect  (AC-1a ~ AC-2): multiple advice types within a single @Aspect targeting the same annotation
- *   - Cross-Aspect (AC-5, AC-6): multiple advice types across different @Aspect objects targeting the same annotation
- *   - Parameter Substitution (AC-9, AC-10a): proceed(newArgs) when combined with @Before/@After
- */
 @Suppress("UNUSED")
 class AdviceTypeCombinationTest {
-    // ── Same Aspect ────────────────────────────────────────────────────────────
-
-    // AC-1a: @Before + @After — 정상 흐름
-
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc1A
 
@@ -81,8 +59,6 @@ class AdviceTypeCombinationTest {
         assertEquals(listOf("before", "body", "after"), AspectAc1A.log)
     }
 
-    // AC-1b: @Before + @After — 예외 발생
-
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc1B
 
@@ -112,8 +88,6 @@ class AdviceTypeCombinationTest {
         assertTrue(AspectAc1B.log.contains("before"))
         assertTrue(AspectAc1B.log.contains("after"))
     }
-
-    // AC-2: @Before + @Around — 정상 흐름
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc2
@@ -149,10 +123,6 @@ class AdviceTypeCombinationTest {
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc2.log)
     }
 
-    // ── Cross-Aspect ───────────────────────────────────────────────────────────
-
-    // AC-5: @Before (AspectA) + @After (AspectB) — 정상 흐름
-
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc5
 
@@ -186,8 +156,6 @@ class AdviceTypeCombinationTest {
         ExampleAc5().work()
         assertEquals(listOf("before", "body", "after"), AspectAc5Before.log)
     }
-
-    // AC-6: @Before (AspectA) + @Around (AspectB) — 정상 흐름
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc6
@@ -226,8 +194,6 @@ class AdviceTypeCombinationTest {
         assertEquals(listOf("before", "around-before", "body", "around-after"), AspectAc6Before.log)
     }
 
-    // ── Parameter Substitution via proceed() ──────────────────────────────────
-
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc9
 
@@ -253,8 +219,6 @@ class AdviceTypeCombinationTest {
         val result = ExampleAc9().greet("alice", 3)
         assertEquals("modified-99", result)
     }
-
-    // AC-10a: @After (먼저 선언) + @Around (나중 선언) — @Around가 proceed(newArgs)로 파라미터를 치환할 수 있다.
 
     @Target(AnnotationTarget.FUNCTION)
     private annotation class TargetAc10A

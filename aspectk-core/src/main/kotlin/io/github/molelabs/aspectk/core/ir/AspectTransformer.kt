@@ -85,25 +85,23 @@ internal class AspectTransformer(
         signatureProperty: IrProperty,
     ) {
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
+        val byKind = contexts.groupBy { it.kind }
 
         // @After wraps the body first, so it stays inside every @Around: it only runs when the
         // body did, once per proceed().
-        contexts.filter { it.kind == Kind.AFTER }.forEach { context ->
+        byKind[Kind.AFTER]?.forEach { context ->
             adviceCallGenerator.generateAfterAdviceCalls(declaration, context, joinPoint)
         }
 
-        // Each @Around wraps whatever the body holds so far, so they are woven last to first:
-        // the first one ends up outermost and every later one nests inside it.
-        contexts.filter { it.kind == Kind.AROUND }.asReversed().forEach { context ->
+        // Each @Around wraps whatever the body holds so far, so they are woven last to first
+        byKind[Kind.AROUND]?.asReversed()?.forEach { context ->
             val proceedingJoinPoint =
                 proceedingJoinPointGenerator.generateProceedingJoinPoint(declaration, signatureProperty)
             adviceCallGenerator.generateAroundAdviceCalls(declaration, context, proceedingJoinPoint)
         }
 
-        // @Before is prepended after the body structure is finalized, so it runs ahead of
-        // everything else, exactly once.
-        val befores = contexts.filter { it.kind == Kind.BEFORE }
-        if (befores.isNotEmpty()) adviceCallGenerator.generateAdviceCalls(declaration, befores, joinPoint)
+        // @Before is prepended after the body structure is finalized
+        byKind[Kind.BEFORE]?.let { adviceCallGenerator.generateAdviceCalls(declaration, it, joinPoint) }
     }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
