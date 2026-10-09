@@ -12,6 +12,11 @@ that carries the target annotation.
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.x-purple.svg)](https://kotlinlang.org)
 [![KMP](https://img.shields.io/badge/KMP-JVM%20%7C%20JS%20%7C%20WASM%20%7C%20Native-green.svg)](https://kotlinlang.org/docs/multiplatform.html)
 
+> [!WARNING]
+> AspectK is in **alpha**. The API can change without notice between releases, and you may run
+> into bugs. Pin the version you depend on and read the
+> [changelog](https://mole-labs.github.io/aspectk/reference/changelog/) before upgrading.
+
 ---
 
 ## Quick Setup
@@ -111,6 +116,26 @@ Full documentation: **https://mole-labs.github.io/aspectk/**
 - [Quick Start](https://mole-labs.github.io/aspectk/getting-started/quick-start/)
 - [Core Concepts](https://mole-labs.github.io/aspectk/core-concepts/aspects/)
 - [API Reference](https://mole-labs.github.io/aspectk/api/)
+
+---
+
+## Anti-Vibe-Coding
+
+AspectK is built with the help of AI tools, but it is not vibe-coded. The roles are split:
+
+- **A human designs the architecture and the tests.** What the library does, how it is
+  structured, which trade-offs it accepts and which cases the tests have to cover are decided by
+  a maintainer, and recorded in pull requests: each
+  [merged PR](https://github.com/Mole-Labs/aspectk/pulls?q=is%3Apr+is%3Amerged) states what
+  changed and why.
+- **AI does the legwork.** It reverse-engineers how Gradle and the Kotlin compiler plugin API
+  behave, hunts for bugs, researches, and drafts code and documentation to that design.
+- **A human reviews every change** and has to understand it before it is merged.
+- **Changes are verified by four test suites**, all run in CI:
+    - `aspectk-core` tests compile sources with the plugin and check the woven result
+    - `aspectk-core-tests` (`commonTest`) run woven code on JVM, JS, Wasm and iOS
+    - `aspectk-plugin` `functionalTest` drives real Gradle builds, including incremental ones
+    - `sample` tests build a multi-module app against the working tree, on JVM, Android, JS and iOS
 
 ---
 
