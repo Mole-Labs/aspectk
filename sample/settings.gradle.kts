@@ -1,11 +1,6 @@
 pluginManagement {
     repositories {
-        // Throwaway repo the root aspectk build publishes an unreleased PUBLISH_VERSION to
-        // (AspectKBuildPlugin.publish() -> build/localMaven) -- see :core's build.gradle.kts
-        // for why this is used instead of mavenLocal().
-        maven(url = "../build/localMaven")
         mavenCentral()
-        mavenLocal()
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -20,9 +15,7 @@ pluginManagement {
 dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
-        maven(url = "../build/localMaven")
         mavenCentral()
-        mavenLocal()
         google()
         gradlePluginPortal()
     }
@@ -33,6 +26,13 @@ plugins {
 }
 
 rootProject.name = "aspectk-sample"
+
+// The sample builds against the aspectk sources in the parent directory, so nothing has to be
+// published first and a change in the library shows up here right away. Gradle finds the Gradle
+// plugin by its id, and substitutes the compiler plugin and the runtime for the published
+// coordinates the Gradle plugin adds them by (the modules' `group` matches the published one).
+includeBuild("..")
+
 include(":composeApp")
 include(":core")
 include(":data")

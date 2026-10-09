@@ -112,6 +112,8 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             .allDependencies
             .withType(ProjectDependency::class.java)
             .configureEach { projectDependency ->
+                // An Android test compilation depends on its own project to see the main variant.
+                if (projectDependency.path == project.path) return@configureEach
                 project.dependencies.add(
                     resolvableConfig.name,
                     project.dependencies.project(
