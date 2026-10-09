@@ -86,6 +86,11 @@ public abstract interface class io/github/molelabs/aspectk/runtime/ProceedingJoi
 	public abstract fun onProceed (Ljava/util/List;)Ljava/lang/Object;
 }
 
+public final class io/github/molelabs/aspectk/runtime/ProceedingJoinPointExtensionsKt {
+	public static final fun proceedWith (Lio/github/molelabs/aspectk/runtime/ProceedingJoinPoint;[Lkotlin/Pair;)Ljava/lang/Object;
+	public static final fun proceedWith (Lio/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint;[Lkotlin/Pair;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public abstract interface class io/github/molelabs/aspectk/runtime/SuspendProceedingJoinPoint : io/github/molelabs/aspectk/runtime/JoinPoint {
 	public abstract fun proceed (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun proceed ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
