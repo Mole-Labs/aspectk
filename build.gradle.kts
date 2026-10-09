@@ -40,3 +40,7 @@ subprojects {
         }
     }
 }
+
+subprojects {
+    group = property("PUBLISH_GROUP") as String
+}

@@ -40,9 +40,6 @@ kotlin {
     }
 }
 
-group = "com.mole"
-version = "unspecified"
-
 repositories {
     google()
     mavenCentral()

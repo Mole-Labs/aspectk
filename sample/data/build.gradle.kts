@@ -24,6 +24,7 @@ kotlin {
     androidTarget()
     iosArm64()
     iosSimulatorArm64()
+    js { nodejs() }
 
     applyDefaultHierarchyTemplate()
 
@@ -32,7 +33,16 @@ kotlin {
             // api, not implementation: AppDatabase (public) extends RoomDatabase, so consumers
             // touching the `database` property need RoomDatabase on their own classpath too.
             api(libs.androidx.room.runtime)
-            implementation(libs.androidx.sqlite.bundled)
+        }
+        // Room 3 needs an explicit driver. The bundled one has no JS artifact, so it can't sit
+        // in commonMain; the web targets get the web worker driver instead.
+        jvmMain.dependencies { implementation(libs.androidx.sqlite.bundled) }
+        androidMain.dependencies { implementation(libs.androidx.sqlite.bundled) }
+        appleMain.dependencies { implementation(libs.androidx.sqlite.bundled) }
+        jsMain.dependencies { implementation(libs.androidx.sqlite.web) }
+        jvmTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
@@ -43,6 +53,7 @@ dependencies {
     add("kspJvm", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspJs", libs.androidx.room.compiler)
 }
 
 // Run commonMain KSP before any platform compilation.

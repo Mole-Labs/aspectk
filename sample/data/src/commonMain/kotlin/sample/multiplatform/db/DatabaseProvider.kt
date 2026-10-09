@@ -1,6 +1,6 @@
 package sample.multiplatform.db
 
-import androidx.room.RoomDatabase
+import androidx.room3.RoomDatabase
 
 expect fun getDatabaseBuilder(): RoomDatabase.Builder<AppDatabase>
 

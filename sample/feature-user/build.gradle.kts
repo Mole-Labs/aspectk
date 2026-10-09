@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
-    id("io.github.mole-labs.aspectk") version "0.3.2"
+    // No version: resolved from the parent aspectk build (includeBuild in settings.gradle.kts)
+    id("io.github.mole-labs.aspectk")
 }
 
 android {
@@ -22,6 +23,7 @@ kotlin {
     androidTarget()
     iosArm64()
     iosSimulatorArm64()
+    js { nodejs() }
 
     applyDefaultHierarchyTemplate()
 
