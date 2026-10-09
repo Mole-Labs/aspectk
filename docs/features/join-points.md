@@ -246,8 +246,8 @@ expect fun platformGreet(name: String)
 
 ## Extension Functions
 
-`aspectk-runtime` includes inline extension functions on `JoinPoint`, `MethodSignature` and
-`AnnotationInfo` for the common lookups and casts.
+`aspectk-runtime` includes extension functions on `JoinPoint`, `ProceedingJoinPoint`,
+`MethodSignature` and `AnnotationInfo` for the common lookups and casts.
 
 ### `JoinPoint` extensions
 
@@ -314,6 +314,63 @@ fun doBefore(jp: JoinPoint) {
     val rateLimit = jp.findAnnotation<RateLimit>() ?: return
     val limit = rateLimit.getArg<Int>("maxCalls")
 }
+```
+
+#### `getAnnotationArgs<T : Annotation>(): Map<String, Any?>`
+
+Returns the arguments of annotation `T` on the intercepted function, by parameter name.
+Throws `NoSuchElementException` if the function is not annotated with `T`.
+
+```kotlin
+@RateLimit(maxCalls = 5)
+fun search(query: String) { /* ... */ }
+
+@Before(RateLimit::class)
+fun doBefore(jp: JoinPoint) {
+    val args = jp.getAnnotationArgs<RateLimit>()   // {maxCalls=5}
+    val maxCalls = args["maxCalls"] as Int
+}
+```
+
+Only the arguments written at the use site are present. A parameter left to its default value
+has no entry, so read it with a fallback: `args["scope"] as? String ?: "global"`.
+
+#### `getAnnotationArgsOrNull<T : Annotation>(): Map<String, Any?>?`
+
+Same as `getAnnotationArgs`, but returns `null` if the function is not annotated with `T`.
+
+### `ProceedingJoinPoint` extensions
+
+Every function here also exists on `SuspendProceedingJoinPoint`, as a `suspend` function.
+
+#### `proceedAs<T>(): T`
+
+Proceeds with the original arguments and returns the result cast to `T`. Throws
+`ClassCastException` if the result is not a `T`.
+
+```kotlin
+@Around(Scaled::class)
+fun doAround(pjp: ProceedingJoinPoint): Any? = pjp.proceedAs<Int>() * 2
+```
+
+#### `proceedAs<T>(vararg args: Any?): T`
+
+Proceeds with substituted arguments, as `proceed(vararg args)` does, and returns the result
+cast to `T`.
+
+#### `proceedWith(vararg replacements: Pair<String, Any?>): Any?`
+
+Proceeds with the named arguments replaced and every other one kept. Unlike
+`proceed(vararg args)`, the arguments that don't change don't have to be passed again. Throws
+`NoSuchElementException` if a name is not a parameter of the intercepted function.
+
+```kotlin
+@Normalized
+fun find(tenant: String, name: String, limit: Int): List<User> { /* ... */ }
+
+@Around(Normalized::class)
+fun doAround(pjp: ProceedingJoinPoint): Any? =
+    pjp.proceedWith("name" to pjp.getArg<String>("name").trim())
 ```
 
 ### `MethodSignature` extensions

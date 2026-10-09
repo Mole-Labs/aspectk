@@ -97,3 +97,30 @@ public inline fun <reified T> JoinPoint.getTargetOrNull(): T? = target as? T
  * ```
  */
 public inline fun <reified T : Annotation> JoinPoint.findAnnotation(): AnnotationInfo? = signature.findAnnotation<T>()
+
+/**
+ * Returns the arguments of annotation [T] on the intercepted function, by parameter name.
+ *
+ * Only the arguments written at the annotation's use site are present: a parameter left to its
+ * default value has no entry.
+ *
+ * ### Example
+ * ```kotlin
+ * @Before(RateLimit::class)
+ * fun doBefore(jp: JoinPoint) {
+ *     val maxCalls = jp.getAnnotationArgs<RateLimit>()["maxCalls"] as Int
+ * }
+ * ```
+ *
+ * @throws NoSuchElementException if the intercepted function is not annotated with [T].
+ */
+public inline fun <reified T : Annotation> JoinPoint.getAnnotationArgs(): Map<String, Any?> = getAnnotationArgsOrNull<T>()
+    ?: throw NoSuchElementException("No annotation ${T::class.simpleName} on ${signature.methodName}")
+
+/**
+ * Returns the arguments of annotation [T] on the intercepted function, by parameter name, or
+ * `null` if the function is not annotated with [T].
+ *
+ * @see getAnnotationArgs
+ */
+public inline fun <reified T : Annotation> JoinPoint.getAnnotationArgsOrNull(): Map<String, Any?>? = findAnnotation<T>()?.let { it.parameterNames.zip(it.args).toMap() }

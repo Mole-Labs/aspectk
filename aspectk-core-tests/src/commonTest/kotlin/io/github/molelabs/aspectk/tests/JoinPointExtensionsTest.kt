@@ -22,12 +22,15 @@ import io.github.molelabs.aspectk.runtime.Before
 import io.github.molelabs.aspectk.runtime.JoinPoint
 import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
 import io.github.molelabs.aspectk.runtime.findAnnotation
+import io.github.molelabs.aspectk.runtime.getAnnotationArgs
+import io.github.molelabs.aspectk.runtime.getAnnotationArgsOrNull
 import io.github.molelabs.aspectk.runtime.getArg
 import io.github.molelabs.aspectk.runtime.getArgOrNull
 import io.github.molelabs.aspectk.runtime.getTarget
 import io.github.molelabs.aspectk.runtime.getTargetOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -241,5 +244,51 @@ class JoinPointExtensionsTest {
     fun `getArg inside Around advice can read args and combine with proceed result`() {
         val result = AroundGetArgExample().compute(4, 3)
         assertEquals(15, result) // (4+1) * 3
+    }
+
+    // --- getAnnotationArgs ---
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class TargetAnnotationArgs(
+        val maxCalls: Int,
+        val scope: String = "global",
+    )
+
+    @Target(AnnotationTarget.FUNCTION)
+    private annotation class NotPresent
+
+    @Aspect
+    private object AnnotationArgsAspect {
+        var args: Map<String, Any?>? = null
+        var absent: Map<String, Any?>? = emptyMap()
+
+        @Before(TargetAnnotationArgs::class)
+        fun doBefore(jp: JoinPoint) {
+            args = jp.getAnnotationArgs<TargetAnnotationArgs>()
+            absent = jp.getAnnotationArgsOrNull<NotPresent>()
+            if (jp.signature.methodName == "strict") jp.getAnnotationArgs<NotPresent>()
+        }
+    }
+
+    private class AnnotationArgsExample {
+        @TargetAnnotationArgs(maxCalls = 5)
+        fun limited(): String = "ok"
+
+        @TargetAnnotationArgs(maxCalls = 1, scope = "user")
+        fun strict(): String = "ok"
+    }
+
+    @Test
+    fun `getAnnotationArgs returns the arguments written on the annotation by name`() {
+        AnnotationArgsExample().limited()
+        // scope is left to its default, so it has no entry
+        assertEquals(mapOf<String, Any?>("maxCalls" to 5), AnnotationArgsAspect.args)
+        assertNull(AnnotationArgsAspect.absent)
+    }
+
+    @Test
+    fun `getAnnotationArgs throws NoSuchElementException when the annotation is absent`() {
+        assertFailsWith<NoSuchElementException> { AnnotationArgsExample().strict() }
+        assertEquals(mapOf<String, Any?>("maxCalls" to 1, "scope" to "user"), AnnotationArgsAspect.args)
     }
 }
