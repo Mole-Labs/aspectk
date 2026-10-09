@@ -32,8 +32,6 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.declarations.impl.IrFunctionImpl
 import org.jetbrains.kotlin.ir.declarations.name
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
-import org.jetbrains.kotlin.ir.util.hasAnnotation
-import org.jetbrains.kotlin.name.FqName
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal class AspectTransformer(
@@ -48,35 +46,24 @@ internal class AspectTransformer(
     override fun visitSimpleFunction(declaration: IrSimpleFunction): IrStatement {
         // Fake Override 메서드는 패스
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
-        val targetAnnotations = targetAnnotations(declaration)
-
-        // 함수 본문이 있으며, 타겟에 해당되는 경우
-        if (targetAnnotations.isNotEmpty() && declaration.hasBody()) {
+        val contexts = adviceFor(declaration)
+        if (contexts.isNotEmpty()) {
             val parent = findParent(declaration) ?: return super.visitSimpleFunction(declaration)
-            val signatureProperty = generateSignature(parent, declaration)
-            targetAnnotations.forEach { target ->
-                generateInner(declaration, target, false, signatureProperty)
-            }
+            weave(declaration, contexts, generateSignature(parent, declaration))
         }
-
-        // 일반 메서드라도 상속 관계일 경우 처리
-        generateIfOverridden(declaration)
         return super.visitSimpleFunction(declaration)
     }
 
-    private fun generateIfOverridden(declaration: IrFunction) {
-        targets.forEach { targetAnnotation ->
-            val isOverridden =
-                aspectKContext.aspectLookUp
-                    .getOverridden(declaration.attributeOwnerId)
-                    .contains(targetAnnotation)
-            val inherits = aspectKContext.aspectLookUp[targetAnnotation].any { it.inherits }
-            if (isOverridden && inherits) {
-                val parent = findParent(declaration) ?: return
-                val signatureProperty = generateSignature(parent, declaration)
-                generateInner(declaration, targetAnnotation, true, signatureProperty)
-            }
-        }
+    // 함수에 직접 붙은 타겟의 어드바이스, 그 뒤에 상속 관계로 적용되는 어드바이스 (inherits = true만).
+    // 타겟끼리는 함수에 어노테이션을 붙인 순서를 따른다. 한 타겟 안의 어드바이스끼리는 수집된
+    // 순서(지금은 선언 순서)지만 보장하는 동작은 아니다.
+    private fun adviceFor(declaration: IrFunction): List<AspectContext> {
+        val lookUp = aspectKContext.aspectLookUp
+        val direct =
+            if (declaration.hasBody()) declaration.targetAnnotations(targets).flatMap { lookUp[it] } else emptyList()
+        val inherited =
+            lookUp.getOverridden(declaration.attributeOwnerId).flatMap { lookUp[it].filter(AspectContext::inherits) }
+        return direct + inherited
     }
 
     private fun generateSignature(
@@ -93,60 +80,29 @@ internal class AspectTransformer(
         return methodSignatureGenerator.toProperty(innerObject, signature)
     }
 
-    private fun generateInner(
+    private fun weave(
         declaration: IrFunction,
-        target: FqName,
-        checkInherits: Boolean,
+        contexts: List<AspectContext>,
         signatureProperty: IrProperty,
     ) {
-        val contexts = aspectKContext.aspectLookUp[target]
-        val hasBefore = contexts.any { it.kind == Kind.BEFORE && (!checkInherits || it.inherits) }
         val joinPoint = joinPointGenerator.generate(declaration, signatureProperty)
+        val byKind = contexts.groupBy { it.kind }
 
-        // @After and @Around wrap whatever the body holds so far, so @Before is added last
-        // to stay outside of them.
-
-        contexts.forEach { context ->
-            when (context.kind) {
-                Kind.AROUND -> {
-                    val proceedingJoinPoint =
-                        proceedingJoinPointGenerator.generateProceedingJoinPoint(
-                            declaration,
-                            signatureProperty,
-                        )
-                    adviceCallGenerator.generateAroundAdviceCalls(
-                        declaration,
-                        context,
-                        proceedingJoinPoint,
-                        checkInherits,
-                    )
-                }
-
-                Kind.AFTER -> {
-                    adviceCallGenerator.generateAfterAdviceCalls(
-                        declaration,
-                        context,
-                        joinPoint,
-                        checkInherits,
-                    )
-                }
-
-                else -> {
-                    Unit
-                }
-            }
+        // @After wraps the body first, so it stays inside every @Around: it only runs when the
+        // body did, once per proceed().
+        byKind[Kind.AFTER]?.forEach { context ->
+            adviceCallGenerator.generateAfterAdviceCalls(declaration, context, joinPoint)
         }
 
-        // @Before is always prepended after the body structure is finalized,
-        // so it appears first in the executed statement list.
-        if (hasBefore) {
-            adviceCallGenerator.generateAdviceCalls(
-                declaration,
-                target,
-                joinPoint,
-                checkInherits,
-            )
+        // Each @Around wraps whatever the body holds so far, so they are woven last to first
+        byKind[Kind.AROUND]?.asReversed()?.forEach { context ->
+            val proceedingJoinPoint =
+                proceedingJoinPointGenerator.generateProceedingJoinPoint(declaration, signatureProperty)
+            adviceCallGenerator.generateAroundAdviceCalls(declaration, context, proceedingJoinPoint)
         }
+
+        // @Before is prepended after the body structure is finalized
+        byKind[Kind.BEFORE]?.let { adviceCallGenerator.generateAdviceCalls(declaration, it, joinPoint) }
     }
 
     private fun findParent(declaration: IrFunction): IrDeclarationContainer? {
@@ -156,8 +112,6 @@ internal class AspectTransformer(
         }
         return current
     }
-
-    private fun targetAnnotations(declaration: IrFunction) = targets.filter(declaration::hasAnnotation)
 
     private fun IrDeclarationContainer.getOrPutAspectObject(
         name: String,
