@@ -5,6 +5,37 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0]
+
+### Added
+
+- **Several advices on one function.** Every `@After` and `@Around` that applies to a function
+  now runs; before, only the last one did. Advices are ordered by kind (`@Before`, then
+  `@Around`, then the body, then `@After`), then by the order the target annotations are written
+  on the function. See [Advice Ordering](../features/advice-ordering.md) for the rules and for
+  what is not guaranteed.
+- **`proceedAs<T>()`** returns the result of `proceed()` cast to `T`.
+- **`proceedWith("name" to value)`** proceeds with only the named arguments replaced.
+- **`getAnnotationArgs<T>()`** returns the arguments of an annotation on the intercepted
+  function by parameter name. See
+  [Extension Functions](../features/join-points.md#extension-functions).
+
+### Changed
+
+- **A function with several `@After` or `@Around` advices behaves differently.** Code that
+  relied on only the last advice running will now see all of them run.
+- **The order of advices no longer depends on the names of the target annotations.** For a
+  function carrying several target annotations, it follows the order they are written in.
+- **The Kotlin/Native, JS and Wasm libraries of `aspectk-runtime` have a new internal name**
+  (`io.github.mole-labs:aspectk-runtime`, was `aspectk:aspectk-runtime`). Maven coordinates are
+  unchanged and JVM and Android are not affected. On the other targets, a library built against
+  an older AspectK may not link against this runtime; rebuild it with 0.4.0.
+
+### Fixed
+
+- **Android unit tests could not be compiled** in a module applying the plugin. The build failed
+  with a circular dependency on `compileDebugUnitTestKotlinAndroid`.
+
 ## [0.3.2]
 
 ### Changed
