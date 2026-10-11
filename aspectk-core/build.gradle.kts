@@ -50,7 +50,7 @@ val shadowBundle: Configuration by configurations.creating {
     isCanBeResolved = true
 }
 
-// -PtestKotlinLang (testAllSupportedVersions) lowers the whole build's Kotlin Gradle Plugin
+// -PtestKotlinLang (the per-version CI job) lowers the whole build's Kotlin Gradle Plugin
 // version, so an older frontend can't compile compat-2400 (needs kotlin-compiler:2.4.0). Only
 // wire it in when it's actually buildable.
 val testKotlinLangVersion = providers.gradleProperty("testKotlinLang").orNull
