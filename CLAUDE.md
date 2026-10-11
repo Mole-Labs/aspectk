@@ -97,7 +97,7 @@ Convention plugins:
 
 | Component | Version |
 |---|---|
-| Kotlin | 2.3.20 (dev-time); supports 2.2.20–2.4.10 (`supported-versions.txt`) |
+| Kotlin | 2.3.20 (dev-time); supports 2.2.20–2.4.20 (`supported-versions.txt`) |
 | JVM target | 17 |
 | Kotlin Compile Testing (kctfork) | 0.12.1 |
 | JUnit Jupiter | 5.8.1 |

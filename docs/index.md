@@ -18,7 +18,7 @@ AspectK is a Kotlin compiler plugin that injects advice into your functions at c
 
 -   **K2 IR**
 
-    Built on the K2 compiler's IR API. Supports Kotlin 2.2.20 through 2.4.10.
+    Built on the K2 compiler's IR API. Supports Kotlin 2.2.20 through 2.4.20.
 
 </div>
 

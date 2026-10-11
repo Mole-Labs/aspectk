@@ -5,6 +5,27 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1]
+
+### Added
+
+- **Kotlin 2.4.20 support.** Supported Kotlin range is now 2.2.20 ~ 2.4.20 (see the
+  [compatibility table](compatibility.md)). The plugin no longer rejects a project on 2.4.20 at
+  configuration time.
+- **Lambda targets and external target annotations are documented and tested.** A target
+  annotation can be written on a lambda or an anonymous function, including a lambda passed to
+  an `inline` function when the annotation has `SOURCE` retention, and it can be an annotation
+  you did not declare: from the standard library, a third-party library, or Java. Both already
+  worked; they are now covered by tests on JVM, JS, Wasm and Native. See
+  [Target Annotations](../features/target-annotations.md).
+
+### Fixed
+
+- **`@Around` on a `suspend` function returning `Unit` could throw `ClassCastException`.** When
+  the last statement of the function was a suspend call that suspended and returned a value
+  (for example a DataStore `edit { }`), `proceed()` returned that value instead of `Unit` and
+  the function failed with `... cannot be cast to kotlin.Unit`. JVM only.
+
 ## [0.4.0]
 
 ### Added
