@@ -41,7 +41,7 @@ object LoggingAspect {
             signature.parameter
                 .drop(1)
                 .mapIndexed { index, param ->
-                    val value = joinPoint.args.getOrNull(index)
+                    val value = joinPoint.args.getOrNull(index + 1)
                     val displayValue = if (param.name.contains("password", ignoreCase = true)) "***" else value
                     "${param.name}=$displayValue"
                 }.joinToString(", ")
