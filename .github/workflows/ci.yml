@@ -45,9 +45,6 @@ jobs:
       - name: Run aspectk-core-tests (WasmJs)
         run: ./gradlew :aspectk-core-tests:wasmJsTest
 
-      - name: Run aspectk-core-tests (all supported Kotlin versions)
-        run: ./gradlew :aspectk-core-tests:testAllSupportedVersions
-
   supported-versions:
     runs-on: ubuntu-latest
     outputs:
@@ -60,10 +57,10 @@ jobs:
         id: read
         run: echo "versions=$(jq -Rnc '[inputs | select(length > 0)]' supported-versions.txt)" >> "$GITHUB_OUTPUT"
 
-  test-functional:
+  test-kotlin-versions:
     needs: supported-versions
     runs-on: ubuntu-latest
-    name: test-functional (Kotlin ${{ matrix.kotlin }})
+    name: test-kotlin-versions (Kotlin ${{ matrix.kotlin }})
 
     strategy:
       fail-fast: false
@@ -81,6 +78,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+
+      - name: Run aspectk-core-tests (JVM)
+        run: ./gradlew :aspectk-core-tests:jvmTest -PtestKotlinLang=${{ matrix.kotlin }} --no-configuration-cache
 
       - name: Run aspectk-plugin functional tests (incremental compilation)
         run: ./gradlew :aspectk-plugin:functionalTest -PfunctionalTestKotlinVersion=${{ matrix.kotlin }}
