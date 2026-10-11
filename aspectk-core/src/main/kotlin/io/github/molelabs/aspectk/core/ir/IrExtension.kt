@@ -146,12 +146,10 @@ internal val AspectKIrCompilerContext.function1Type: IrType
 
 // `suspend (List<Any?>) -> Any?` — used for the @Around wrapper lambda when the intercepted
 // function is `suspend`, so the copied body's suspension points have a continuation.
-internal val AspectKIrCompilerContext.suspendFunction1Type: IrType
-    get() =
-        pluginContext.irBuiltIns
-            .suspendFunctionN(1)
-            .symbol
-            .typeWith(listAnyNType, pluginContext.irBuiltIns.anyNType)
+internal fun AspectKIrCompilerContext.suspendFunction1Type(returnType: IrType): IrType = pluginContext.irBuiltIns
+    .suspendFunctionN(1)
+    .symbol
+    .typeWith(listAnyNType, returnType)
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 internal val AspectKIrCompilerContext.listGetFun: IrSimpleFunctionSymbol

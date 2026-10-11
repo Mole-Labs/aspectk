@@ -53,6 +53,7 @@ class SuspendBodyAdviceTest {
         AroundMemberAspect.proceeded = false
         BeforeSuspendAspect.ran = false
         AroundRetryAspect.attempts = 0
+        AroundUnitAspect.proceeded = null
     }
 
     @Target(AnnotationTarget.FUNCTION)
@@ -281,6 +282,39 @@ class SuspendBodyAdviceTest {
         assertEquals("sync", worker.work(shouldSuspend = false))
         assertEquals("suspended", worker.work(shouldSuspend = true))
         assertEquals(2, ConditionalSuspendAspect.ran)
+    }
+
+    @Target(AnnotationTarget.FUNCTION)
+    annotation class AroundUnitTarget
+
+    @Aspect
+    object AroundUnitAspect {
+        var proceeded: Any? = null
+
+        @Around(AroundUnitTarget::class)
+        suspend fun doAround(pjp: SuspendProceedingJoinPoint): Any? {
+            val result = pjp.proceed()
+            proceeded = result
+            return result
+        }
+    }
+
+    class Saver {
+        private suspend fun store(): String {
+            delay(1)
+            return "stored"
+        }
+
+        @AroundUnitTarget
+        suspend fun save() {
+            store()
+        }
+    }
+
+    @Test
+    fun `around advice on a Unit function proceeds to Unit when its last call suspends and returns a value`() = runTest {
+        Saver().save()
+        assertEquals(Unit, AroundUnitAspect.proceeded)
     }
 }
 
