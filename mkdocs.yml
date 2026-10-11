@@ -40,6 +40,7 @@ nav:
     - '@After Advice': features/after-advice.md
     - '@Around Advice': features/around-advice.md
     - Join Points: features/join-points.md
+    - Target Annotations: features/target-annotations.md
     - Multiple Targets: features/multiple-targets.md
     - Advice Ordering: features/advice-ordering.md
     - Inheritance: features/inheritance.md
