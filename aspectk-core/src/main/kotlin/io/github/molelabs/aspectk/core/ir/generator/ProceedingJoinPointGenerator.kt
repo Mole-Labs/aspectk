@@ -176,7 +176,16 @@ internal class ProceedingJoinPointGenerator(
                 .buildFun {
                     name = Name.special("<anonymous>")
                     visibility = DescriptorVisibilities.LOCAL
-                    returnType = aspectKCompilerContext.pluginContext.irBuiltIns.anyNType
+                    // A suspend listener that ends in `call(); return Unit` must be typed Unit.
+                    // Typed Any?, the JVM backend treats that call as a tail call and passes it
+                    // proceed()'s continuation, so proceed() gets the call's result instead of Unit.
+                    // Typed Unit, the listener gets its own continuation and returns Unit itself.
+                    returnType =
+                        if (isSuspend && declaration.returnType.isUnit()) {
+                            aspectKCompilerContext.pluginContext.irBuiltIns.unitType
+                        } else {
+                            aspectKCompilerContext.pluginContext.irBuiltIns.anyNType
+                        }
                     this.isSuspend = isSuspend
                     origin = aspectKCompilerContext.irCompat.localFunctionForLambdaOrigin()
                 }.apply {
@@ -224,7 +233,7 @@ internal class ProceedingJoinPointGenerator(
         endOffset = -1,
         type =
         if (isSuspend) {
-            aspectKCompilerContext.suspendFunction1Type
+            aspectKCompilerContext.suspendFunction1Type(lambdaFun.returnType)
         } else {
             aspectKCompilerContext.function1Type
         },
