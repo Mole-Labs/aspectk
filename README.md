@@ -75,7 +75,7 @@ fun processOrder(orderId: String, amount: Double) {
 }
 ```
 
-### Validated on the DuckDuckGo Android browser
+## Validated on the DuckDuckGo Android browser
 
 AspectK 0.4.2, resolved from Maven Central, was applied to
 [DuckDuckGo for Android](https://github.com/duckduckgo/Android): an open-source browser with
