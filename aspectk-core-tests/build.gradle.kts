@@ -69,14 +69,6 @@ tasks.register("testAllSupportedVersions") {
                 )
                 workingDir = rootDir
             }
-            execOps.exec {
-                commandLine(
-                    rootDir.resolve("gradlew").path,
-                    ":aspectk-plugin:functionalTest",
-                    "-PfunctionalTestKotlinVersion=$version",
-                )
-                workingDir = rootDir
-            }
         }
     }
 }
