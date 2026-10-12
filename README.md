@@ -17,6 +17,10 @@ that carries the target annotation.
 > into bugs. Pin the version you depend on and read the
 > [changelog](https://mole-labs.github.io/aspectk/reference/changelog/) before upgrading.
 
+> [!IMPORTANT]
+> **Use 0.4.2 or later. This is strongly recommended.** It is the version
+> [validated on the DuckDuckGo Android browser](https://github.com/oungsi2000/Android).
+
 ---
 
 ## Quick Setup
@@ -72,6 +76,40 @@ fun processOrder(orderId: String, amount: Double) {
 }
 ```
 
+## Validated on the DuckDuckGo Android browser
+
+AspectK 0.4.2, resolved from Maven Central, was applied to
+[DuckDuckGo for Android](https://github.com/duckduckgo/Android): an open-source browser with
+50M+ downloads on Google Play and 4.8k stars on GitHub. The whole change is public at
+**[oungsi2000/Android](https://github.com/oungsi2000/Android)** (branch `aspectk-trial`).
+
+| | |
+|---|---|
+| **Project** | DuckDuckGo Android 5.297.1: about 200 Gradle modules, 6,100+ Kotlin files, 900k+ lines |
+| **Applied to** | 39 modules, 355 files changed |
+| **Aspects** | `@OnIo` (`@Around`, about 600 uses), `@LogFailure` on lambdas, `@FireSavedSitesPixel`, and `@Before` advice on the `@WorkerThread`, `@UiThread` and `@MainThread` annotations the code already carried |
+| **Unit tests** | 28,749 passed, 0 failed: 22,297 in the library modules and 6,452 in `:app` |
+| **R8** | the `play` APK builds minified with the project's internal release rules |
+| **Device** | that minified APK was installed and run on a physical Android device |
+
+## Anti-Vibe-Coding
+
+AspectK is built with the help of AI tools, but it is not vibe-coded. The roles are split:
+
+- **A human designs the architecture and the tests.** What the library does, how it is
+  structured, which trade-offs it accepts and which cases the tests have to cover are decided by
+  a maintainer, and recorded in pull requests: each
+  [merged PR](https://github.com/Mole-Labs/aspectk/pulls?q=is%3Apr+is%3Amerged) states what
+  changed and why.
+- **AI does the legwork.** It reverse-engineers how Gradle and the Kotlin compiler plugin API
+  behave, hunts for bugs, researches, and drafts code and documentation to that design.
+- **A human reviews every change** and has to understand it before it is merged.
+- **Changes are verified by four test suites**, all run in CI:
+  - `aspectk-core` tests compile sources with the plugin and check the woven result
+  - `aspectk-core-tests` (`commonTest`) run woven code on JVM, JS, Wasm and iOS
+  - `aspectk-plugin` `functionalTest` drives real Gradle builds, including incremental ones
+  - `sample` tests build a multi-module app against the working tree, on JVM, Android, JS and iOS
+
 ---
 
 ## Features
@@ -116,26 +154,6 @@ Full documentation: **https://mole-labs.github.io/aspectk/**
 - [Quick Start](https://mole-labs.github.io/aspectk/getting-started/quick-start/)
 - [Core Concepts](https://mole-labs.github.io/aspectk/core-concepts/aspects/)
 - [API Reference](https://mole-labs.github.io/aspectk/api/)
-
----
-
-## Anti-Vibe-Coding
-
-AspectK is built with the help of AI tools, but it is not vibe-coded. The roles are split:
-
-- **A human designs the architecture and the tests.** What the library does, how it is
-  structured, which trade-offs it accepts and which cases the tests have to cover are decided by
-  a maintainer, and recorded in pull requests: each
-  [merged PR](https://github.com/Mole-Labs/aspectk/pulls?q=is%3Apr+is%3Amerged) states what
-  changed and why.
-- **AI does the legwork.** It reverse-engineers how Gradle and the Kotlin compiler plugin API
-  behave, hunts for bugs, researches, and drafts code and documentation to that design.
-- **A human reviews every change** and has to understand it before it is merged.
-- **Changes are verified by four test suites**, all run in CI:
-    - `aspectk-core` tests compile sources with the plugin and check the woven result
-    - `aspectk-core-tests` (`commonTest`) run woven code on JVM, JS, Wasm and iOS
-    - `aspectk-plugin` `functionalTest` drives real Gradle builds, including incremental ones
-    - `sample` tests build a multi-module app against the working tree, on JVM, Android, JS and iOS
 
 ---
 
