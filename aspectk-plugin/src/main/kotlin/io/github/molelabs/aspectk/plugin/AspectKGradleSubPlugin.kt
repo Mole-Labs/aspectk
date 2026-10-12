@@ -17,8 +17,8 @@ package io.github.molelabs.aspectk.plugin
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.Usage
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.kotlinToolingVersion
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.tooling.core.KotlinToolingVersion
+import java.util.concurrent.Callable
 
 internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
     // Adds the aspectk-runtime dependency per compilation instead of per platform-specific
@@ -60,15 +61,14 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
             task.outputs.dir(hintsDir).withPropertyName("aspectkHintsDir")
         }
 
-        val hintsConfiguration = registerHintsConfigurations(project, kotlinCompilation, hintsDir)
+        publishHints(project, kotlinCompilation, hintsDir)
         // An associated compilation (test -> main) sees main's declarations without a project
-        // dependency, so its hints never arrive through hintsConfiguration
+        // dependency, so its hints never arrive through the compile classpath
         val associatedHints =
             project
                 .files(project.provider { kotlinCompilation.allAssociatedCompilations.map { hintsDirOf(project, it) } })
                 .builtBy(project.provider { kotlinCompilation.allAssociatedCompilations.map { it.compileTaskProvider } })
-        val externalHints =
-            hintsConfiguration.incoming.artifactView { view -> view.isLenient = true }.files + associatedHints
+        val externalHints = consumeHints(project, kotlinCompilation) + associatedHints
 
         registerAspectChangeDetection(project, kotlinCompilation, hintsDir, externalHints)
 
@@ -83,51 +83,48 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         }
     }
 
-    private fun registerHintsConfigurations(
+    // Offers this compilation's hints next to the classes it already offers: a secondary variant of
+    // the configuration other projects resolve their compile classpath against. Which variant of
+    // this project a consumer gets is then decided by the same matching that picks its classes, so
+    // an application variant `playDebug` finds a library's `debug` without the names agreeing.
+    private fun publishHints(
         project: Project,
         kotlinCompilation: KotlinCompilation<*>,
         hintsDir: Provider<Directory>,
-    ): Configuration {
-        val elementsName = kotlinCompilation.hintsElementsConfigurationName()
-        val elementsConfig =
-            project.configurations.maybeCreate(elementsName).apply {
-                isCanBeConsumed = true
-                isCanBeResolved = false
-                isVisible = false
-            }
-        project.artifacts.add(elementsConfig.name, hintsDir) {
-            it.builtBy(kotlinCompilation.compileTaskProvider)
-        }
-
-        val resolvableName = "${elementsName}Classpath"
-        val resolvableConfig =
-            project.configurations.maybeCreate(resolvableName).apply {
-                isCanBeConsumed = false
-                isCanBeResolved = true
-                isVisible = false
-            }
-
+    ) {
         project.configurations
-            .getByName(kotlinCompilation.compileDependencyConfigurationName)
-            .allDependencies
-            .withType(ProjectDependency::class.java)
-            .configureEach { projectDependency ->
-                // An Android test compilation depends on its own project to see the main variant.
-                if (projectDependency.path == project.path) return@configureEach
-                project.dependencies.add(
-                    resolvableConfig.name,
-                    project.dependencies.project(
-                        mapOf(
-                            "path" to projectDependency.path,
-                            "configuration" to elementsName,
-                        ),
-                    ),
-                )
+            .matching { it.name in kotlinCompilation.apiElementsCandidates() }
+            .configureEach { apiElements ->
+                apiElements.outgoing.variants.maybeCreate(HINTS_VARIANT).apply {
+                    // Its own usage keeps it out of ordinary resolution: asked for classes, Gradle
+                    // would otherwise find two candidates here and refuse to choose.
+                    attributes.attribute(Usage.USAGE_ATTRIBUTE, project.hintsUsage())
+                    attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, HINTS_ARTIFACT_TYPE)
+                    artifact(hintsDir) { it.builtBy(kotlinCompilation.compileTaskProvider) }
+                }
             }
+    }
 
-        elementsConfig.extendsFrom(resolvableConfig)
+    // The hints of everything on this compilation's compile classpath. A dependency that does not
+    // apply this plugin offers no such artifact and is left out, which a view with attributes allows.
+    private fun consumeHints(
+        project: Project,
+        kotlinCompilation: KotlinCompilation<*>,
+    ): FileCollection = project.configurations
+        .getByName(kotlinCompilation.compileDependencyConfigurationName)
+        .incoming
+        .artifactView { view ->
+            view.attributes.attribute(Usage.USAGE_ATTRIBUTE, project.hintsUsage())
+            view.attributes.attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, HINTS_ARTIFACT_TYPE)
+        }.files
 
-        return resolvableConfig
+    private fun Project.hintsUsage(): Usage = objects.named(Usage::class.java, HINTS_ARTIFACT_TYPE)
+
+    // An Android variant is published as `<variant>ApiElements`; every other target publishes its
+    // main compilation as the target's own api elements.
+    private fun KotlinCompilation<*>.apiElementsCandidates(): Set<String> = buildSet {
+        add("${name}ApiElements")
+        if (name == KotlinCompilation.MAIN_COMPILATION_NAME) add(target.apiElementsConfigurationName)
     }
 
     private fun registerAspectChangeDetection(
@@ -140,7 +137,14 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         val changeDir = "generated/aspectk/aspect-change/${kotlinCompilation.target.targetName}"
         val detectTask =
             project.tasks.register(detectTaskName, DetectAspectChangeTask::class.java) { task ->
-                task.sources.setFrom(kotlinCompilation.allKotlinSourceSets.map { it.kotlin })
+                // AGP's built-in Kotlin compiles sources that no Kotlin source set knows about.
+                // Through a Callable and not the task provider, which would make this task depend on the
+                // compilation it has to run before. for AbstractKotlinNativeCompile, DetectAspectChangeTask is't needed
+                task.sources.setFrom(
+                    Callable {
+                        (kotlinCompilation.compileTaskProvider.get() as? AbstractKotlinCompile<*>)?.sources ?: project.files()
+                    },
+                )
                 task.previousHints.set(hintsDir.map { it.file("hints.json") })
                 task.resultFile.set(project.layout.buildDirectory.file("$changeDir/${kotlinCompilation.name}.txt"))
             }
@@ -181,8 +185,6 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
         project: Project,
         compilation: KotlinCompilation<*>,
     ): Provider<Directory> = project.layout.buildDirectory.dir("generated/aspectk/hints/${compilation.target.targetName}/${compilation.name}")
-
-    private fun KotlinCompilation<*>.hintsElementsConfigurationName(): String = "aspectkHints${target.targetName.replaceFirstChar { it.uppercase() }}${name.replaceFirstChar { it.uppercase() }}Elements"
 
     private fun KotlinCompilation<*>.detectTaskName(): String = "detectAspectChange${
         target.targetName.replaceFirstChar { it.uppercase() }
@@ -228,5 +230,10 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
                 )
             }
         }
+    }
+
+    private companion object {
+        const val HINTS_VARIANT = "aspectkHints"
+        const val HINTS_ARTIFACT_TYPE = "aspectk-hints"
     }
 }

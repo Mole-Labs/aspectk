@@ -1,27 +1,19 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.ksp)
     // No AspectK plugin here -- :data declares no @Aspect and no advice-target annotations,
     // demonstrating that applying the plugin is opt-in per module, not build-wide.
 }
 
-android {
-    namespace = "sample.multiplatform.data"
-    compileSdk = 36
-    defaultConfig {
-        minSdk = 24
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-}
-
 kotlin {
     jvm()
     jvmToolchain(17)
-    androidTarget()
+    android {
+        namespace = "sample.multiplatform.data"
+        compileSdk = 37
+        minSdk = 24
+    }
     iosArm64()
     iosSimulatorArm64()
     js { nodejs() }

@@ -34,6 +34,7 @@ rootProject.name = "aspectk-sample"
 includeBuild("..")
 
 include(":composeApp")
+include(":androidApp")
 include(":core")
 include(":data")
 include(":feature-user")

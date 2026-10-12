@@ -100,9 +100,11 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Run sample tests (JVM, Android unit tests, JS)
+      # testAndroidHostTest: the library modules' Android target. test<Flavor>DebugUnitTest: the
+      # application module, whose flavored variants have no namesake in the library modules.
+      - name: Run sample tests (JVM, Android host and app unit tests, JS)
         working-directory: sample
-        run: ./gradlew kotlinUpgradeYarnLock jvmTest testDebugUnitTest jsNodeTest
+        run: ./gradlew kotlinUpgradeYarnLock jvmTest testAndroidHostTest testPlayDebugUnitTest testInternalDebugUnitTest jsNodeTest
 
   test-ios:
     runs-on: macos-latest

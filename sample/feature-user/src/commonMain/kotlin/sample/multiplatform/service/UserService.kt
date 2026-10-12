@@ -1,5 +1,6 @@
 package sample.multiplatform.service
 
+import androidx.annotation.MainThread
 import sample.multiplatform.annotations.LogExecution
 import sample.multiplatform.annotations.RequirePermission
 import sample.multiplatform.annotations.Trace
@@ -73,4 +74,12 @@ class UserService(private val dao: UserDao) {
     }
 
     suspend fun getUserCount(): Int = dao.getUserCount()
+
+    /**
+     * Builds the greeting shown on the home screen.
+     * - [MainThread]: androidx's annotation, not one of this project's. It is all the function
+     *   carries, and MainThreadAspect in :core still records the call.
+     */
+    @MainThread
+    fun greeting(username: String): String = "Welcome back, $username"
 }

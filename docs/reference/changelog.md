@@ -5,6 +5,26 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2]
+
+### Fixed
+
+- **Aspects from other modules did not reach Android modules whose variants have no namesake
+  in the aspect's module.** An application module with product flavors (`playDebug`,
+  `internalDebug`, ...) compiled without the aspects of the library modules it depends on, so
+  nothing was woven and no error was reported. Hints now travel as a variant of each module's
+  `apiElements`, and Gradle's variant matching picks the right one.
+- **An aspect added, changed or removed in the same module went unnoticed under AGP 9's
+  built-in Kotlin.** Incremental builds kept the previous weaving until a clean build. Change
+  detection now reads the sources of the compile task itself.
+
+### Changed
+
+- **Aspects follow the compile classpath.** A module receives the aspects of the modules it can
+  see at compile time. An aspect behind an `implementation` dependency of another module is no
+  longer delivered; expose it with `api` where it has to reach further.
+- The sample builds with AGP 9 and has a flavored application module.
+
 ## [0.4.1]
 
 ### Added

@@ -118,13 +118,10 @@ $DUMP_HINTS_PATH_TASK
 """
 
 private val DUMP_HINTS_PATH_TASK = """
-val aspectkHintsPath = files(
-    provider {
-        configurations
-            .filter { it.name.startsWith("aspectkHints") && it.name.endsWith("MainElementsClasspath") }
-            .map { it.incoming.artifactView { isLenient = true }.files }
-    },
-)
+val aspectkHintsPath = configurations.compileClasspath.get().incoming.artifactView {
+    attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named<Usage>("aspectk-hints"))
+    attributes.attribute(org.gradle.api.artifacts.type.ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, "aspectk-hints")
+}.files
 tasks.register("dumpHintsPath") {
     // The provider above carries no task dependencies; once this module has compiled, every upstream
     // hints.json it consumed is final for this build.

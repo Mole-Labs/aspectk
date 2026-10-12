@@ -1,33 +1,22 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
-}
-
-android {
-    namespace = "sample.multiplatform"
-    compileSdk = 36
-    defaultConfig {
-        applicationId = "sample.multiplatform"
-        minSdk = 24
-        targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
 }
 
 kotlin {
     jvm()
     jvmToolchain(17)
 
-    androidTarget()
+    android {
+        namespace = "sample.multiplatform.shared"
+        compileSdk = 37
+        minSdk = 24
+        androidResources { enable = true }
+    }
 
     iosArm64()
     iosSimulatorArm64()
@@ -44,8 +33,8 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":core"))
-                implementation(project(":data"))
+                api(project(":core"))
+                api(project(":data"))
                 implementation(project(":feature-user"))
                 implementation(project(":feature-payment"))
                 implementation(project(":feature-catalog"))
@@ -59,11 +48,6 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(compose.desktop.currentOs)
-            }
-        }
-        androidMain {
-            dependencies {
-                implementation(libs.androidx.activity.compose)
             }
         }
         commonTest {
