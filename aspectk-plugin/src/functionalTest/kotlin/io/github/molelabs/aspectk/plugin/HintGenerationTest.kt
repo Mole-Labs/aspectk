@@ -475,7 +475,7 @@ class HintGenerationTest {
     // b     <- a (implementation)    AspectB
     // c*    <- b (api)               TargetB [@LogCallB]
     @Test
-    fun `c still receives a's hints through an implementation edge`() {
+    fun `c does not receive a's hints through an implementation edge`() {
         // given
         writeChain(bToA = "implementation")
 
@@ -483,9 +483,8 @@ class HintGenerationTest {
         val result = runGradle(projectDir, testKitDir(), "test", "dumpHintsPath")
 
         // then
-        assertEquals(listOf("a", "b"), hintsReceivedBy("c").keys.sorted())
-        val receivedByC = hintsReceivedBy("c")
-        assertTrue(receivedByC.getValue("a").hasAspect("LoggingAspectA"), receivedByC.toString())
+        assertEquals(listOf("b"), hintsReceivedBy("c").keys.sorted())
+        assertEquals(listOf("a"), hintsReceivedBy("b").keys.sorted())
         assertEquals(TaskOutcome.SUCCESS, result.task(":c:test")?.outcome, result.output)
     }
 
