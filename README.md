@@ -18,7 +18,8 @@ that carries the target annotation.
 > [changelog](https://mole-labs.github.io/aspectk/reference/changelog/) before upgrading.
 
 > [!IMPORTANT]
-> **Use 0.4.2 or later. This is strongly recommended.** 
+> **Use 0.4.2 or later. This is strongly recommended.** It is the version
+> [validated on the DuckDuckGo Android browser](#validated-on-the-duckduckgo-android-browser).
 
 ---
 
