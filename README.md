@@ -19,7 +19,7 @@ that carries the target annotation.
 
 > [!IMPORTANT]
 > **Use 0.4.2 or later. This is strongly recommended.** It is the version
-> [validated on the DuckDuckGo Android browser](#validated-on-the-duckduckgo-android-browser).
+> [validated on the DuckDuckGo Android browser](https://github.com/oungsi2000/Android).
 
 ---
 
