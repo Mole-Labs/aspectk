@@ -19,6 +19,7 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -46,6 +47,10 @@ interface IrCompat {
     // plugin jar compiled against the old shape throws ClassCastException on a newer daemon.
     @OptIn(ExperimentalCompilerApi::class)
     fun CompilerPluginRegistrar.ExtensionStorage.registerIrGenerationExtension(extension: IrGenerationExtension)
+
+    // FirExtensionRegistrarAdapter.Companion changed its supertype at the same version, for the same reason.
+    @OptIn(ExperimentalCompilerApi::class)
+    fun CompilerPluginRegistrar.ExtensionStorage.registerFirExtension(registrar: FirExtensionRegistrar)
 
     companion object {
         fun create(version: KotlinVersion): IrCompat = ServiceLoader

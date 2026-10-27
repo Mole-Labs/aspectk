@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.AspectKClassIds
 import io.github.molelabs.aspectk.core.hints.HintRecord
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.ir.declarations.IrClass
@@ -61,8 +62,7 @@ internal class AspectVisitor(
         declaration.functions.forEach { func ->
             func.annotations.forEach { annotation ->
                 val fqName = annotation.type.classFqName ?: return@forEach
-                if (fqName !in AspectKIrCompilerContext.ADVICE_ANNOTATIONS_FQ_NAME) return@forEach
-                val kind = AspectContext.find(fqName) ?: reportCompilerBug("kind not found: $fqName")
+                val kind = AspectContext.find(fqName) ?: return@forEach
                 val inherits = (annotation.arguments[1] as? IrConst)?.value as? Boolean
 
                 val targetFqNames =
@@ -133,5 +133,5 @@ internal class AspectVisitor(
         )
     }
 
-    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(FqName(AspectKIrCompilerContext.ASPECT_ANNOTATION_FQ_NAME))
+    private fun canSkip(declaration: IrClass): Boolean = !declaration.hasAnnotation(AspectKClassIds.ASPECT.asSingleFqName())
 }
