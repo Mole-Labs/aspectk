@@ -16,11 +16,8 @@
 package io.github.molelabs.aspectk.core.fir.checkers
 
 import com.tschuchort.compiletesting.JvmCompilationResult
-import com.tschuchort.compiletesting.KotlinCompilation.ExitCode
 import io.github.molelabs.aspectk.core.compile
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 
 private val HEADER =
     """
@@ -32,12 +29,6 @@ private val HEADER =
 /** Compiles [body] with the runtime imported and a `Logged` target annotation declared. */
 @OptIn(ExperimentalCompilerApi::class)
 internal fun check(body: String): JvmCompilationResult = compile("$HEADER\n$body")
-
-@OptIn(ExperimentalCompilerApi::class)
-internal fun JvmCompilationResult.assertError(message: String) {
-    assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
-    assertTrue(messages.contains(message), messages)
-}
 
 @OptIn(ExperimentalCompilerApi::class)
 internal fun JvmCompilationResult.count(message: String): Int = Regex(Regex.escape(message)).findAll(messages).count()

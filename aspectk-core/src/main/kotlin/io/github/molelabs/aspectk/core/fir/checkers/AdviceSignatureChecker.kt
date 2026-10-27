@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.fir.types.classId
 import org.jetbrains.kotlin.fir.types.coneType
 import org.jetbrains.kotlin.name.StandardClassIds
 
-//
 internal object AdviceSignatureChecker : FirFunctionChecker(MppCheckerKind.Common) {
     context(context: CheckerContext, reporter: DiagnosticReporter)
     override fun check(declaration: FirFunction) {

@@ -30,6 +30,9 @@ class AspectClassCheckerTest {
 
     @Test
     fun `an @Aspect class is an error`() {
-        check("@Aspect class NotObject").assertError("An @Aspect must be an object declaration")
+        check("@Aspect class NotObject").run {
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
+            assertEquals(1, count("An @Aspect must be an object declaration"), messages)
+        }
     }
 }

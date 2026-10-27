@@ -55,8 +55,8 @@ class AdviceSignatureCheckerTest {
             }
             """.trimIndent(),
         ).run {
-            assertError("of type JoinPoint")
-            assertEquals(4, count("Advice must take exactly one parameter"), messages)
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
+            assertEquals(4, count("of type JoinPoint"), messages)
         }
     }
 
@@ -72,7 +72,8 @@ class AdviceSignatureCheckerTest {
             }
             """.trimIndent(),
         ).run {
-            assertError("of type ProceedingJoinPoint")
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
+            assertEquals(1, count("of type ProceedingJoinPoint"), messages)
             assertEquals(2, count("of type SuspendProceedingJoinPoint"), messages)
             assertEquals(3, count("Advice must take exactly one parameter"), messages)
         }
@@ -87,7 +88,10 @@ class AdviceSignatureCheckerTest {
                 @Around(Logged::class) suspend fun around(jp: ProceedingJoinPoint): Any? = null
             }
             """.trimIndent(),
-        ).assertError("of type SuspendProceedingJoinPoint")
+        ).run {
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
+            assertEquals(1, count("of type SuspendProceedingJoinPoint"), messages)
+        }
     }
 
     @Test
@@ -99,7 +103,10 @@ class AdviceSignatureCheckerTest {
                 @Around(Logged::class) fun around(jp: SuspendProceedingJoinPoint): Any? = null
             }
             """.trimIndent(),
-        ).assertError("declare the advice suspend to take a SuspendProceedingJoinPoint")
+        ).run {
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
+            assertEquals(1, count("declare the advice suspend to take a SuspendProceedingJoinPoint"), messages)
+        }
     }
 
     @Test
@@ -113,7 +120,7 @@ class AdviceSignatureCheckerTest {
             }
             """.trimIndent(),
         ).run {
-            assertError("@Around advice must return Any?")
+            assertEquals(ExitCode.COMPILATION_ERROR, exitCode, messages)
             assertEquals(2, count("@Around advice must return Any?"), messages)
         }
     }

@@ -94,6 +94,8 @@ fun multipleAspectFile() = """
         import io.github.molelabs.aspectk.runtime.Before
         import io.github.molelabs.aspectk.runtime.Around
         import io.github.molelabs.aspectk.runtime.JoinPoint
+        import io.github.molelabs.aspectk.runtime.ProceedingJoinPoint
+
 
         annotation class LogCall
 
@@ -107,8 +109,9 @@ fun multipleAspectFile() = """
             }
 
             @Around(LogCall::class)
-            fun logAround(joinPoint: JoinPoint) {
+            fun logAround(joinPoint: ProceedingJoinPoint):Any? {
                 executionCount++
+                return joinPoint.proceed()
             }
         }
 """.trimIndent()
