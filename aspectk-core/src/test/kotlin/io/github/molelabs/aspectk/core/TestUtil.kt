@@ -64,6 +64,7 @@ fun compileWithHints(
     hintsPaths: List<File> = emptyList(),
     extraClasspath: List<File> = emptyList(),
     moduleName: String? = null,
+    reportsDir: File? = null,
 ): JvmCompilationResult = KotlinCompilation()
     .apply {
         moduleName?.let { this.moduleName = it }
@@ -78,6 +79,9 @@ fun compileWithHints(
             buildList {
                 hintsOutputDir?.let {
                     add(PluginOption("io.github.mole-labs.aspectk", AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_OPTION, it.absolutePath))
+                }
+                reportsDir?.let {
+                    add(PluginOption("io.github.mole-labs.aspectk", AspectKCommandLineProcessor.REPORTS_DIR_OPTION, it.absolutePath))
                 }
                 hintsPaths.forEach {
                     add(PluginOption("io.github.mole-labs.aspectk", AspectKCommandLineProcessor.HINTS_PATH_OPTION, it.absolutePath))

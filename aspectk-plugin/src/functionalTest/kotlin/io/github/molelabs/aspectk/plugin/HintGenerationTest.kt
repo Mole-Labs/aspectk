@@ -180,6 +180,7 @@ class HintGenerationTest {
         writeFile(projectDir, "app/src/main/kotlin/AspectB.kt", aspectFile("B", declaresAnnotation = false))
         writeFile(projectDir, "app/src/main/kotlin/Target.kt", targetFile("B"))
         writeFile(projectDir, "app/src/test/kotlin/WeavingTest.kt", weavingTestFile(executionCount = 1, postFix = "B"))
+        enableDebug("app")
         runGradle(projectDir, testKitDir(), "test")
         val hintsBefore = hintsOf(projectDir, "app")
         assertTrue(hintsBefore.hasAspect("LoggingAspectB"), hintsBefore)
@@ -196,6 +197,10 @@ class HintGenerationTest {
         assertTrue(hints.hasAspect("LoggingAspectA"), hints)
         assertFalse(hints.hasAspect("LoggingAspectB"), hints)
         assertEquals(TaskOutcome.SUCCESS, result.task(":app:test")?.outcome, result.output)
+        // Target still uses @LogCallB, so detect forces a full rebuild, which clears the old hints.json:
+        // LoggingAspectB is never carried forward, so it is not dropped either, just gone
+        val report = aspectsReport("app")
+        assertFalse(report.contains("LoggingAspectB"), report)
     }
 
     @Test
@@ -225,6 +230,7 @@ class HintGenerationTest {
         writeFile(projectDir, "app/src/main/kotlin/LogCallB.kt", "annotation class LogCallB\n")
         writeFile(projectDir, "app/src/main/kotlin/AspectB.kt", aspectFile("B", declaresAnnotation = false))
         writeFile(projectDir, "app/src/main/kotlin/TargetB.kt", targetFile("B"))
+        enableDebug("app")
         runGradle(projectDir, testKitDir(), "compileKotlin")
 
         // when: nothing left uses @LogCallB, so no stale woven call can survive
@@ -237,6 +243,8 @@ class HintGenerationTest {
         val hints = hintsOf(projectDir, "app")
         assertTrue(hints.hasAspect("LoggingAspectA"), hints)
         assertFalse(hints.hasAspect("LoggingAspectB"), hints)
+        val report = aspectsReport("app")
+        assertTrue(report.contains("LoggingAspectB.log -> LogCallB  [carried-forward]"), report)
     }
 
     @Test
@@ -589,6 +597,13 @@ class HintGenerationTest {
     private fun aspectChangeResult(module: String): String = File(projectDir, "$module/build/generated/aspectk/aspect-change")
         .walkTopDown()
         .first { it.name == "main.txt" }
+        .readText()
+
+    private fun enableDebug(module: String) = File(projectDir, "$module/build.gradle.kts").appendText("\naspectk { debug = true }\n")
+
+    private fun aspectsReport(module: String): String = File(projectDir, "$module/build/aspectk/reports")
+        .walkTopDown()
+        .first { it.name == "aspects.txt" && it.parentFile.name == "main" }
         .readText()
 
     private fun String.hasAspect(className: String) = contains("\"class\":\"$className\"")

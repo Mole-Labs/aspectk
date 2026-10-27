@@ -57,13 +57,11 @@ internal class AspectLookUp {
             }.add(function)
     }
 
-    fun getWoven(advice: IrSimpleFunctionSymbol): List<IrFunction> =
-        wovenFunctions[advice]?.toList() ?: emptyList()
+    fun getWoven(advice: IrSimpleFunctionSymbol): List<IrFunction> = wovenFunctions[advice]?.toList() ?: emptyList()
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
-    operator fun get(fqName: FqName): List<AspectContext> =
-        aspectContexts[fqName]?.toList() ?: emptyList()
+    operator fun get(fqName: FqName): List<AspectContext> = aspectContexts[fqName]?.toList() ?: emptyList()
 
     fun add(
         fqName: FqName,
@@ -85,8 +83,7 @@ internal class AspectLookUp {
             }.add(target)
     }
 
-    fun getOverridden(attributeOwnerId: IrElement): Set<FqName> =
-        overriddenDeclarations[attributeOwnerId]?.toSet() ?: emptySet()
+    fun getOverridden(attributeOwnerId: IrElement): Set<FqName> = overriddenDeclarations[attributeOwnerId]?.toSet() ?: emptySet()
 }
 
 internal data class AspectContext(

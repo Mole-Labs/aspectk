@@ -25,16 +25,6 @@ class AspectKCommandLineProcessorTest {
     private val processor = AspectKCommandLineProcessor()
 
     @Test
-    fun `stores the debug option in the compiler configuration`() {
-        val configuration = CompilerConfiguration()
-        val option = processor.pluginOptions.first { it.optionName == AspectKCommandLineProcessor.DEBUG_OPTION }
-
-        processor.processOption(option, "true", configuration)
-
-        assertEquals(true, configuration.get(AspectKCommandLineProcessor.DEBUG_KEY))
-    }
-
-    @Test
     fun `stores the hints output dir option in the compiler configuration`() {
         val configuration = CompilerConfiguration()
         val option = processor.pluginOptions.first { it.optionName == AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_OPTION }
