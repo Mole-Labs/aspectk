@@ -43,6 +43,7 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         val currentVersion = KotlinVersion.CURRENT
         val irCompat = IrCompat.create(currentVersion)
+        val debug = configuration.get(AspectKCommandLineProcessor.DEBUG_KEY, false)
         val hintsOutputDir = configuration.get(AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_KEY)
         val externalHints =
             configuration

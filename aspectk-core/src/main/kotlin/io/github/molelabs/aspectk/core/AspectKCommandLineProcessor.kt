@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 
 // Handles -P plugin:<pluginId>:<key>=<value> arguments passed to the Kotlin compiler.
+// - debug: enables AspectK's debug mode.
 // Two options support cross-module weaving (docs/design-decision/cross-module-weaving.md):
 // - hintsOutputDir: where this module writes its own advice hints (single value).
 // - hintsPath: a directory containing an upstream module's hints.json (repeatable).
@@ -38,6 +39,12 @@ internal class AspectKCommandLineProcessor : CommandLineProcessor {
 
     override val pluginOptions: Collection<AbstractCliOption> =
         listOf(
+            CliOption(
+                optionName = DEBUG_OPTION,
+                valueDescription = "<true|false>",
+                description = "Enables AspectK debug mode.",
+                required = false,
+            ),
             CliOption(
                 optionName = HINTS_OUTPUT_DIR_OPTION,
                 valueDescription = "<path>",
@@ -59,6 +66,7 @@ internal class AspectKCommandLineProcessor : CommandLineProcessor {
         configuration: CompilerConfiguration,
     ) {
         when (option.optionName) {
+            DEBUG_OPTION -> configuration.put(DEBUG_KEY, value.toBoolean())
             HINTS_OUTPUT_DIR_OPTION -> configuration.put(HINTS_OUTPUT_DIR_KEY, value)
             HINTS_PATH_OPTION -> configuration.put(HINTS_PATHS_KEY, (configuration.getList(HINTS_PATHS_KEY) + value).toMutableList())
             else -> error("Unexpected AspectK plugin option: ${option.optionName}")
@@ -66,9 +74,12 @@ internal class AspectKCommandLineProcessor : CommandLineProcessor {
     }
 
     companion object {
+        const val DEBUG_OPTION = "debug"
         const val HINTS_OUTPUT_DIR_OPTION = "hintsOutputDir"
         const val HINTS_PATH_OPTION = "hintsPath"
 
+        val DEBUG_KEY: CompilerConfigurationKey<Boolean> =
+            CompilerConfigurationKey.create("aspectk debug mode")
         val HINTS_OUTPUT_DIR_KEY: CompilerConfigurationKey<String> =
             CompilerConfigurationKey.create("aspectk hints output directory")
         val HINTS_PATHS_KEY: CompilerConfigurationKey<MutableList<String>> =
