@@ -100,8 +100,8 @@ internal fun AspectKIrCompilerContext.createKClassExpression(
     )
 }
 
-internal fun AspectKIrCompilerContext.getSymbol(fqName: String): IrClassSymbol = irCompat.referenceClass(pluginContext, ClassId.topLevel(FqName(fqName)))
-    ?: reportCompilerBug("Cannot find symbol for $fqName")
+internal fun AspectKIrCompilerContext.getSymbol(classId: ClassId): IrClassSymbol = irCompat.referenceClass(pluginContext, classId)
+    ?: reportCompilerBug("Cannot find symbol for $classId")
 
 internal fun AspectKIrCompilerContext.createArgsListOf(declaration: IrFunction): IrExpression = createIrListOf(
     scope = declaration.symbol,

@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.ir
 
+import io.github.molelabs.aspectk.core.AspectKClassIds
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AFTER
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AROUND
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.BEFORE
@@ -74,10 +75,10 @@ internal data class AspectContext(
     }
 
     companion object {
-        fun find(fqName: FqName) = when (fqName.asString()) {
-            AspectKIrCompilerContext.BEFORE_ANNOTATION_FQ_NAME -> BEFORE
-            AspectKIrCompilerContext.AFTER_ANNOTATION_FQ_NAME -> AFTER
-            AspectKIrCompilerContext.AROUND_ANNOTATION_FQ_NAME -> AROUND
+        fun find(fqName: FqName) = when (fqName) {
+            AspectKClassIds.BEFORE.asSingleFqName() -> BEFORE
+            AspectKClassIds.AFTER.asSingleFqName() -> AFTER
+            AspectKClassIds.AROUND.asSingleFqName() -> AROUND
             else -> null
         }
     }
