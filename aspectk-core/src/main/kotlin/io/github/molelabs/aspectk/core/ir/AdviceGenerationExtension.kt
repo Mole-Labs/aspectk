@@ -41,6 +41,7 @@ internal class AdviceGenerationExtension(
     private val irCompat: IrCompat,
     private val hintsOutputDir: String? = null,
     private val externalHints: List<HintRecord> = emptyList(),
+    private val reportsDir: String? = null, // Not null when only debug option is enabled
 ) : IrGenerationExtension {
     override fun generate(
         moduleFragment: IrModuleFragment,
@@ -65,8 +66,8 @@ internal class AdviceGenerationExtension(
 
                 // Resolve before writing: a class whose source file was deleted has no symbol any
                 // more, and writing its hint anyway would keep it alive in hints.json forever.
-                val carriedForwardHints =
-                    readCarriedForwardHints(aspectkContext).filter { resolve(it, pluginContext) != null }
+                val (carriedForwardHints, droppedCarriedForward) =
+                    readCarriedForwardHints(aspectkContext).partition { resolve(it, pluginContext) != null }
                 hintsOutputDir?.let { dir ->
                     HintsCodec.write(aspectkContext.localHints + carriedForwardHints, File(dir, "hints.json"))
                 }
@@ -84,6 +85,17 @@ internal class AdviceGenerationExtension(
                     ),
                     null,
                 )
+
+                reportsDir?.let { dir ->
+                    val droppedExternal = externalHints.filter { resolve(it, pluginContext) == null }
+                    writeAspectsReport(
+                        dir = File(dir),
+                        lookUp = aspectkContext.aspectLookUp,
+                        resolved = carriedForwardHints.withOrigin("carried-forward") + externalHints.withOrigin("external"),
+                        dropped = droppedCarriedForward.withOrigin("carried-forward") + droppedExternal.withOrigin("external"),
+                    )
+                    writeWovenReport(File(dir), aspectkContext.aspectLookUp.wovenFiles)
+                }
             }
     }
 

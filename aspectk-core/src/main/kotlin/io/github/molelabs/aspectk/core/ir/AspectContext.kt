@@ -20,6 +20,8 @@ import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AFTER
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AROUND
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.BEFORE
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -31,12 +33,37 @@ import java.util.concurrent.ConcurrentHashMap
 // 즉 하나의 Target에 여러 Advice를 가질 수 있고
 // 하나의 Advice에 여러 Target을 가질 수 있음
 internal class AspectLookUp {
-    private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> = ConcurrentHashMap()
-    private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> = ConcurrentHashMap()
+    private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> =
+        ConcurrentHashMap()
+    private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> =
+        ConcurrentHashMap()
+
+    // What weaving did, for the debug reports: advice -> functions it was woven into, in weaving order
+    private val wovenFunctions: ConcurrentHashMap<IrSimpleFunctionSymbol, MutableList<IrFunction>> =
+        ConcurrentHashMap()
+    private val _wovenFiles: MutableSet<IrFile> = ConcurrentHashMap.newKeySet()
+
+    val wovenFiles: Set<IrFile> get() = _wovenFiles.toSet()
+
+    fun addWoven(
+        function: IrFunction,
+        file: IrFile,
+        advice: IrSimpleFunctionSymbol,
+    ) {
+        _wovenFiles += file
+        wovenFunctions
+            .computeIfAbsent(advice) {
+                Collections.synchronizedList(mutableListOf<IrFunction>())
+            }.add(function)
+    }
+
+    fun getWoven(advice: IrSimpleFunctionSymbol): List<IrFunction> =
+        wovenFunctions[advice]?.toList() ?: emptyList()
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
-    operator fun get(fqName: FqName): List<AspectContext> = aspectContexts[fqName]?.toList() ?: emptyList()
+    operator fun get(fqName: FqName): List<AspectContext> =
+        aspectContexts[fqName]?.toList() ?: emptyList()
 
     fun add(
         fqName: FqName,
@@ -58,7 +85,8 @@ internal class AspectLookUp {
             }.add(target)
     }
 
-    fun getOverridden(attributeOwnerId: IrElement): Set<FqName> = overriddenDeclarations[attributeOwnerId]?.toSet() ?: emptySet()
+    fun getOverridden(attributeOwnerId: IrElement): Set<FqName> =
+        overriddenDeclarations[attributeOwnerId]?.toSet() ?: emptySet()
 }
 
 internal data class AspectContext(
