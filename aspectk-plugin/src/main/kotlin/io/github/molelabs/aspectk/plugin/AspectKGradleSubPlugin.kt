@@ -72,8 +72,17 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
 
         registerAspectChangeDetection(project, kotlinCompilation, hintsDir, externalHints)
 
+        val extension = project.extensions.getByType(AspectKGradleExtension::class.java)
+
         return project.provider {
             buildList {
+                if (extension.debug.get()) {
+                    val reportsDir =
+                        project.layout.buildDirectory.dir(
+                            "aspectk/reports/${kotlinCompilation.target.targetName}/${kotlinCompilation.name}",
+                        )
+                    add(SubpluginOption("reportsDir", reportsDir.get().asFile.absolutePath))
+                }
                 add(SubpluginOption("hintsOutputDir", hintsDir.get().asFile.absolutePath))
                 externalHints
                     .forEach { file ->
@@ -202,6 +211,10 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
 
     @OptIn(ExperimentalBuildToolsApi::class, ExperimentalKotlinGradlePluginApi::class)
     override fun apply(target: Project) {
+        target.extensions
+            .create(EXTENSION_NAME, AspectKGradleExtension::class.java)
+            .debug
+            .convention(false)
         GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
         val compilerVersionProvider =
             target.kotlinExtension.compilerVersion.map { KotlinToolingVersion(it) }
@@ -233,6 +246,7 @@ internal class AspectKGradleSubPlugin : KotlinCompilerPluginSupportPlugin {
     }
 
     private companion object {
+        const val EXTENSION_NAME = "aspectk"
         const val HINTS_VARIANT = "aspectkHints"
         const val HINTS_ARTIFACT_TYPE = "aspectk-hints"
     }

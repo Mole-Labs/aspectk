@@ -50,6 +50,7 @@ internal class AspectTransformer(
         if (contexts.isNotEmpty()) {
             val parent = findParent(declaration) ?: return super.visitSimpleFunction(declaration)
             weave(declaration, contexts, generateSignature(parent, declaration))
+            contexts.forEach { aspectKContext.aspectLookUp.addWoven(declaration, currentFile, it) }
         }
         return super.visitSimpleFunction(declaration)
     }

@@ -22,6 +22,8 @@ import io.github.molelabs.aspectk.core.hints.HintRecord
 import io.github.molelabs.aspectk.core.hints.HintsCodec
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -62,5 +64,141 @@ class CrossModuleHintEmissionTest {
             listOf(HintRecord("", "LoggingAspect", "log", "BEFORE", listOf("LogCall"), false)),
             HintsCodec.read(File(hintsDir, "hints.json")),
         )
+    }
+
+    @Test
+    fun `reports applied and dropped advice across modules and dumps only woven files`() {
+        // lib is on the classpath; gone's hints arrive without its classes, so they can't resolve
+        val lib = compileUpstream("lib", "LibAspect")
+        val gone = compileUpstream("gone", "GoneAspect")
+        val reportsDir = createTempDirectory("aspectk-reports").toFile()
+
+        val result =
+            compileWithHints(
+                sourceFiles =
+                listOf(
+                    SourceFile.kotlin(
+                        "Main.kt",
+                        """
+                        package app
+
+                        import io.github.molelabs.aspectk.runtime.*
+
+                        @Aspect
+                        object AppAspect {
+                            @Before(shared.Logged::class) fun advice(jp: JoinPoint) {}
+                        }
+
+                        class Woven {
+                            @shared.Logged fun run() {}
+                        }
+
+                        @shared.Logged fun topLevel() {}
+                        """.trimIndent(),
+                    ),
+                    SourceFile.kotlin("Plain.kt", "package app\n\nclass Plain {\n    fun run() {}\n}"),
+                ),
+                hintsPaths = listOf(lib.hintsDir, gone.hintsDir),
+                extraClasspath = listOf(lib.classes),
+                reportsDir = reportsDir,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+
+        assertEquals(
+            """
+            ## Applied
+            shared.Logged
+              BEFORE  app.AppAspect.advice  [local]
+              BEFORE  lib.LibAspect.advice  [external]
+
+            ## Dropped
+            gone.GoneAspect.advice -> shared.Logged  [external]
+            """.trimIndent(),
+            File(reportsDir, "aspects.txt").readText().trimEnd(),
+        )
+        assertEquals(
+            """
+            app.Woven.run
+              BEFORE  app.AppAspect.advice  [local]
+              BEFORE  lib.LibAspect.advice  [external]
+            app.topLevel
+              BEFORE  app.AppAspect.advice  [local]
+              BEFORE  lib.LibAspect.advice  [external]
+            """.trimIndent(),
+            File(reportsDir, "woven/app/Main.aspects.txt").readText().trimEnd(),
+        )
+        assertTrue(File(reportsDir, "woven/app/Main.kt").readText().contains("class Woven"))
+        assertFalse(File(reportsDir, "woven/app/Plain.kt").exists())
+        assertFalse(File(reportsDir, "woven/app/Plain.aspects.txt").exists())
+    }
+
+    @Test
+    fun `a round rewrites the woven reports of the files it compiles and keeps the others`() {
+        val reportsDir = createTempDirectory("aspectk-reports").toFile()
+        val aspect =
+            SourceFile.kotlin(
+                "Aspect.kt",
+                """
+                package app
+
+                import io.github.molelabs.aspectk.runtime.*
+
+                annotation class Logged
+
+                @Aspect
+                object AppAspect {
+                    @Before(Logged::class) fun advice(jp: JoinPoint) {}
+                }
+                """.trimIndent(),
+            )
+        fun round(vararg sources: SourceFile) = assertEquals(
+            KotlinCompilation.ExitCode.OK,
+            compileWithHints(sourceFiles = listOf(aspect, *sources), reportsDir = reportsDir).exitCode,
+        )
+
+        round(
+            SourceFile.kotlin("A.kt", "package app\n\n@Logged fun a() {}"),
+            SourceFile.kotlin("B.kt", "package app\n\n@Logged fun b() {}"),
+        )
+        // as an incremental round: only B.kt is recompiled, and it lost its target annotation
+        round(SourceFile.kotlin("B.kt", "package app\n\nfun b() {}"))
+
+        assertTrue(File(reportsDir, "woven/app/A.aspects.txt").readText().startsWith("app.a\n"))
+        assertFalse(File(reportsDir, "woven/app/B.aspects.txt").exists())
+        assertFalse(File(reportsDir, "woven/app/B.kt").exists())
+    }
+
+    private class Upstream(val classes: File, val hintsDir: File)
+
+    // A module declaring the shared `Logged` target and one aspect advising it
+    private fun compileUpstream(
+        packageName: String,
+        aspectName: String,
+    ): Upstream {
+        val hintsDir = createTempDirectory("aspectk-hints-$packageName").toFile()
+        val result =
+            compileWithHints(
+                sourceFiles =
+                listOf(
+                    SourceFile.kotlin(
+                        "$aspectName.kt",
+                        """
+                        package $packageName
+
+                        import io.github.molelabs.aspectk.runtime.*
+
+                        @Aspect
+                        object $aspectName {
+                            @Before(shared.Logged::class) fun advice(jp: JoinPoint) {}
+                        }
+                        """.trimIndent(),
+                    ),
+                    SourceFile.kotlin("Logged.kt", "package shared\n\nannotation class Logged"),
+                ),
+                hintsOutputDir = hintsDir,
+                moduleName = packageName,
+            )
+        assertEquals(KotlinCompilation.ExitCode.OK, result.exitCode, result.messages)
+        return Upstream(result.outputDirectory, hintsDir)
     }
 }

@@ -43,6 +43,7 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         val currentVersion = KotlinVersion.CURRENT
         val irCompat = IrCompat.create(currentVersion)
+        val reportsDir = configuration.get(AspectKCommandLineProcessor.REPORTS_DIR_KEY)
         val hintsOutputDir = configuration.get(AspectKCommandLineProcessor.HINTS_OUTPUT_DIR_KEY)
         val externalHints =
             configuration
@@ -51,7 +52,7 @@ internal class AspectKCompilerPluginRegistrar : CompilerPluginRegistrar() {
         with(irCompat) {
             registerFirExtension(AspectKFirExtensionRegistrar())
             registerIrGenerationExtension(
-                AdviceGenerationExtension(irCompat, hintsOutputDir, externalHints),
+                AdviceGenerationExtension(irCompat, hintsOutputDir, externalHints, reportsDir),
             )
         }
     }

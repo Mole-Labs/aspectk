@@ -20,6 +20,8 @@ import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AFTER
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.AROUND
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind.BEFORE
 import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -31,8 +33,27 @@ import java.util.concurrent.ConcurrentHashMap
 // 즉 하나의 Target에 여러 Advice를 가질 수 있고
 // 하나의 Advice에 여러 Target을 가질 수 있음
 internal class AspectLookUp {
-    private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> = ConcurrentHashMap()
-    private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> = ConcurrentHashMap()
+    private val aspectContexts: ConcurrentHashMap<FqName, MutableList<AspectContext>> =
+        ConcurrentHashMap()
+    private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> =
+        ConcurrentHashMap()
+
+    // What weaving did, for the debug reports: file -> (function, advice) in weaving order
+    private val wovenFunctions: ConcurrentHashMap<IrFile, MutableList<Pair<IrFunction, AspectContext>>> =
+        ConcurrentHashMap()
+
+    val wovenFiles: Map<IrFile, List<Pair<IrFunction, AspectContext>>>
+        get() = wovenFunctions.mapValues { it.value.toList() }
+
+    fun addWoven(
+        function: IrFunction,
+        file: IrFile,
+        context: AspectContext,
+    ) {
+        wovenFunctions
+            .computeIfAbsent(file) { Collections.synchronizedList(mutableListOf()) }
+            .add(function to context)
+    }
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 

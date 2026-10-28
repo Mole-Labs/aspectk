@@ -1,0 +1,5 @@
+public abstract class io/github/molelabs/aspectk/plugin/AspectKGradleExtension {
+	public fun <init> ()V
+	public abstract fun getDebug ()Lorg/gradle/api/provider/Property;
+}
+
