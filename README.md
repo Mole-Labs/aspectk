@@ -43,36 +43,40 @@ plugins {
 }
 ```
 
-### 2. Define a target annotation
+### 2. Replace the boilerplate
+
+**Before.** Cross-cutting concerns are wrapped around the call by hand. Each concern adds one
+more level of nesting, and the function name and arguments have to be passed into every wrapper
+again:
 
 ```kotlin
-@Target(AnnotationTarget.FUNCTION)
-@Retention(AnnotationRetention.BINARY)
-annotation class Logged
-```
-
-### 3. Create an aspect
-
-```kotlin
-import io.github.molelabs.aspectk.runtime.Aspect
-import io.github.molelabs.aspectk.runtime.Before
-import io.github.molelabs.aspectk.runtime.JoinPoint
-
-@Aspect
-object LoggingAspect {
-    @Before(target = [Logged::class])
-    fun log(joinPoint: JoinPoint) {
-        println("→ ${joinPoint.signature.methodName}(${joinPoint.args.joinToString()})")
+suspend fun loadProfile(id: String, locale: String): Profile =
+    traced(name = "loadProfile", args = listOf(id, locale)) {
+        retrying(name = "loadProfile", times = 3) {
+            api.loadProfile(id, locale)
+        }
     }
-}
 ```
 
-### 4. Annotate your functions
+**After.** The concerns are annotations. Nothing is nested, and nothing is passed by hand:
 
 ```kotlin
-@Logged
-fun processOrder(orderId: String, amount: Double) {
-    // AspectK injects LoggingAspect.log() here at compile time
+@Traced 
+@Retry(times = 3)
+suspend fun loadProfile(id: String, locale: String): Profile = api.loadProfile(id, locale)
+```
+
+The wrappers become advice, written once. The join point carries the function name, the
+arguments and the annotation values, so nothing has to be passed in:
+
+```kotlin
+@Aspect
+object CallAspect {
+    @Around(Traced::class)
+    suspend fun trace(pjp: SuspendProceedingJoinPoint): Any? { /* log and time pjp.proceed() */ }
+
+    @Around(Retry::class)
+    suspend fun retry(pjp: SuspendProceedingJoinPoint): Any? { /* call pjp.proceed() up to `times` times */ }
 }
 ```
 
