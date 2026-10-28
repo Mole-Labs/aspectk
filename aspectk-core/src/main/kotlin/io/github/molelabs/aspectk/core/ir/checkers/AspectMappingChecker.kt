@@ -19,8 +19,6 @@ import io.github.molelabs.aspectk.core.AspectKDiagnostics
 import io.github.molelabs.aspectk.core.ir.AspectContext
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
-import io.github.molelabs.aspectk.core.ir.hasBody
-import io.github.molelabs.aspectk.core.ir.targetAnnotations
 import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactory1
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
@@ -33,22 +31,7 @@ internal object AspectMappingChecker {
     fun check(
         declaration: IrSimpleFunction,
         contexts: List<AspectContext>,
-    ): Boolean {
-        declaration.checkBodilessTarget()
-        return declaration.checkTarget(contexts)
-    }
-
-    // A target annotation on a function without a body weaves nothing, here or in the overrides,
-    // unless the advice has inherits = true
-    context(aspectKContext: AspectKIrCompilerContext)
-    private fun IrFunction.checkBodilessTarget() {
-        if (hasBody()) return
-        val lookUp = aspectKContext.aspectLookUp
-        targetAnnotations(lookUp.targets)
-            .flatMap { lookUp[it] }
-            .filterNot(AspectContext::inherits)
-            .forEach { report(AspectKDiagnostics.TARGET_WITHOUT_BODY, it) }
-    }
+    ): Boolean = declaration.checkTarget(contexts)
 
     context(aspectKContext: AspectKIrCompilerContext)
     private fun IrSimpleFunction.checkTarget(contexts: List<AspectContext>): Boolean {

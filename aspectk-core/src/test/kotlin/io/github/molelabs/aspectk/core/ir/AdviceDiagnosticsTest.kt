@@ -104,29 +104,6 @@ class AdviceDiagnosticsTest {
     }
 
     @Test
-    fun `a target annotation on a function without a body warns unless the advice inherits`() {
-        check(
-            """
-            annotation class Inherited
-            @Aspect object A {
-                @Before(target = [Logged::class])
-                fun before(jp: JoinPoint) {}
-                @Before(target = [Inherited::class], inherits = true)
-                fun inherited(jp: JoinPoint) {}
-            }
-            interface Repo {
-                @Logged fun load()
-                @Inherited fun save()
-            }
-            """.trimIndent(),
-        ).run {
-            assertEquals(ExitCode.OK, exitCode, messages)
-            assertEquals(1, count("is never applied here: this function has no body"), messages)
-            assertEquals(1, count("Advice A.before"), messages)
-        }
-    }
-
-    @Test
     fun `@After on a tailrec function warns and @Before does not`() {
         check(
             """

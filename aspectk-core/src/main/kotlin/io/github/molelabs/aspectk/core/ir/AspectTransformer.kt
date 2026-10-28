@@ -48,8 +48,7 @@ internal class AspectTransformer(
         // Fake Override 메서드는 패스
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
         val contexts = adviceFor(declaration)
-        val valid = with(aspectKContext) { AspectMappingChecker.check(declaration, contexts) }
-        if (contexts.isNotEmpty() && valid) {
+        if (contexts.isNotEmpty() && with(aspectKContext) { AspectMappingChecker.check(declaration, contexts) }) {
             val parent = findParent(declaration) ?: return super.visitSimpleFunction(declaration)
             weave(declaration, contexts, generateSignature(parent, declaration))
             contexts.forEach { aspectKContext.aspectLookUp.addWoven(declaration, currentFile, it) }

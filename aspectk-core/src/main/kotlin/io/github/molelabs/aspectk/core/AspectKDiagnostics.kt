@@ -44,8 +44,6 @@ internal object AspectKDiagnostics : KtDiagnosticsContainer() {
 
     val AROUND_INLINE_LAMBDA by error1<KtElement, String>()
 
-    val TARGET_WITHOUT_BODY by warning1<KtElement, String>()
-
     val TAILREC_ADVICE by warning1<KtElement, String>()
 
     override fun getRendererFactory(): BaseDiagnosticRendererFactory = AspectKRenderers
@@ -78,11 +76,6 @@ internal object AspectKDiagnostics : KtDiagnosticsContainer() {
             map.put(
                 AROUND_INLINE_LAMBDA,
                 "[AspectK] @Around advice {0} cannot wrap an inline function with inline or crossinline lambda parameters: the body moves into a lambda that cannot call them. Mark them noinline.",
-                CommonRenderers.STRING,
-            )
-            map.put(
-                TARGET_WITHOUT_BODY,
-                "[AspectK] Advice {0} is never applied here: this function has no body. Use inherits = true to weave it into the overrides.",
                 CommonRenderers.STRING,
             )
             map.put(
