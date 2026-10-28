@@ -1,5 +1,8 @@
 # IDE Support
 
+!!! info "Since 0.4.3"
+    The diagnostics on this page are available from AspectK 0.4.3. Earlier versions do not have them.
+
 AspectK reports mistakes in how aspects and advice are written as compiler diagnostics. Some
 of them come from the compiler frontend, which IntelliJ IDEA and Android Studio run while you
 edit, so the IDE can highlight them without a build.

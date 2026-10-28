@@ -1,5 +1,8 @@
 # Debug Reports
 
+!!! info "Since 0.4.3"
+    Debug reports are available from AspectK 0.4.3. Earlier versions do not have them.
+
 Advice is woven into the compiled code, not into your sources, so the source never shows what
 runs. Debug reports show which advice applies to each target annotation and which functions it
 was woven into. They also include a Kotlin-like dump of every woven file.
