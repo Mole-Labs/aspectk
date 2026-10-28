@@ -55,39 +55,39 @@ internal object AspectKDiagnostics : KtDiagnosticsContainer() {
         override val MAP by KtDiagnosticFactoryToRendererMap("AspectK") { map ->
             map.put(
                 ASPECT_NOT_OBJECT,
-                "An @Aspect must be an object declaration: advice is called on its single instance. Declare it with object instead of class.",
+                "[AspectK] An @Aspect must be an object declaration: advice is called on its single instance. Declare it with object instead of class.",
             )
             map.put(
                 ADVICE_INVALID_PARAMETER,
-                "Advice must take exactly one parameter, of type {0}, and no receiver.",
+                "[AspectK] Advice must take exactly one parameter, of type {0}, and no receiver.",
                 CommonRenderers.STRING,
             )
             map.put(
                 AROUND_INVALID_RETURN_TYPE,
-                "@Around advice must return Any? or Any: its result becomes the return value of every target function.",
+                "[AspectK] @Around advice must return Any? or Any: its result becomes the return value of every target function.",
             )
             map.put(
                 ADVICE_OUTSIDE_ASPECT,
-                "This advice is never applied: advice is only collected from an @Aspect object.",
+                "[AspectK] This advice is never applied: advice is only collected from an @Aspect object.",
             )
             map.put(
                 AROUND_SUSPEND_MISMATCH,
-                "@Around advice {0} must be suspend and take a SuspendProceedingJoinPoint exactly when the target function is suspend.",
+                "[AspectK] @Around advice {0} must be suspend and take a SuspendProceedingJoinPoint exactly when the target function is suspend.",
                 CommonRenderers.STRING,
             )
             map.put(
                 AROUND_INLINE_LAMBDA,
-                "@Around advice {0} cannot wrap an inline function with inline or crossinline lambda parameters: the body moves into a lambda that cannot call them. Mark them noinline.",
+                "[AspectK] @Around advice {0} cannot wrap an inline function with inline or crossinline lambda parameters: the body moves into a lambda that cannot call them. Mark them noinline.",
                 CommonRenderers.STRING,
             )
             map.put(
                 TARGET_WITHOUT_BODY,
-                "Advice {0} is never applied here: this function has no body. Use inherits = true to weave it into the overrides.",
+                "[AspectK] Advice {0} is never applied here: this function has no body. Use inherits = true to weave it into the overrides.",
                 CommonRenderers.STRING,
             )
             map.put(
                 TAILREC_ADVICE,
-                "Advice {0} wraps a tailrec function: the recursive call is no longer a tail call, so it is not optimized and deep recursion can overflow the stack.",
+                "[AspectK] Advice {0} wraps a tailrec function: the recursive call is no longer a tail call, so it is not optimized and deep recursion can overflow the stack.",
                 CommonRenderers.STRING,
             )
         }

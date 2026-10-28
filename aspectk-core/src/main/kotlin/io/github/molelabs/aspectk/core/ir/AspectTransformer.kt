@@ -16,6 +16,7 @@
 package io.github.molelabs.aspectk.core.ir
 
 import io.github.molelabs.aspectk.core.ir.AspectContext.Kind
+import io.github.molelabs.aspectk.core.ir.checkers.AspectMappingChecker
 import io.github.molelabs.aspectk.core.ir.generator.AdviceCallGenerator
 import io.github.molelabs.aspectk.core.ir.generator.JoinPointGenerator
 import io.github.molelabs.aspectk.core.ir.generator.MethodSignatureGenerator
@@ -47,7 +48,8 @@ internal class AspectTransformer(
         // Fake Override 메서드는 패스
         if (declaration !is IrFunctionImpl) return super.visitSimpleFunction(declaration)
         val contexts = adviceFor(declaration)
-        if (contexts.isNotEmpty()) {
+        val valid = with(aspectKContext) { AspectMappingChecker.check(declaration, contexts) }
+        if (contexts.isNotEmpty() && valid) {
             val parent = findParent(declaration) ?: return super.visitSimpleFunction(declaration)
             weave(declaration, contexts, generateSignature(parent, declaration))
             contexts.forEach { aspectKContext.aspectLookUp.addWoven(declaration, currentFile, it) }
