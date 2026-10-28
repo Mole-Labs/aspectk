@@ -10,7 +10,7 @@ AspectJ's pointcut expressions can match more than AspectK's annotation-based ta
 
 ### Which Kotlin versions can I use?
 
-2.2.20 through 2.4.20 with AspectK 0.4.2. The plugin fails the build at configuration time if
+2.2.20 through 2.4.20 with AspectK 0.4.3. The plugin fails the build at configuration time if
 the project's Kotlin version is outside the supported range. See the
 [compatibility table](compatibility.md) for older releases and for the stricter rule on iOS.
 
