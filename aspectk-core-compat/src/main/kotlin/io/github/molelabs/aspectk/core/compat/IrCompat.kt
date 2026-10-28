@@ -19,7 +19,9 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactory1
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -51,6 +53,9 @@ interface IrCompat {
     // FirExtensionRegistrarAdapter.Companion changed its supertype at the same version, for the same reason.
     @OptIn(ExperimentalCompilerApi::class)
     fun CompilerPluginRegistrar.ExtensionStorage.registerFirExtension(registrar: FirExtensionRegistrar)
+
+    // up to 2.3.x and the interface IrDiagnosticReporter.IrDiagnosticContext from 2.4.0, a binary break.
+    fun report(pluginContext: IrPluginContext, declaration: IrDeclaration, factory: KtDiagnosticFactory1<String>, arg: String)
 
     companion object {
         fun create(version: KotlinVersion): IrCompat = ServiceLoader

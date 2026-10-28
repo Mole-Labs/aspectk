@@ -104,6 +104,8 @@ internal class AdviceGenerationExtension(
     // entries whose class ISN'T in visitedClassIds are trusted: any class AspectVisitor walked
     // this round is authoritative for itself, even if it now yields zero hints or lost @Aspect,
     // so its old entries must never be resurrected.
+    // TODO: migrate the hint logic (carried-forward and external hints, resolve, same-module aspect
+    //  collection) to FIR, so the target-side diagnostics in AspectKDiagnostics can move to FIR checkers
     private fun readCarriedForwardHints(aspectkContext: AspectKIrCompilerContext): List<HintRecord> {
         val dir = hintsOutputDir ?: return emptyList()
         val oldHints = HintsCodec.read(File(dir, "hints.json"))

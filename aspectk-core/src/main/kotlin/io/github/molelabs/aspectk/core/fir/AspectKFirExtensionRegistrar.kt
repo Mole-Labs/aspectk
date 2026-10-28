@@ -15,6 +15,7 @@
  */
 package io.github.molelabs.aspectk.core.fir
 
+import io.github.molelabs.aspectk.core.AspectKDiagnostics
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 
 // Frontend checks on how aspects and advice are declared. They only look at the declaration

@@ -19,8 +19,10 @@ import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.diagnostics.KtDiagnosticFactory1
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrarAdapter
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -50,5 +52,9 @@ class IrCompatImpl2400 : IrCompat {
     @OptIn(ExperimentalCompilerApi::class)
     override fun CompilerPluginRegistrar.ExtensionStorage.registerFirExtension(registrar: FirExtensionRegistrar) {
         FirExtensionRegistrarAdapter.registerExtension(registrar)
+    }
+
+    override fun report(pluginContext: IrPluginContext, declaration: IrDeclaration, factory: KtDiagnosticFactory1<String>, arg: String) {
+        pluginContext.diagnosticReporter.at(declaration).report(factory, arg)
     }
 }
