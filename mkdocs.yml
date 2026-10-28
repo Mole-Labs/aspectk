@@ -8,14 +8,14 @@ theme:
   name: material
   palette:
     - scheme: default
-      primary: deep purple
-      accent: purple
+      primary: grey
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
-      accent: purple
+      primary: grey
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -46,6 +46,9 @@ nav:
     - Inheritance: features/inheritance.md
     - Multiplatform: features/multiplatform.md
     - Cross-Module Injection: features/cross-module-weaving.md
+  - Debugging:
+    - Debug Reports: debugging/reports.md
+    - IDE Support: debugging/ide-support.md
   - Reference:
     - Compatibility: reference/compatibility.md
     - Changelog: reference/changelog.md

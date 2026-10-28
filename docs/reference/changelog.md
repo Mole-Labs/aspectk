@@ -5,6 +5,28 @@ All notable changes to this project will be documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3]
+
+### Added
+
+- **Debug reports.** `aspectk { debug = true }` writes, per compilation, the advice that applies
+  to each target annotation and where it came from (`local`, `external`, `carried-forward`),
+  the hints that no longer resolve, and a Kotlin-like dump of every woven file with the advice
+  on each of its functions. Reports are kept per file, so incremental builds keep the results
+  of files they did not recompile. See [Debug Reports](../debugging/reports.md).
+- **Compiler diagnostics for aspect declarations.** An `@Aspect` declared as a `class`, advice
+  with the wrong parameter or `@Around` return type, and advice outside an `@Aspect` are now
+  reported by the compiler frontend. IntelliJ IDEA and Android Studio can highlight them while
+  editing. See [IDE Support](../debugging/ide-support.md).
+- **Build diagnostics for advice on unsuitable targets.** `@Around` advice whose `suspend`
+  modifier does not match its target, `@Around` on an `inline` function with inline or
+  `crossinline` lambda parameters, and `@After`/`@Around` on a `tailrec` function are
+  reported during the build. A function that fails one of the errors is not woven.
+
+### Changed
+
+- Every AspectK diagnostic message starts with `[AspectK]`.
+
 ## [0.4.2]
 
 ### Fixed
