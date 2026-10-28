@@ -16,7 +16,7 @@
 package io.github.molelabs.aspectk.core.fir.checkers
 
 import io.github.molelabs.aspectk.core.AspectKClassIds
-import io.github.molelabs.aspectk.core.fir.AspectKDiagnostics
+import io.github.molelabs.aspectk.core.AspectKDiagnostics
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.diagnostics.DiagnosticReporter
 import org.jetbrains.kotlin.diagnostics.reportOn
