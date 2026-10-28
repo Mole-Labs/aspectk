@@ -88,13 +88,13 @@ internal class AdviceGenerationExtension(
 
                 reportsDir?.let { dir ->
                     val droppedExternal = externalHints.filter { resolve(it, pluginContext) == null }
-                    writeAspectsReport(
+                    writeReports(
                         dir = File(dir),
+                        compiledFiles = moduleFragment.files,
                         lookUp = aspectkContext.aspectLookUp,
                         resolved = carriedForwardHints.withOrigin("carried-forward") + externalHints.withOrigin("external"),
                         dropped = droppedCarriedForward.withOrigin("carried-forward") + droppedExternal.withOrigin("external"),
                     )
-                    writeWovenReport(File(dir), aspectkContext.aspectLookUp.wovenFiles)
                 }
             }
     }

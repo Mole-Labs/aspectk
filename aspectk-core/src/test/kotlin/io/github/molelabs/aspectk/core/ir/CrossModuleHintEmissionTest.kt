@@ -109,19 +109,63 @@ class CrossModuleHintEmissionTest {
             ## Applied
             shared.Logged
               BEFORE  app.AppAspect.advice  [local]
-                -> app.Woven.run
-                -> app.topLevel
               BEFORE  lib.LibAspect.advice  [external]
-                -> app.Woven.run
-                -> app.topLevel
 
             ## Dropped
             gone.GoneAspect.advice -> shared.Logged  [external]
             """.trimIndent(),
             File(reportsDir, "aspects.txt").readText().trimEnd(),
         )
+        assertEquals(
+            """
+            app.Woven.run
+              BEFORE  app.AppAspect.advice  [local]
+              BEFORE  lib.LibAspect.advice  [external]
+            app.topLevel
+              BEFORE  app.AppAspect.advice  [local]
+              BEFORE  lib.LibAspect.advice  [external]
+            """.trimIndent(),
+            File(reportsDir, "woven/app/Main.aspects.txt").readText().trimEnd(),
+        )
         assertTrue(File(reportsDir, "woven/app/Main.kt").readText().contains("class Woven"))
         assertFalse(File(reportsDir, "woven/app/Plain.kt").exists())
+        assertFalse(File(reportsDir, "woven/app/Plain.aspects.txt").exists())
+    }
+
+    @Test
+    fun `a round rewrites the woven reports of the files it compiles and keeps the others`() {
+        val reportsDir = createTempDirectory("aspectk-reports").toFile()
+        val aspect =
+            SourceFile.kotlin(
+                "Aspect.kt",
+                """
+                package app
+
+                import io.github.molelabs.aspectk.runtime.*
+
+                annotation class Logged
+
+                @Aspect
+                object AppAspect {
+                    @Before(Logged::class) fun advice(jp: JoinPoint) {}
+                }
+                """.trimIndent(),
+            )
+        fun round(vararg sources: SourceFile) = assertEquals(
+            KotlinCompilation.ExitCode.OK,
+            compileWithHints(sourceFiles = listOf(aspect, *sources), reportsDir = reportsDir).exitCode,
+        )
+
+        round(
+            SourceFile.kotlin("A.kt", "package app\n\n@Logged fun a() {}"),
+            SourceFile.kotlin("B.kt", "package app\n\n@Logged fun b() {}"),
+        )
+        // as an incremental round: only B.kt is recompiled, and it lost its target annotation
+        round(SourceFile.kotlin("B.kt", "package app\n\nfun b() {}"))
+
+        assertTrue(File(reportsDir, "woven/app/A.aspects.txt").readText().startsWith("app.a\n"))
+        assertFalse(File(reportsDir, "woven/app/B.aspects.txt").exists())
+        assertFalse(File(reportsDir, "woven/app/B.kt").exists())
     }
 
     private class Upstream(val classes: File, val hintsDir: File)

@@ -29,46 +29,59 @@ import java.io.File
 internal fun List<HintRecord>.withOrigin(origin: String): List<Pair<HintRecord, String>> = map { it to origin }
 
 // aspects.txt: every advice each target ends up with, and the hints that failed to resolve.
-// Advice not among the [resolved] hints was collected from this compilation's sources.
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-internal fun writeAspectsReport(
+internal fun writeReports(
     dir: File,
+    compiledFiles: List<IrFile>,
     lookUp: AspectLookUp,
     resolved: List<Pair<HintRecord, String>>,
     dropped: List<Pair<HintRecord, String>>,
 ) {
+    // Advice not among the resolved hints was collected from this compilation's sources
     val origins = resolved.associate { (hint, origin) -> hint.key to origin }
-    val text =
+    val label = { context: AspectContext ->
+        val classId = context.aspect.owner.classId
+        val advice = context.advice.owner.name.asString()
+        "${context.kind}  ${classId?.asFqNameString()}.$advice  [${origins[classId to advice] ?: "local"}]"
+    }
+
+    dir.mkdirs()
+    File(dir, "aspects.txt").writeText(
         buildString {
             appendLine("## Applied")
             lookUp.targets.sortedBy { it.asString() }.forEach { target ->
                 appendLine(target.asString())
-                lookUp[target].forEach { context ->
-                    val classId = context.aspect.owner.classId
-                    val advice = context.advice.owner.name.asString()
-                    appendLine("  ${context.kind}  ${classId?.asFqNameString()}.$advice  [${origins[classId to advice] ?: "local"}]")
-                    lookUp.getWoven(context.advice).forEach { appendLine("    -> ${it.fqNameWhenAvailable}") }
-                }
+                lookUp[target].forEach { appendLine("  ${label(it)}") }
             }
             appendLine()
             appendLine("## Dropped")
             dropped.forEach { (hint, origin) ->
                 appendLine("${hint.key.first.asFqNameString()}.${hint.functionName} -> ${hint.targets.joinToString()}  [$origin]")
             }
-        }
-    dir.mkdirs()
-    File(dir, "aspects.txt").writeText(text)
+        },
+    )
+
+    // A recompiled file may no longer be woven, so clear what an earlier round wrote for it
+    compiledFiles.forEach { file -> file.reportFiles(dir).toList().forEach(File::delete) }
+
+    lookUp.wovenFiles.forEach { (file, woven) ->
+        val (dump, aspects) = file.reportFiles(dir)
+        dump.parentFile.mkdirs()
+        dump.writeText(file.dumpKotlinLike())
+        aspects.writeText(
+            buildString {
+                woven.groupBy({ it.first }, { it.second }).forEach { (function, contexts) ->
+                    appendLine(function.fqNameWhenAvailable?.asString())
+                    contexts.forEach { appendLine("  ${label(it)}") }
+                }
+            },
+        )
+    }
 }
 
-internal fun writeWovenReport(
-    dir: File,
-    files: Set<IrFile>,
-) {
-    files.forEach { file ->
-        File(dir, "woven/${file.packageFqName.asString().replace('.', '/')}/${file.name}")
-            .apply { parentFile.mkdirs() }
-            .writeText(file.dumpKotlinLike())
-    }
+private fun IrFile.reportFiles(dir: File): Pair<File, File> {
+    val packageDir = File(dir, "woven/${packageFqName.asString().replace('.', '/')}")
+    return File(packageDir, name) to File(packageDir, "${name.substringBeforeLast('.')}.aspects.txt")
 }
 
 private val HintRecord.key: Pair<ClassId, String>

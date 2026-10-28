@@ -38,26 +38,22 @@ internal class AspectLookUp {
     private val overriddenDeclarations: ConcurrentHashMap<IrElement, MutableSet<FqName>> =
         ConcurrentHashMap()
 
-    // What weaving did, for the debug reports: advice -> functions it was woven into, in weaving order
-    private val wovenFunctions: ConcurrentHashMap<IrSimpleFunctionSymbol, MutableList<IrFunction>> =
+    // What weaving did, for the debug reports: file -> (function, advice) in weaving order
+    private val wovenFunctions: ConcurrentHashMap<IrFile, MutableList<Pair<IrFunction, AspectContext>>> =
         ConcurrentHashMap()
-    private val _wovenFiles: MutableSet<IrFile> = ConcurrentHashMap.newKeySet()
 
-    val wovenFiles: Set<IrFile> get() = _wovenFiles.toSet()
+    val wovenFiles: Map<IrFile, List<Pair<IrFunction, AspectContext>>>
+        get() = wovenFunctions.mapValues { it.value.toList() }
 
     fun addWoven(
         function: IrFunction,
         file: IrFile,
-        advice: IrSimpleFunctionSymbol,
+        context: AspectContext,
     ) {
-        _wovenFiles += file
         wovenFunctions
-            .computeIfAbsent(advice) {
-                Collections.synchronizedList(mutableListOf<IrFunction>())
-            }.add(function)
+            .computeIfAbsent(file) { Collections.synchronizedList(mutableListOf()) }
+            .add(function to context)
     }
-
-    fun getWoven(advice: IrSimpleFunctionSymbol): List<IrFunction> = wovenFunctions[advice]?.toList() ?: emptyList()
 
     val targets: Set<FqName> get() = aspectContexts.keys.toSet()
 
