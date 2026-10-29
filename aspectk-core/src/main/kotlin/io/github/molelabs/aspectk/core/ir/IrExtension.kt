@@ -17,7 +17,6 @@ package io.github.molelabs.aspectk.core.ir
 
 import io.github.molelabs.aspectk.core.reportCompilerBug
 import org.jetbrains.kotlin.backend.common.lower.DeclarationIrBuilder
-import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.IrGeneratorContext
 import org.jetbrains.kotlin.ir.builders.irCall
@@ -29,7 +28,6 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
-import org.jetbrains.kotlin.ir.expressions.IrReturn
 import org.jetbrains.kotlin.ir.expressions.impl.IrClassReferenceImpl
 import org.jetbrains.kotlin.ir.symbols.IrClassSymbol
 import org.jetbrains.kotlin.ir.symbols.IrSimpleFunctionSymbol
@@ -162,21 +160,6 @@ internal val AspectKIrCompilerContext.listGetFun: IrSimpleFunctionSymbol
                     Name.identifier("get"),
                 ),
             ).first()
-
-internal fun IrBody.add(element: IrStatement) {
-    (this as? IrBlockBody)?.statements?.add(0, element)
-}
-
-// Inserts element before the last IrReturn; if none, appends at end.
-internal fun IrBody.addLast(element: IrStatement) {
-    val statements = (this as? IrBlockBody)?.statements ?: return
-    val lastReturnIndex = statements.indexOfLast { it is IrReturn }
-    if (lastReturnIndex >= 0) {
-        statements.add(lastReturnIndex, element)
-    } else {
-        statements.add(element)
-    }
-}
 
 internal fun IrFunction.hasBody(): Boolean = body != null && body is IrBlockBody
 
