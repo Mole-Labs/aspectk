@@ -158,10 +158,8 @@ not. This is `Woven` from `woven/app/Main.kt`, with the constructor and the inhe
 class Woven {
   @Logged
   fun run() {
-    { // BLOCK
-      AppAspect.advice(jp = DefaultJoinPoint(target = <this>, signature = $MethodSignatures.<get-ajc$tjp_0>(), args = listOf<Any?>(elements = [<this>])))
-      LibAspect.advice(jp = DefaultJoinPoint(target = <this>, signature = $MethodSignatures.<get-ajc$tjp_0>(), args = listOf<Any?>(elements = [<this>])))
-    }
+    AppAspect.advice(jp = DefaultJoinPoint(target = <this>, signature = $MethodSignatures.<get-ajc$tjp_0>(), args = listOf<Any?>(elements = [<this>])))
+    LibAspect.advice(jp = DefaultJoinPoint(target = <this>, signature = $MethodSignatures.<get-ajc$tjp_0>(), args = listOf<Any?>(elements = [<this>])))
   }
 
   object $MethodSignatures {

@@ -17,7 +17,6 @@ package io.github.molelabs.aspectk.core.ir.generator
 
 import io.github.molelabs.aspectk.core.ir.AspectContext
 import io.github.molelabs.aspectk.core.ir.AspectKIrCompilerContext
-import io.github.molelabs.aspectk.core.ir.add
 import io.github.molelabs.aspectk.core.ir.withIrBuilder
 import org.jetbrains.kotlin.ir.builders.IrBuilderWithScope
 import org.jetbrains.kotlin.ir.builders.irAs
@@ -41,10 +40,10 @@ internal class AdviceCallGenerator(
         declaration: IrFunction,
         contexts: List<AspectContext>,
         joinPoint: IrExpression,
-    ) = aspectKContext
-        .withIrBuilder(declaration.symbol) {
-            irBlock { contexts.forEach { +adviceCall(it, joinPoint) } }
-        }.also { declaration.body?.add(it) }
+    ) {
+        val calls = aspectKContext.withIrBuilder(declaration.symbol) { contexts.map { adviceCall(it, joinPoint) } }
+        (declaration.body as? IrBlockBody)?.statements?.addAll(0, calls)
+    }
 
     private fun IrBuilderWithScope.adviceCall(
         context: AspectContext,
@@ -66,7 +65,7 @@ internal class AdviceCallGenerator(
     ) {
         val statements = (declaration.body as? IrBlockBody)?.statements ?: return
         val finallyExpression =
-            aspectKContext.withIrBuilder(declaration.symbol) { irBlock { +adviceCall(context, joinPoint) } }
+            aspectKContext.withIrBuilder(declaration.symbol) { adviceCall(context, joinPoint) }
         val unitType = aspectKContext.pluginContext.irBuiltIns.unitType
         val body =
             aspectKContext.withIrBuilder(declaration.symbol) {
@@ -106,16 +105,14 @@ internal class AdviceCallGenerator(
         context: AspectContext,
         joinPointExpr: IrExpression,
     ) = aspectKContext.withIrBuilder(declaration.symbol) {
-        irBlock {
-            +irReturn(
-                irAs(
-                    irCall(context.advice).apply {
-                        dispatchReceiver = irGetObject(context.aspect)
-                        arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
-                    },
-                    declaration.returnType,
-                ),
-            )
-        }
+        irReturn(
+            irAs(
+                irCall(context.advice).apply {
+                    dispatchReceiver = irGetObject(context.aspect)
+                    arguments[1] = joinPointExpr.deepCopyWithSymbols(declaration)
+                },
+                declaration.returnType,
+            ),
+        )
     }
 }
