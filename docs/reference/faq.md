@@ -12,7 +12,8 @@ AspectJ's pointcut expressions can match more than AspectK's annotation-based ta
 
 2.2.20 through 2.4.20 with AspectK 0.4.4. The plugin fails the build at configuration time if
 the project's Kotlin version is outside the supported range. See the
-[compatibility table](compatibility.md) for older releases and for the stricter rule on iOS.
+[compatibility table](compatibility.md) for older releases and for the higher minimum on iOS
+and other native targets, which is 2.3.0.
 
 ## Setup
 

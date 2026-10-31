@@ -19,21 +19,29 @@ in Kotlin 2.0 and requires K2 compiler mode.
 
 ## iOS / Native ABI Compatibility
 
-iOS and other native targets are stricter because of Kotlin/Native ABI conventions. A JVM
-runtime resolves symbols dynamically, but a native binary is linked against one Kotlin
-version's ABI, and a library compiled with a different version may not be binary compatible.
+iOS and other native targets have a higher minimum Kotlin version than the JVM. `aspectk-runtime`
+is published as a klib stamped with the ABI version of the compiler that built it, and a Kotlin
+compiler can only read klibs whose ABI version is not newer than its own. The project's Kotlin
+therefore has to be at least the minimum listed below. Newer versions in the supported range work.
 
-For iOS targets, use the exact Kotlin version listed below:
-
-| AspectK Version | Compiled with Kotlin |
-|-----------------|---------------------|
-| 0.1.0 ~ 0.1.1 | 2.2.20 |
-| 0.2.0 | 2.3.10 |
-| 0.2.1 ~ 0.4.4 | 2.3.20 |
+| AspectK Version | Compiled with Kotlin | klib ABI version | Minimum Kotlin on Native |
+|-----------------|---------------------|------------------|--------------------------|
+| 0.1.0 ~ 0.1.1 | 2.2.20 | 2.2.0 | 2.2.20 |
+| 0.2.0 | 2.3.10 | 2.3.0 | 2.3.0 |
+| 0.2.1 ~ 0.4.4 | 2.3.20 | 2.3.0 | 2.3.0 |
 
 !!! warning
-    On iOS targets, using a Kotlin version different from the one listed above is not supported
-    and may result in linker errors or unexpected runtime behavior.
+    Below the minimum, the plugin's version check still passes and compilation fails instead:
+
+    ```
+    w: KLIB resolver: Skipping '.../aspectk-runtime-iosSimulatorArm64Main.klib' having incompatible ABI version '2.3.0'.
+    The current Kotlin compiler can consume libraries having ABI version <= '2.2.0'.
+    e: KLIB resolver: Could not find ".../aspectk-runtime-iosSimulatorArm64Main.klib"
+    ```
+
+    The fix is to upgrade Kotlin. Setting `languageVersion` does not change a klib's ABI version.
+
+The JS and Wasm klibs carry the same ABI version as the native ones.
 
 ## Kotlin Multiplatform Compatibility
 

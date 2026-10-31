@@ -61,13 +61,13 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                api(versionCatalog().findLibrary("kotlin.stdlib").get())
+                api(kotlin("stdlib"))
             }
         }
 
         commonTest {
             dependencies {
-                implementation(versionCatalog().findLibrary("kotlin.test").get())
+                implementation(kotlin("test"))
             }
         }
 

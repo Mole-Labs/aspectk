@@ -3,9 +3,10 @@ name: CI
 on:
   pull_request:
     types: [ opened, synchronize ]
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number }}
+  group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -35,15 +36,6 @@ jobs:
 
       - name: Run aspectk-core tests
         run: ./gradlew :aspectk-core:test
-
-      - name: Run aspectk-core-tests (JVM)
-        run: ./gradlew :aspectk-core-tests:jvmTest
-
-      - name: Run aspectk-core-tests (JS)
-        run: ./gradlew kotlinUpgradeYarnLock :aspectk-core-tests:jsTest
-
-      - name: Run aspectk-core-tests (WasmJs)
-        run: ./gradlew :aspectk-core-tests:wasmJsTest
 
   supported-versions:
     runs-on: ubuntu-latest
@@ -82,8 +74,52 @@ jobs:
       - name: Run aspectk-core-tests (JVM)
         run: ./gradlew :aspectk-core-tests:jvmTest -PtestKotlinLang=${{ matrix.kotlin }} --no-configuration-cache
 
+      - name: Run aspectk-core-tests (JS)
+        run: ./gradlew kotlinUpgradeYarnLock :aspectk-core-tests:jsTest -PtestKotlinLang=${{ matrix.kotlin }} --no-configuration-cache
+
+      - name: Run aspectk-core-tests (WasmJs)
+        run: ./gradlew :aspectk-core-tests:wasmJsTest -PtestKotlinLang=${{ matrix.kotlin }} --no-configuration-cache
+
       - name: Run aspectk-plugin functional tests (incremental compilation)
         run: ./gradlew :aspectk-plugin:functionalTest -PfunctionalTestKotlinVersion=${{ matrix.kotlin }}
+
+  test-kotlin-versions-ios:
+    needs: supported-versions
+    runs-on: macos-latest
+    name: test-kotlin-versions-ios (Kotlin ${{ matrix.kotlin }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        kotlin: ${{ fromJson(needs.supported-versions.outputs.versions) }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # setup-gradle only caches Gradle User Home, which doesn't hold the Kotlin/Native toolchains.
+      - name: Cache Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ matrix.kotlin }}
+
+      - name: Run aspectk-core-tests (iOS Simulator)
+        run: ./gradlew :aspectk-core-tests:iosSimulatorArm64Test -PtestKotlinLang=${{ matrix.kotlin }} --no-configuration-cache
+
+      # Skipped on 2.2.x: klibs with ABI 2.3.0
+      - name: Run sample tests (iOS Simulator)
+        if: ${{ !startsWith(matrix.kotlin, '2.2.') }}
+        working-directory: sample
+        run: ./gradlew iosSimulatorArm64Test -DsampleKotlin=${{ matrix.kotlin }}
 
   test-sample:
     runs-on: ubuntu-latest
@@ -105,25 +141,3 @@ jobs:
       - name: Run sample tests (JVM, Android host and app unit tests, JS)
         working-directory: sample
         run: ./gradlew kotlinUpgradeYarnLock jvmTest testAndroidHostTest testPlayDebugUnitTest testInternalDebugUnitTest jsNodeTest
-
-  test-ios:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Run aspectk-core-tests (iOS Simulator)
-        run: ./gradlew :aspectk-core-tests:iosSimulatorArm64Test
-
-      - name: Run sample tests (iOS Simulator)
-        working-directory: sample
-        run: ./gradlew iosSimulatorArm64Test
