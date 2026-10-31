@@ -5,6 +5,8 @@
 ## Requirements
 
 - Kotlin 2.2.20 through 2.4.20
+- Kotlin 2.3.0 or later on iOS and other native targets, see
+  [iOS / Native ABI Compatibility](../reference/compatibility.md#ios-native-abi-compatibility)
 
 ## Gradle Setup
 

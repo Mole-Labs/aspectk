@@ -19,6 +19,12 @@ dependencyResolutionManagement {
         google()
         gradlePluginPortal()
     }
+
+    versionCatalogs {
+        create("libs") {
+            providers.systemProperty("sampleKotlin").orNull?.let { version("kotlin", it) }
+        }
+    }
 }
 
 plugins {
